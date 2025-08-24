@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import '../styles/globals.css'
 import NavBar from '../components/NavBar'
 import Footer from '../components/Footer'
+import { ThemeProvider } from '../components/ThemeProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -23,9 +24,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" />
       </head>
       <body className={inter.className}>
-        <NavBar />
-        {children}
-        <Footer />
+        <ThemeProvider>
+          <NavBar />
+          {children}
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   )

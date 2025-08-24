@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { FaFacebook, FaPhone, FaMapMarkerAlt, FaClock, FaCalendarAlt } from 'react-icons/fa'
+import { ThemeToggle } from './ThemeToggle'
 import styles from '../styles/Footer.module.css'
 
 /**
@@ -90,6 +91,12 @@ const Footer = () => {
                   <FaFacebook />
                 </a>
               </div>
+            </div>
+            
+            {/* Theme Toggle */}
+            <div className={styles.themeSection}>
+              <h3 className={styles.themeTitle}>Тема</h3>
+              <ThemeToggle />
             </div>
             
             {/* Payment Methods */}

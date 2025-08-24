@@ -53,7 +53,7 @@ export default function MenuPage() {
       <header className="bg-card border-b border-white/8 sticky top-0 z-40">
         <div className="container py-4">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            <h1 className="text-3xl font-bold text-white">Поръчай сега!</h1>
+            <h1 className="text-3xl font-bold text-text">Поръчай сега!</h1>
             <div className="relative">
               <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
               <input
@@ -61,7 +61,7 @@ export default function MenuPage() {
                 placeholder="Търсене в менюто..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-3 bg-card border border-white/12 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent w-64 text-white placeholder-muted"
+                className="pl-10 pr-4 py-3 bg-card border border-white/12 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent w-64 text-text placeholder-muted"
               />
             </div>
           </div>
@@ -111,7 +111,7 @@ export default function MenuPage() {
                   {item.image}
                 </div>
                 <div className="p-6">
-                  <h3 className="font-bold text-lg mb-2 text-white">{item.name}</h3>
+                  <h3 className="font-bold text-lg mb-2 text-text">{item.name}</h3>
                   
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-orange font-bold text-2xl">{item.price.toFixed(2)} лв.</span>
@@ -131,7 +131,7 @@ export default function MenuPage() {
                       <p className="text-sm text-muted mb-2">Размери:</p>
                       <div className="flex space-x-2">
                         {item.sizes.map(size => (
-                          <span key={size} className="px-3 py-1 bg-white/8 text-white rounded-lg text-sm border border-white/12">
+                          <span key={size} className="px-3 py-1 bg-white/8 text-text rounded-lg text-sm border border-white/12">
                             {size}
                           </span>
                         ))}
@@ -160,7 +160,7 @@ export default function MenuPage() {
       <div className="text-center py-8">
         <a
           href="/"
-          className="inline-flex items-center space-x-2 bg-white/8 hover:bg-white/12 text-white px-6 py-3 rounded-xl font-medium transition-all border border-white/12 hover:border-white/20"
+          className="inline-flex items-center space-x-2 bg-white/8 hover:bg-white/12 text-text px-6 py-3 rounded-xl font-medium transition-all border border-white/12 hover:border-white/20"
         >
           ← Назад към началната страница
         </a>
