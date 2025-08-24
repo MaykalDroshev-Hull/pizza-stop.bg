@@ -33,7 +33,7 @@ const menuData = {
 }
 
 function FlyingFoodAnimation() {
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -54,10 +54,6 @@ function FlyingFoodAnimation() {
       setCanvasDimensions();
       window.addEventListener('resize', setCanvasDimensions);
     }
-
-    // Food items array
-    const foodItems = [];
-    const numberOfItems = 25;
 
     // Food emojis and their properties
     const foodTypes = [
@@ -130,6 +126,10 @@ function FlyingFoodAnimation() {
         ctx.restore();
       }
     }
+
+    // Food items array
+    const foodItems: FoodItem[] = [];
+    const numberOfItems = 25;
 
     // Initialize food items
     function init() {
