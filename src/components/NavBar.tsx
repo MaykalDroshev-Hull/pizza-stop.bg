@@ -1,3 +1,5 @@
+import CartIcon from './CartIcon'
+
 export default function NavBar() {
   return (
     <header>
@@ -26,6 +28,7 @@ export default function NavBar() {
             </div>
           </div>
           <a className="btn" href="/order">ПОРЪЧАЙ СЕГА</a>
+          <CartIcon />
         </div>
       </nav>
     </header>

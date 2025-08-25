@@ -4,6 +4,7 @@ import '../styles/globals.css'
 import NavBar from '../components/NavBar'
 import Footer from '../components/Footer'
 import { ThemeProvider } from '../components/ThemeProvider'
+import { CartProvider } from '../components/CartContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -22,12 +23,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  if (!theme) {
+                    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    theme = prefersDark ? 'dark' : 'light';
+                  }
+                  document.documentElement.className = theme;
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
       </head>
       <body className={inter.className}>
         <ThemeProvider>
-          <NavBar />
-          {children}
-          <Footer />
+          <CartProvider>
+            <NavBar />
+            {children}
+            <Footer />
+          </CartProvider>
         </ThemeProvider>
       </body>
     </html>

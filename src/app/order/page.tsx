@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Search, Star, Clock, Plus } from 'lucide-react'
+import CartModal from '../../components/CartModal'
 
 // Mock data (same as main page)
 const menuData = {
@@ -35,6 +36,8 @@ const menuData = {
 export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState('pizza')
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedItem, setSelectedItem] = useState<any>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const categories = [
     { key: 'pizza', label: '🍕 Пица', count: menuData.pizza.length },
@@ -46,6 +49,11 @@ export default function MenuPage() {
   const filteredItems = menuData[activeCategory]?.filter(item => 
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || []
+
+  const handleAddToCart = (item: any) => {
+    setSelectedItem(item)
+    setIsModalOpen(true)
+  }
 
   return (
     <div className="min-h-screen">
@@ -140,10 +148,7 @@ export default function MenuPage() {
                   )}
                   
                   <button
-                    onClick={() => {
-                      // This would open the configurator in a real app
-                      alert(`Добавено в количката: ${item.name}`)
-                    }}
+                    onClick={() => handleAddToCart(item)}
                     className="w-full bg-gradient-to-r from-red to-orange text-white py-3 px-4 rounded-xl font-medium transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
                   >
                     <Plus size={20} />
@@ -165,6 +170,18 @@ export default function MenuPage() {
           ← Назад към началната страница
         </a>
       </div>
+
+      {/* Cart Modal */}
+      {selectedItem && (
+        <CartModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false)
+            setSelectedItem(null)
+          }}
+          item={selectedItem}
+        />
+      )}
     </div>
   )
 }

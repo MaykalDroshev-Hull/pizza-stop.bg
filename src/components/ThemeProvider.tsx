@@ -10,30 +10,27 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState('dark')
-
-  useEffect(() => {
-    // Get theme from localStorage on mount
-    const savedTheme = localStorage.getItem('theme')
-    if (savedTheme) {
-      setTheme(savedTheme)
-    } else {
+  const [theme, setTheme] = useState(() => {
+    // Initialize theme immediately to prevent flash
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme')
+      if (savedTheme) {
+        return savedTheme
+      }
       // Check system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      setTheme(prefersDark ? 'dark' : 'light')
+      return prefersDark ? 'dark' : 'light'
     }
-  }, [])
+    return 'light' // Default fallback
+  })
 
   useEffect(() => {
-    // Update localStorage when theme changes
-    localStorage.setItem('theme', theme)
-    
-    // Update document class and CSS variables
-    document.documentElement.className = theme
-    document.documentElement.setAttribute('data-theme', theme)
+    // Apply theme immediately on mount
+    const root = document.documentElement
+    root.className = theme
+    root.setAttribute('data-theme', theme)
     
     // Update CSS custom properties
-    const root = document.documentElement
     if (theme === 'light') {
       root.style.setProperty('--bg', '#ffffff')
       root.style.setProperty('--text', '#1a1a1a')
@@ -49,6 +46,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.style.setProperty('--border', 'rgba(255, 255, 255, 0.08)')
       root.style.setProperty('--shadow', '0 10px 25px rgba(0, 0, 0, 0.25)')
     }
+  }, [theme])
+
+  useEffect(() => {
+    // Update localStorage when theme changes
+    localStorage.setItem('theme', theme)
   }, [theme])
 
   const toggleTheme = () => {
