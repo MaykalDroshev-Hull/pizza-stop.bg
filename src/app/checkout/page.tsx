@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   })
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('online')
   const [showAddressModal, setShowAddressModal] = useState(false)
-  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null)
+  const [autocomplete, setAutocomplete] = useState<any>(null)
   const addressInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function CheckoutPage() {
       }
     })
 
-    setAutocomplete(autocompleteInstance)
+    setAutocomplete(autocompleteInstance as any)
   }
 
   const handleAddressChange = (address: string) => {

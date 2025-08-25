@@ -18,9 +18,9 @@ export default function AddressSelectionModal({
   onCoordinatesSelect,
   onExactLocationSelect
 }: AddressSelectionModalProps) {
-  const [map, setMap] = useState<google.maps.Map | null>(null)
-  const [marker, setMarker] = useState<google.maps.Marker | null>(null)
-  const [exactMarker, setExactMarker] = useState<google.maps.Marker | null>(null)
+  const [map, setMap] = useState<any>(null)
+  const [marker, setMarker] = useState<any>(null)
+  const [exactMarker, setExactMarker] = useState<any>(null)
   const [geocodedCoordinates, setGeocodedCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [selectedExactLocation, setSelectedExactLocation] = useState<{ lat: number; lng: number } | null>(null)
   const mapRef = useRef<HTMLDivElement>(null)
@@ -56,7 +56,7 @@ export default function AddressSelectionModal({
     const mapInstance = new window.google.maps.Map(mapRef.current!, {
       center: defaultCenter,
       zoom: 8,
-      mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+      mapTypeId: (window.google.maps.MapTypeId as any).ROADMAP,
       styles: [
         {
           featureType: 'poi',
@@ -74,7 +74,7 @@ export default function AddressSelectionModal({
     }
   }
 
-  const geocodeAddress = (addressToGeocode: string, mapInstance: google.maps.Map) => {
+  const geocodeAddress = (addressToGeocode: string, mapInstance: any) => {
     const geocoder = new window.google.maps.Geocoder()
     geocoder.geocode({ address: addressToGeocode }, (results, status) => {
       if (status === 'OK' && results && results[0]) {
