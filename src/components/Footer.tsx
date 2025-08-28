@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { FaFacebook, FaPhone, FaMapMarkerAlt, FaClock, FaCalendarAlt } from 'react-icons/fa'
+import { FaFacebook, FaPhone, FaMapMarkerAlt, FaClock, FaCalendarAlt, FaCog } from 'react-icons/fa'
 import { ThemeToggle } from './ThemeToggle'
 import styles from '../styles/Footer.module.css'
 
@@ -97,6 +97,15 @@ const Footer = () => {
             <div className={styles.themeSection}>
               <h3 className={styles.themeTitle}>Тема</h3>
               <ThemeToggle />
+            </div>
+            
+            {/* Administration */}
+            <div className={styles.adminSection}>
+              <h3 className={styles.adminTitle}>Администрация</h3>
+              <Link href="/admin" className={styles.adminLink}>
+                <FaCog className={styles.adminIcon} />
+                <span>Управление</span>
+              </Link>
             </div>
             
             {/* Payment Methods */}
