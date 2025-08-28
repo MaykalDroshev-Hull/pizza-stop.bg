@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { FaFacebook, FaPhone, FaMapMarkerAlt, FaClock, FaCalendarAlt, FaCog } from 'react-icons/fa'
-import { ThemeToggle } from './ThemeToggle'
+import { FaFacebook, FaPhone, FaMapMarkerAlt, FaClock, FaCalendarAlt, FaCog, FaGoogle } from 'react-icons/fa'
 import styles from '../styles/Footer.module.css'
 
 /**
@@ -90,13 +89,16 @@ const Footer = () => {
                 >
                   <FaFacebook />
                 </a>
+                <a
+                  href='https://www.google.com/maps/place/?q=place_id:ChIJr9f-_gndq0AR-_mEi-V-yl4'
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.socialLink}
+                  aria-label="Google Maps"
+                >
+                  <FaGoogle />
+                </a>
               </div>
-            </div>
-            
-            {/* Theme Toggle */}
-            <div className={styles.themeSection}>
-              <h3 className={styles.themeTitle}>Тема</h3>
-              <ThemeToggle />
             </div>
             
             {/* Administration */}
