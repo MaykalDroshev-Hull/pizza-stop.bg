@@ -5,7 +5,9 @@ export default function NavBar() {
     <header>
       <nav className="nav container" aria-label="Основна навигация">
         <a className="brand" href="/" aria-label="Към началото">
-          <div className="logo" aria-hidden="true">🍕</div>
+          <div className="logo" aria-hidden="true">
+            <img src="/images/home/logo.png" alt="Pizza Stop Logo" />
+          </div>
           <div>
             <h1>Pizza Stop</h1>
             <small>🔥 Свежи • Бързи • Вкусни</small>

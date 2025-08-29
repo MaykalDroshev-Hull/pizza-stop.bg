@@ -19,7 +19,9 @@ const Footer = () => {
             <div className={styles.footerSection}>
               <div className={styles.logoSection}>
                 <Link href="/">
-                  <div className={styles.logo}>🍕</div>
+                  <div className={styles.logo}>
+                    <img src="/images/home/logo.png" alt="Pizza Stop Logo" />
+                  </div>
                 </Link>
                 <p className={styles.companyDescription}>
                   Pizza Stop — пици, дюнери и бургери в Ловеч. Домашно изпечени хлебчета за дюнер, бърза доставка и внимателно подбрани продукти.

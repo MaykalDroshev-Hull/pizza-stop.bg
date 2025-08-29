@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { Laptop, ChefHat, Pizza } from 'lucide-react'
 import styles from '../styles/home.module.css'
 import TeamCarousel from '../components/TeamCarousel'
+import DeliveryAreaMap from '../components/DeliveryAreaMap'
 
 
 function FlyingFoodAnimation() {
@@ -20,6 +21,8 @@ function FlyingFoodAnimation() {
 }
 
 export default function HomePage() {
+  const timelineRef = useRef<HTMLDivElement>(null);
+  
   // Hide sticky CTA when footer is in view
   useEffect(() => {
     const stickyCta = document.querySelector(`.${styles.stickyCta}`);
@@ -45,6 +48,26 @@ export default function HomePage() {
     return () => observer.disconnect();
   }, []);
 
+  // Timeline scroll animation
+  useEffect(() => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            timeline.classList.add(styles.timelineAnimated);
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(timeline);
+    return () => observer.disconnect();
+  }, []);
+
 
 
   return (
@@ -59,7 +82,7 @@ export default function HomePage() {
           <div className={styles.heroLayout}>
             {/* Left decorative image */}
             <div className={styles.heroLeftContainer}>
-              <img src="/images/home/left.png" alt="" className={styles.heroLeft} aria-hidden="true" />
+              <img src="/images/home/logo.png" alt="" className={styles.heroLeft} aria-hidden="true" />
             </div>
             
             {/* Centered content */}
@@ -122,7 +145,7 @@ export default function HomePage() {
             <div className={styles.modernTimelineSection}>
               <h3 className={styles.sectionSubtitle}>История</h3>
               
-              <div className={styles.modernTimeline}>
+              <div className={styles.modernTimeline} ref={timelineRef}>
                 {/* Vertical line */}
                 <div className={styles.timelineLine}></div>
 
@@ -170,6 +193,9 @@ export default function HomePage() {
         </section>
 
 
+
+        {/* РАЙОНИ ЗА ДОСТАВКА */}
+        <DeliveryAreaMap apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''} />
 
         {/* ГАЛЕРИЯ */}
         <section id="gallery" className={styles.gallerySection}>

@@ -19,6 +19,11 @@ declare namespace google {
       setMap(map: Map | null): void
     }
 
+    class Polygon {
+      constructor(opts?: PolygonOptions)
+      setMap(map: Map | null): void
+    }
+
     class Geocoder {
       geocode(request: GeocoderRequest, callback: (results: GeocoderResult[] | null, status: GeocoderStatus) => void): void
     }
@@ -35,6 +40,16 @@ declare namespace google {
       map?: Map
       title?: string
       icon?: string | Icon
+    }
+
+    interface PolygonOptions {
+      paths?: LatLng[]
+      map?: Map
+      fillColor?: string
+      fillOpacity?: number
+      strokeColor?: string
+      strokeWeight?: number
+      strokeOpacity?: number
     }
 
     interface Icon {
