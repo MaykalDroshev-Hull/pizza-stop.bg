@@ -55,10 +55,10 @@
 .infoIcon {
   width: 48px;
   height: 48px;
-  color: var(--red);
+  color: var(--yellow);
   margin: 0 auto 20px;
   display: block;
-  filter: drop-shadow(0 0 10px rgba(220, 38, 38, 0.3));
+  filter: drop-shadow(0 0 10px rgba(255, 209, 102, 0.3));
 }
 
 .infoCard h3 {
@@ -243,5 +243,341 @@
   .deliveryDetails {
     padding: 20px 16px;
     margin: 0 16px;
+  }
+}
+
+/* Address Check Section */
+.addressCheckSection {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.addressCheckButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+}
+
+.addressCheckButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(220, 38, 38, 0.4);
+}
+
+.buttonIcon {
+  width: 24px;
+  height: 24px;
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 0;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+}
+
+.modalHeader h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.modalContent {
+  padding: 24px;
+}
+
+.modalContent p {
+  margin: 0 0 20px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.addressInput {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+/* Google Places Autocomplete Styling */
+.pac-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.pac-item {
+  padding: 12px 16px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.pac-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pac-item:last-child {
+  border-bottom: none;
+}
+
+.pac-item-selected {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.pac-matched {
+  font-weight: 700;
+  color: var(--red);
+}
+
+.checkButton {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.checkButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+}
+
+.checkButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.successMessage,
+.errorMessage {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.successIcon,
+.errorIcon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.successIcon .icon,
+.errorIcon .icon {
+  width: 48px;
+  height: 48px;
+  color: white;
+}
+
+.successIcon {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.errorIcon {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.successMessage h4,
+.errorMessage h4 {
+  margin: 0 0 12px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.successMessage h4 {
+  color: #10b981;
+}
+
+.errorMessage h4 {
+  color: #ef4444;
+}
+
+.successMessage p,
+.errorMessage p {
+  margin: 0 0 24px;
+  color: var(--muted);
+}
+
+.deliveryZoneInfo {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.zoneBadge {
+  display: inline-block;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.orderButton {
+  display: inline-block;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  color: white;
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+}
+
+.orderButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(220, 38, 38, 0.4);
+}
+
+.actionButtons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.callButton,
+.areaButton {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.callButton {
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  color: white;
+}
+
+.callButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+}
+
+.areaButton {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.areaButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--red);
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+  .modal {
+    margin: 20px;
+    max-height: calc(100vh - 40px);
+  }
+  
+  .addressInput {
+    flex-direction: column;
+  }
+  
+  .actionButtons {
+    flex-direction: column;
+  }
+  
+  .callButton,
+  .areaButton {
+    width: 100%;
+    text-align: center;
   }
 }

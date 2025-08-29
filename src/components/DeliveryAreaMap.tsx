@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { MapPin, Clock, Phone, Truck, Pizza } from 'lucide-react'
+import { MapPin, Clock, Phone, Truck, Pizza, CheckCircle, XCircle } from 'lucide-react'
 import styles from '../styles/DeliveryArea.module.css'
 
 interface DeliveryAreaMapProps {
@@ -10,16 +10,22 @@ interface DeliveryAreaMapProps {
 
 export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
+  const addressInputRef = useRef<HTMLInputElement>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [address, setAddress] = useState('')
+  const [isAddressInCoverage, setIsAddressInCoverage] = useState<boolean | null>(null)
+  const [isChecking, setIsChecking] = useState(false)
+  const [deliveryZone, setDeliveryZone] = useState('')
 
   useEffect(() => {
     if (!mapRef.current || mapLoaded) return
 
-    // Load Google Maps script
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry`
-    script.async = true
-    script.defer = true
+         // Load Google Maps script
+     const script = document.createElement('script')
+     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry,places`
+     script.async = true
+     script.defer = true
     
     script.onload = () => {
       initMap()
@@ -32,6 +38,101 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
       document.head.removeChild(script)
     }
   }, [apiKey, mapLoaded])
+
+  // Initialize autocomplete when modal opens
+  useEffect(() => {
+    if (isModalOpen && mapLoaded && addressInputRef.current) {
+      // Small delay to ensure the input is rendered
+      setTimeout(() => {
+        initAutocomplete()
+      }, 100)
+    }
+  }, [isModalOpen, mapLoaded])
+
+  const checkAddressCoverage = async (address: string) => {
+    setIsChecking(true)
+    
+    // Normalize the address for better matching
+    const normalizedAddress = address.toLowerCase()
+      .replace(/[.,]/g, ' ') // Remove punctuation
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim()
+    
+    // Define coverage areas with their keywords
+    const lovechCityKeywords = [
+      'ловеч', 'lovech', '5500', 'ул.', 'улица', 'бул.', 'булевард', 'пл.', 'площад'
+    ]
+    
+    const lovechVillages = [
+      'продъмчет', 'продъмчец', 'prodimchets', 'prodimchec',
+      'лисец', 'lisets', 'lisets',
+      'баховица', 'bahovitsa', 'bahovica',
+      'горан', 'goran',
+      'умаревци', 'umarevtsi', 'umarevci',
+      'скобелево', 'skobelevo'
+    ]
+    
+    // Check if address contains Lovech city indicators
+    const isInLovechCity = lovechCityKeywords.some(keyword => 
+      normalizedAddress.includes(keyword)
+    )
+    
+    // Check if address contains specific village names
+    const isInVillage = lovechVillages.some(village => 
+      normalizedAddress.includes(village)
+    )
+    
+    // Check if address contains postal codes for the area
+    const hasLovechPostalCode = /550[0-9]/.test(normalizedAddress)
+    
+    // Determine coverage based on multiple factors
+    let isInCoverage = false
+    let deliveryZone = ''
+    
+    if (isInLovechCity || hasLovechPostalCode) {
+      isInCoverage = true
+      deliveryZone = 'Ловеч град (3 лв.)'
+    } else if (isInVillage) {
+      isInCoverage = true
+      deliveryZone = 'Разширена зона (7 лв.)'
+    }
+    
+    // Simulate API call delay
+    setTimeout(() => {
+      setIsAddressInCoverage(isInCoverage)
+      setDeliveryZone(deliveryZone)
+      setIsChecking(false)
+    }, 1000)
+  }
+
+  const resetModal = () => {
+    setAddress('')
+    setIsAddressInCoverage(null)
+    setIsChecking(false)
+    setDeliveryZone('')
+  }
+
+  const openModal = () => {
+    resetModal()
+    setIsModalOpen(true)
+  }
+
+  const initAutocomplete = () => {
+    if (!addressInputRef.current || !window.google) return
+
+    const autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+      types: ['address'],
+      componentRestrictions: { country: 'bg' },
+      fields: ['formatted_address', 'geometry']
+    })
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace()
+      if (place.formatted_address) {
+        setAddress(place.formatted_address)
+      }
+    })
+  }
 
   const initMap = () => {
     if (!mapRef.current || !window.google) return
@@ -154,7 +255,18 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
            </div>
          </div>
 
-                 <div className={styles.deliveryDetails}>
+         {/* Address Check Button */}
+         <div className={styles.addressCheckSection}>
+                       <button 
+              className={styles.addressCheckButton}
+              onClick={openModal}
+            >
+             <MapPin className={styles.buttonIcon} />
+             Провери своя адрес
+           </button>
+         </div>
+
+         <div className={styles.deliveryDetails}>
            <h3>Допълнителна информация</h3>
            <ul>
              <li>Работно време: Пон.–Съб. 11:00–23:00, Нед. 11:00–21:00</li>
@@ -165,8 +277,86 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
              <li>Може да се поръчва до 3 дни напред</li>
            </ul>
          </div>
-      </div>
-    </section>
-  )
-}
+       </div>
+
+       {/* Address Check Modal */}
+       {isModalOpen && (
+         <div className={styles.modalOverlay} onClick={() => setIsModalOpen(false)}>
+           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+             <div className={styles.modalHeader}>
+               <h3>Провери доставка до твоя адрес</h3>
+               <button 
+                 className={styles.closeButton}
+                 onClick={() => setIsModalOpen(false)}
+               >
+                 ×
+               </button>
+             </div>
+             
+             <div className={styles.modalContent}>
+               {isAddressInCoverage === null ? (
+                 <>
+                   <p>Въведете своя адрес, за да проверим дали доставяме до вас:</p>
+                   <div className={styles.addressInput}>
+                     <input
+                       ref={addressInputRef}
+                       type="text"
+                       placeholder="Въведете адрес..."
+                       value={address}
+                       onChange={(e) => setAddress(e.target.value)}
+                       className={styles.input}
+                       autoComplete="off"
+                     />
+                     <button
+                       className={styles.checkButton}
+                       onClick={() => checkAddressCoverage(address)}
+                       disabled={!address.trim() || isChecking}
+                     >
+                       {isChecking ? 'Проверявам...' : 'Провери'}
+                     </button>
+                   </div>
+                 </>
+                                               ) : isAddressInCoverage ? (
+                  <div className={styles.successMessage}>
+                    <div className={styles.successIcon}>
+                      <CheckCircle className={styles.icon} />
+                    </div>
+                    <h4>Отлично! Доставяме до вас!</h4>
+                    <p>Вашият адрес е в зоната за доставка.</p>
+                    <div className={styles.deliveryZoneInfo}>
+                      <span className={styles.zoneBadge}>
+                        {deliveryZone || 'Зона за доставка'}
+                      </span>
+                    </div>
+                    <a href="/order" className={styles.orderButton}>
+                      Поръчай сега
+                    </a>
+                  </div>
+                ) : (
+                  <div className={styles.errorMessage}>
+                    <div className={styles.errorIcon}>
+                      <XCircle className={styles.icon} />
+                    </div>
+                    <h4>За съжаление не доставяме до вашия район</h4>
+                    <p>Вашият адрес е извън текущата зона за доставка.</p>
+                    <div className={styles.actionButtons}>
+                      <a href="tel:+35968670070" className={styles.callButton}>
+                        Обади се за проверка
+                      </a>
+                      <button 
+                        className={styles.areaButton}
+                        onClick={() => setIsModalOpen(false)}
+                      >
+                        Виж зони за доставка
+                      </button>
+                    </div>
+                  </div>
+                )}
+             </div>
+           </div>
+         </div>
+       )}
+     </section>
+   )
+ }
 

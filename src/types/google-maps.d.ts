@@ -43,14 +43,40 @@ declare namespace google {
     }
 
     interface PolygonOptions {
-      paths?: LatLng[]
-      map?: Map
-      fillColor?: string
-      fillOpacity?: number
-      strokeColor?: string
-      strokeWeight?: number
-      strokeOpacity?: number
+  paths?: LatLng[]
+  map?: Map
+  fillColor?: string
+  fillOpacity?: number
+  strokeColor?: string
+  strokeWeight?: number
+  strokeOpacity?: number
+}
+
+// Google Places API
+declare namespace google.maps.places {
+  class Autocomplete {
+    constructor(inputField: HTMLInputElement, opts?: AutocompleteOptions)
+    addListener(eventName: string, handler: () => void): void
+    getPlace(): PlaceResult
+  }
+
+  interface AutocompleteOptions {
+    types?: string[]
+    componentRestrictions?: ComponentRestrictions
+    fields?: string[]
+  }
+
+  interface ComponentRestrictions {
+    country: string
+  }
+
+  interface PlaceResult {
+    formatted_address?: string
+    geometry?: {
+      location?: LatLng
     }
+  }
+}
 
     interface Icon {
       url: string
