@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google'
 import '../styles/globals.css'
 import NavBar from '../components/NavBar'
 import Footer from '../components/Footer'
-import { ThemeProvider } from '../components/ThemeProvider'
 import { CartProvider } from '../components/CartContext'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -21,34 +20,54 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="color-scheme" content="dark" />
+        <meta name="supported-color-schemes" content="dark" />
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            /* Critical CSS to prevent white flash on Safari */
+            html { background-color: #0b1020 !important; }
+            body { background-color: #0b1020 !important; color: #f8fafc !important; }
+            
+          `
+        }} />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" />
+
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
+                  // Immediately set dark theme to prevent white flash
+                  document.documentElement.className = 'dark';
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                  
+                  // Then check for user preference
                   var theme = localStorage.getItem('theme');
                   if (!theme) {
                     var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    theme = prefersDark ? 'dark' : 'light';
+                    theme = 'dark';
                   }
+                  
+                  // Apply the detected theme
                   document.documentElement.className = theme;
                   document.documentElement.setAttribute('data-theme', theme);
-                } catch (e) {}
+                } catch (e) {
+                  // Fallback to dark theme if anything fails
+                  document.documentElement.className = 'dark';
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                }
               })();
             `,
           }}
         />
       </head>
       <body className={inter.className}>
-        <ThemeProvider>
           <CartProvider>
             <NavBar />
             {children}
             <Footer />
           </CartProvider>
-        </ThemeProvider>
       </body>
     </html>
   )

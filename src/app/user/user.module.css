@@ -1,0 +1,396 @@
+/* User Page Styles - Adapted from original design with Pizza Stop theming */
+
+.userPage {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 40px 20px 20px 20px;
+}
+
+.wrapper {
+  position: relative;
+  width: 850px;
+  height: 520px;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+/* Rotating background elements */
+.rotateBg {
+  position: absolute;
+  top: -4px;
+  right: 0;
+  width: 950px;
+  height: 700px;
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  transform: rotate(10deg) skewY(40deg);
+  transform-origin: bottom right;
+  transition: 1.5s ease;
+  transition-delay: 1.6s;
+}
+
+.wrapper.active .rotateBg {
+  transform: rotate(0) skewY(0);
+  transition-delay: 0.5s;
+}
+
+.rotateBg2 {
+  position: absolute;
+  top: 100%;
+  left: 250px;
+  width: 950px;
+  height: 800px;
+  background: var(--card);
+  transform: rotate(0) skewY(0);
+  transform-origin: bottom left;
+  transition: 1.5s ease;
+  transition-delay: 0.5s;
+}
+
+.wrapper.active .rotateBg2 {
+  transform: rotate(-11deg) skewY(-40deg);
+  transition-delay: 1.2s;
+}
+
+/* Form Box Styles */
+.formBox {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  transition: all 0.7s ease;
+}
+
+.formBox.login {
+  left: 0;
+  padding: 0 60px 0 40px;
+}
+
+.formBox.register {
+  padding: 0 40px 0 60px;
+  right: 0;
+}
+
+/* Login Form Animation */
+.wrapper .formBox.login .animation {
+  transform: translateX(0);
+  transition: 0.7s ease;
+  opacity: 1;
+  filter: blur(0);
+  transition-delay: calc(.1s * var(--j));
+}
+
+.wrapper.active .formBox.login .animation {
+  transform: translateX(-120%);
+  opacity: 0;
+  filter: blur(10px);
+  transition-delay: calc(.1s * var(--i));
+}
+
+/* Registration Form Animation */
+.wrapper .formBox.register .animation {
+  transform: translateX(120%);
+  opacity: 0;
+  filter: blur(10px);
+  transition: 0.7s ease;
+  transition-delay: calc(.1s * var(--j));
+}
+
+.wrapper.active .formBox.register .animation {
+  transform: translateX(0);
+  opacity: 1;
+  filter: blur(0);
+  transition-delay: calc(.1s * var(--i));
+}
+
+/* Title Styles */
+.title {
+  margin-bottom: 10px;
+  position: relative;
+  font-size: 32px;
+  color: var(--text);
+  text-align: center;
+  font-weight: 800;
+}
+
+.title::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: linear-gradient(90deg, var(--red), var(--orange));
+  border-radius: 2px;
+}
+
+/* Input Box Styles */
+.inputBox {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  margin: 25px 0;
+}
+
+.inputBox input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 500;
+  border: none;
+  outline: none;
+  border-bottom: 2px solid var(--border);
+  transition: 0.5s;
+  padding-right: 50px;
+  padding-left: 0;
+}
+
+.inputBox input:focus,
+.inputBox input:valid {
+  border-bottom-color: var(--orange);
+}
+
+.inputBox label {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: var(--muted);
+  pointer-events: none;
+  transition: 0.5s;
+  font-weight: 500;
+}
+
+.inputBox input:focus ~ label,
+.inputBox input:valid ~ label {
+  top: -5px;
+  color: var(--orange);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.inputIcon {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  color: var(--muted);
+  transition: 0.5s;
+}
+
+.inputBox input:focus ~ .inputIcon,
+.inputBox input:valid ~ .inputIcon {
+  color: var(--orange);
+}
+
+.passwordToggle {
+  position: absolute;
+  top: 50%;
+  right: 25px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  transition: 0.3s;
+}
+
+.passwordToggle:hover {
+  color: var(--orange);
+}
+
+/* Button Styles */
+.btn {
+  width: 100%;
+  height: 45px;
+  background: linear-gradient(90deg, var(--red), var(--orange));
+  color: white;
+  border: none;
+  outline: none;
+  border-radius: 40px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  transition: 0.3s;
+  box-shadow: 0 8px 20px rgba(225, 29, 72, 0.45);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(225, 29, 72, 0.6);
+}
+
+/* Link Text Styles */
+.linkTxt {
+  font-size: 14px;
+  color: var(--muted);
+  text-align: center;
+  margin: 20px 0 10px;
+}
+
+.linkBtn {
+  background: none;
+  border: none;
+  color: var(--orange);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.linkBtn:hover {
+  color: var(--red);
+}
+
+/* Info Text Styles */
+.infoText {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: all 0.7s ease;
+}
+
+.infoText.login {
+  right: 0;
+  text-align: right;
+  padding: 0 40px 60px 150px;
+}
+
+.infoText.register {
+  left: 0;
+  text-align: left;
+  padding: 0 150px 60px 40px;
+  pointer-events: none;
+}
+
+.wrapper.active .infoText.register {
+  pointer-events: auto;
+}
+
+/* Login Info Text Animation */
+.wrapper .infoText.login .animation {
+  transform: translateX(0);
+  opacity: 1;
+  filter: blur(0);
+  transition: 0.7s ease;
+  transition-delay: calc(.1s * var(--j));
+}
+
+.wrapper.active .infoText.login .animation {
+  transform: translateX(120px);
+  opacity: 0;
+  filter: blur(10px);
+  transition-delay: calc(.1s * var(--i));
+}
+
+/* Registration Info Text Animation */
+.wrapper .infoText.register .animation {
+  transform: translateX(-120%);
+  opacity: 0;
+  filter: blur(10px);
+  transition: 0.7s ease;
+  transition-delay: calc(.1s * var(--j));
+}
+
+.wrapper.active .infoText.register .animation {
+  transform: translateX(0);
+  opacity: 1;
+  filter: blur(0);
+  transition-delay: calc(.1s * var(--i));
+}
+
+.infoText h2 {
+  font-size: 36px;
+  color: white;
+  line-height: 1.3;
+  text-transform: uppercase;
+  font-weight: 800;
+  margin-bottom: 20px;
+}
+
+.infoText p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .wrapper {
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    min-height: 500px;
+  }
+
+  .formBox {
+    width: 100%;
+    position: relative;
+    padding: 40px 20px;
+  }
+
+  .formBox.login,
+  .formBox.register {
+    left: 0;
+    right: 0;
+  }
+
+  .infoText {
+    display: none;
+  }
+
+  .rotateBg,
+  .rotateBg2 {
+    display: none;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .inputBox {
+    margin: 20px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .wrapper {
+    border-radius: 12px;
+    margin: 10px;
+  }
+
+  .formBox {
+    padding: 30px 15px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .inputBox input {
+    font-size: 14px;
+  }
+
+  .btn {
+    height: 40px;
+    font-size: 14px;
+  }
+}
