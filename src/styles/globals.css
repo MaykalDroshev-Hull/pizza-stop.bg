@@ -42,17 +42,41 @@
   --shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
 }
 
+/* Safari fallback - ensure dark theme works without CSS variables */
+html.dark {
+  background-color: #0b1020 !important;
+  color: #f8fafc !important;
+}
+
+html.dark body {
+  background-color: #0b1020 !important;
+  color: #f8fafc !important;
+}
+
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);transition:background-color 0.3s ease}
+body{
+  margin:0;
+  font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  transition:background-color 0.3s ease;
+  /* Safari fallback colors */
+  background-color: #0b1020;
+  color: #f8fafc;
+}
 
 /* Theme-specific backgrounds */
 .light body {
   background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 50%, #e9ecef 100%);
+  background-color: #ffffff;
+  color: #1a1a1a;
 }
 
 .dark body {
   background: linear-gradient(180deg, #0b1020 0%, #0b1020 50%, #111827 100%);
+  background-color: #0b1020;
+  color: #f8fafc;
 }
 a{color:inherit;text-decoration:none}
 img{max-width:100%;height:auto;border-radius:var(--radius);transition:transform 0.3s ease,box-shadow 0.3s ease;cursor:pointer}
@@ -185,21 +209,138 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
 .brand{display:flex;gap:12px;align-items:center}
 .logo{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;overflow:hidden;box-shadow:0 6px 16px rgba(225,29,72,.35)}
 .logo img{width:100%;height:100%;object-fit:contain}
+/* Door Sign Styling */
+.door-sign {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.sign-main {
+  position: relative;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 14px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: rotate(2deg);
+  transition: all 0.3s ease;
+}
+
+.sign-main.open {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: 2px solid #047857;
+}
+
+.sign-main.closed {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  border: 2px solid #b91c1c;
+}
+
+.sign-hanger {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.hanger-ring {
+  width: 16px;
+  height: 16px;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  background: white;
+  margin: 0 auto;
+}
+
+.hanger-strings {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid currentColor;
+}
+
+.sign-text {
+  display: block;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Brand styling update */
 .brand h1{font-size:18px;line-height:1.1;margin:0}
 .brand small{display:block;color:var(--yellow);font-weight:700;font-size:13px}
 .nav-contact{display:flex;align-items:center;gap:16px}
 .contact-info{display:flex;gap:12px;align-items:center}
 .contact-item{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;font-weight:500}
-.contact-icon{font-size:14px}
+.contact-icon {
+  color: var(--yellow);
+  flex-shrink: 0;
+}
 .contact-item a{color:var(--yellow);font-weight:600;transition:color 0.2s ease}
 .contact-item a:hover{color:var(--orange)}
 .nav a.btn{padding:10px 14px;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--orange));font-weight:800;box-shadow:0 8px 20px rgba(225,29,72,.45);transition:transform 0.2s ease}
 .nav a.btn:hover{transform:translateY(-1px)}
 
+/* Account icon styling */
+.account-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.account-icon:hover {
+  background: transparent;
+  transform: translateY(-1px);
+  color: var(--orange);
+}
+
 @media (max-width:768px){
   .contact-info{display:none}
   .nav-contact{gap:8px}
   .nav-contact .btn{font-size:14px;padding:8px 12px}
+  
+  .account-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Mobile door sign adjustments */
+  .door-sign {
+    gap: 6px;
+  }
+
+  .sign-main {
+    padding: 6px 12px;
+    font-size: 12px;
+    transform: rotate(1deg);
+  }
+
+  .hanger-ring {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+  }
+
+
 }
 
 /* Hero - Basic styles only (detailed styles moved to home.module.css) */

@@ -23,6 +23,9 @@ function FlyingFoodAnimation() {
 export default function HomePage() {
   const timelineRef = useRef<HTMLDivElement>(null);
   
+  // Business status - should match NavBar component
+  const isOpen = true // This can be made dynamic later
+  
   // Hide sticky CTA when footer is in view
   useEffect(() => {
     const stickyCta = document.querySelector(`.${styles.stickyCta}`);
@@ -90,7 +93,9 @@ export default function HomePage() {
               <h2>Гладен ли си? Пица, Дюнер, Бургер — на един клик</h2>
               <p>Домашно изпечени хлебчета за дюнер, пухкаво тесто и сочни бургери. Бърза доставка в Ловеч.</p>
               <div className={styles.cta}>
-                <a className={styles.primary} href="/order">ПОРЪЧАЙ СЕГА</a>
+                <a className={styles.primary} href="/order">
+                  {isOpen ? 'ПОРЪЧАЙ СЕГА' : 'ПОРЪЧАЙ ЗА ПО-КЪСНО'}
+                </a>
               </div>
             </div>
             

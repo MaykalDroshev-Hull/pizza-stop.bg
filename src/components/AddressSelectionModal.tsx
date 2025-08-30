@@ -56,7 +56,7 @@ export default function AddressSelectionModal({
     const mapInstance = new window.google.maps.Map(mapRef.current!, {
       center: defaultCenter,
       zoom: 8,
-      mapTypeId: (window.google.maps.MapTypeId as any).ROADMAP,
+      mapTypeId: window.google.maps.MapTypeId.ROADMAP,
       styles: [
         {
           featureType: 'poi',

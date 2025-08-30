@@ -8,7 +8,7 @@ A modern food ordering website built with Next.js, React, and Tailwind CSS.
 - 🛒 **Shopping Cart**: Add items with customization options
 - 📍 **Address Selection**: Google Maps integration for precise delivery location
 - 💳 **Payment Options**: Online, card at delivery, or cash at delivery
-- 🌙 **Theme Support**: Light and dark theme switching
+- 🌙 **Theme Support**: Dark theme Only
 - 📱 **Mobile Responsive**: Optimized for all device sizes
 
 ## Setup
@@ -90,7 +90,7 @@ Complete checkout flow:
 - **Tailwind CSS**: Utility-first CSS framework
 - **Custom CSS Variables**: Theme-aware color system
 - **Responsive Design**: Mobile-first approach
-- **Dark/Light Themes**: Automatic theme switching
+- **Dark/Light Themes**: Dark theme only
 
 ## Browser Support
 

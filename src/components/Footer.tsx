@@ -1,64 +1,39 @@
 import Link from 'next/link'
-import { FaFacebook, FaPhone, FaMapMarkerAlt, FaClock, FaCalendarAlt, FaCog, FaGoogle } from 'react-icons/fa'
+import { FaFacebook, FaGoogle, FaCog } from 'react-icons/fa'
 import styles from '../styles/Footer.module.css'
 
-/**
- * Modern Footer component for Pizza Stop with organized sections and professional design.
- * @returns {JSX.Element} The JSX code for the Footer component.
- */
-const Footer = () => {
+export default function Footer() {
+  // Business status - should match NavBar component
+  const isOpen = true // This can be made dynamic later
+  
   return (
     <footer className={styles.footer}>
-      <div className={styles.footerContent}>
-        <div className={styles.container}>
-
-          {/* Main Footer Sections */}
+      <div className="container">
+        <div className={styles.footerContent}>
+          {/* Main Footer Grid */}
           <div className={styles.footerGrid}>
-
             {/* Company Info Section */}
             <div className={styles.footerSection}>
-              <div className={styles.logoSection}>
-                <Link href="/">
-                  <div className={styles.logo}>
-                    <img src="/images/home/logo.png" alt="Pizza Stop Logo" />
-                  </div>
-                </Link>
+              <h3 className={styles.sectionTitle}>За нас</h3>
+              <div className={styles.companyInfo}>
                 <p className={styles.companyDescription}>
-                  Pizza Stop — пици, дюнери и бургери в Ловеч. Домашно изпечени хлебчета за дюнер, бърза доставка и внимателно подбрани продукти.
+                  Pizza Stop е вашият надежден партньор за вкусна храна в Ловеч. 
+                  Специализираме се в приготвянето на свежи пици, сочни дюнери и 
+                  апетитни бургери с най-качествените продукти.
                 </p>
-              </div>
-            </div>
-
-            {/* Contact Info Section */}
-            <div className={styles.footerSection}>
-              <h3 className={styles.sectionTitle}>Контакти</h3>
-              <div className={styles.contactInfo}>
-                <div className={styles.contactItem}>
-                  <FaMapMarkerAlt className={styles.contactIcon} />
-                  <span className={styles.contactText}>
-                    Ловеч (доставка в града)
-                  </span>
-                </div>
-                <div className={styles.contactItem}>
-                  <FaPhone className={styles.contactIcon} />
-                  <a href="tel:+35968670070" className={styles.contactLink}>
-                    +359 68 670070
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Business Hours Section */}
-            <div className={styles.footerSection}>
-              <h3 className={styles.sectionTitle}>Работно време</h3>
-              <div className={styles.businessHours}>
-                <div className={styles.hoursItem}>
-                  <FaCalendarAlt className={styles.hoursIcon} />
-                  <span>Пон.–Съб.: 11:00–23:00 • Нед.: 11:00–21:00</span>
-                </div>
-                <div className={styles.hoursItem}>
-                  <FaClock className={styles.hoursIcon} />
-                  <span>Поръчки се приемат: 9:30–22:30</span>
+                <div className={styles.companyStats}>
+                  <div className={styles.statItem}>
+                    <span className={styles.statNumber}>5+</span>
+                    <span className={styles.statLabel}>години опит</span>
+                  </div>
+                  <div className={styles.statItem}>
+                    <span className={styles.statNumber}>1000+</span>
+                    <span className={styles.statLabel}>доволни клиенти</span>
+                  </div>
+                  <div className={styles.statItem}>
+                    <span className={styles.statNumber}>24/7</span>
+                    <span className={styles.statLabel}>поддръжка</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -69,7 +44,7 @@ const Footer = () => {
               <div className={styles.quickOrder}>
                 <p className={styles.orderText}>Натиснете, за да поръчате:</p>
                 <Link href="/order" className={styles.orderButton}>
-                  📞 ПОРЪЧАЙ СЕГА
+                  📞 {isOpen ? 'ПОРЪЧАЙ СЕГА' : 'ПОРЪЧАЙ ЗА ПО-КЪСНО'}
                 </Link>
                 <small className={styles.orderNote}>Работим мобилно — сайтът е оптимизиран за бързо поръчване.</small>
               </div>
@@ -179,5 +154,3 @@ const Footer = () => {
     </footer>
   )
 }
-
-export default Footer

@@ -59,15 +59,33 @@ export default function TeamCarousel() {
   }
 
   const getCardClass = (index: number) => {
-    const offset = (index - currentIndex + teamMembers.length) % teamMembers.length
+    // Calculate the offset from the current index
+    let offset = index - currentIndex
+    
+    // Handle wrapping around the array
+    if (offset > teamMembers.length / 2) {
+      offset -= teamMembers.length
+    } else if (offset < -teamMembers.length / 2) {
+      offset += teamMembers.length
+    }
 
+    // Assign classes based on offset
     if (offset === 0) return styles.cardCenter
     if (offset === 1) return styles.cardRight1
     if (offset === 2) return styles.cardRight2
-    if (offset === teamMembers.length - 1) return styles.cardLeft1
-    if (offset === teamMembers.length - 2) return styles.cardLeft2
+    if (offset === -1) return styles.cardLeft1
+    if (offset === -2) return styles.cardLeft2
     return styles.cardHidden
   }
+
+  // Debug: Log current state
+  useEffect(() => {
+    console.log('Current index:', currentIndex)
+    teamMembers.forEach((member, index) => {
+      const className = getCardClass(index)
+      console.log(`Card ${index} (${member.name}): ${className}`)
+    })
+  }, [currentIndex])
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft') {

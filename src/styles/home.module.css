@@ -612,8 +612,8 @@
 
 .galleryItem {
   flex: 0 0 auto;
-  width: 280px;
-  height: 200px;
+  width: 210px;
+  height: 150px;
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
@@ -660,6 +660,7 @@
   perspective: 1000px;
   margin: 0 auto;
   margin-top: 40px;
+  overflow: visible;
 }
 
 .carouselTrack {
@@ -671,6 +672,8 @@
   position: relative;
   transform-style: preserve-3d;
   transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* Ensure 3D transforms work */
+  perspective: 1000px;
 }
 
 .card {
@@ -683,6 +686,8 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   cursor: pointer;
+  /* Debug: ensure cards are visible */
+  will-change: transform;
 }
 
 .card img {
@@ -703,8 +708,10 @@
 
 .cardLeft2 {
   z-index: 1;
-  transform: translateX(-400px) scale(0.8) translateZ(-300px);
-  opacity: 0.7;
+  transform: translateX(-300px) scale(0.75) translateZ(-200px);
+  opacity: 0.8;
+  /* Debug: make more visible */
+  border: 2px solid red;
 }
 
 .cardLeft2 img {
@@ -713,7 +720,7 @@
 
 .cardLeft1 {
   z-index: 5;
-  transform: translateX(-200px) scale(0.9) translateZ(-100px);
+  transform: translateX(-150px) scale(0.85) translateZ(-100px);
   opacity: 0.9;
 }
 
@@ -723,7 +730,7 @@
 
 .cardRight1 {
   z-index: 5;
-  transform: translateX(200px) scale(0.9) translateZ(-100px);
+  transform: translateX(150px) scale(0.85) translateZ(-100px);
   opacity: 0.9;
 }
 
@@ -733,8 +740,10 @@
 
 .cardRight2 {
   z-index: 1;
-  transform: translateX(400px) scale(0.8) translateZ(-300px);
-  opacity: 0.7;
+  transform: translateX(300px) scale(0.75) translateZ(-200px);
+  opacity: 0.8;
+  /* Debug: make more visible */
+  border: 2px solid blue;
 }
 
 .cardRight2 img {
@@ -883,8 +892,8 @@
   }
   
   .galleryItem {
-    width: 240px;
-    height: 180px;
+    width: 180px;
+    height: 135px;
   }
   
   .galleryScroll {
@@ -897,29 +906,39 @@
   }
 
   /* Team Carousel Responsive */
+  .teamCarouselSection {
+    padding: 40px 0;
+  }
+
   .teamCarouselTitle {
-    font-size: 2.25rem;
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+
+  .carouselContainer {
+    height: 320px;
+    margin-top: 24px;
   }
 
   .card {
-    width: 200px;
-    height: 280px;
+    width: 180px;
+    height: 240px;
   }
 
   .cardLeft2 {
-    transform: translateX(-250px) scale(0.8) translateZ(-300px);
+    transform: translateX(-120px) scale(0.7) translateZ(-150px);
   }
 
   .cardLeft1 {
-    transform: translateX(-120px) scale(0.9) translateZ(-100px);
+    transform: translateX(-80px) scale(0.8) translateZ(-80px);
   }
 
   .cardRight1 {
-    transform: translateX(120px) scale(0.9) translateZ(-100px);
+    transform: translateX(80px) scale(0.8) translateZ(-80px);
   }
 
   .cardRight2 {
-    transform: translateX(250px) scale(0.8) translateZ(-300px);
+    transform: translateX(120px) scale(0.7) translateZ(-150px);
   }
 
   .memberName {
@@ -936,18 +955,67 @@
   }
 
   .memberName::before {
-    left: -70px;
+    left: -60px;
   }
 
   .memberName::after {
-    right: -70px;
+    right: -60px;
+  }
+
+  .memberInfo {
+    margin-top: 24px;
+  }
+
+  .memberName {
+    font-size: 1.75rem;
+  }
+
+  .memberRole {
+    font-size: 1rem;
+  }
+
+  .memberName::before,
+  .memberName::after {
+    width: 40px;
+  }
+
+  .memberName::before {
+    left: -60px;
+  }
+
+  .memberName::after {
+    right: -60px;
+  }
+
+  .dots {
+    margin-top: 32px;
+  }
+
+  .navArrow {
+    width: 36px;
+    height: 36px;
+    font-size: 1.25rem;
+  }
+
+  .navArrowLeft {
+    left: 10px;
+  }
+
+  .navArrowRight {
+    right: 10px;
+  }
+
+  /* Disable hover effects on mobile */
+  .navArrow:hover {
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    transform: translateY(-50%);
   }
 }
 
 @media (max-width: 480px) {
   .galleryItem {
-    width: 200px;
-    height: 150px;
+    width: 150px;
+    height: 113px;
   }
   
   .galleryScroll {
@@ -957,5 +1025,81 @@
   
   .galleryRow {
     margin-bottom: 24px;
+  }
+
+  /* Team Carousel Extra Small Screens */
+  .teamCarouselSection {
+    padding: 32px 0;
+  }
+
+  .teamCarouselTitle {
+    font-size: 1.75rem;
+  }
+
+  .carouselContainer {
+    height: 280px;
+    margin-top: 20px;
+  }
+
+  .card {
+    width: 160px;
+    height: 200px;
+  }
+
+  .cardLeft2 {
+    transform: translateX(-160px) scale(0.7) translateZ(-150px);
+  }
+
+  .cardLeft1 {
+    transform: translateX(-80px) scale(0.8) translateZ(-80px);
+  }
+
+  .cardRight1 {
+    transform: translateX(80px) scale(0.8) translateZ(-80px);
+  }
+
+  .cardRight2 {
+    transform: translateX(160px) scale(0.7) translateZ(-150px);
+  }
+
+  .memberName {
+    font-size: 1.5rem;
+  }
+
+  .memberRole {
+    font-size: 0.9rem;
+  }
+
+  .memberName::before,
+  .memberName::after {
+    width: 30px;
+  }
+
+  .memberName::before {
+    left: -45px;
+  }
+
+  .memberName::after {
+    right: -45px;
+  }
+
+  .navArrow {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .navArrowLeft {
+    left: 8px;
+  }
+
+  .navArrowRight {
+    right: 8px;
+  }
+
+  /* Disable hover effects on extra small screens */
+  .navArrow:hover {
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    transform: translateY(-50%);
   }
 }
