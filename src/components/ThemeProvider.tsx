@@ -2,69 +2,54 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
+type Theme = 'light' | 'dark'
+
 interface ThemeContextType {
-  theme: string
-  toggleTheme: () => void
+  theme: Theme
+  setTheme: (theme: Theme) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState(() => {
-    // Initialize theme immediately to prevent flash
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme')
-      if (savedTheme) {
-        return savedTheme
-      }
-      // Check system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      return prefersDark ? 'dark' : 'light'
-    }
-    return 'light' // Default fallback
-  })
+  const [theme, setTheme] = useState<Theme>('dark')
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Apply theme immediately on mount
-    const root = document.documentElement
-    root.className = theme
-    root.setAttribute('data-theme', theme)
+    // Get theme from localStorage or default to dark
+    const savedTheme = localStorage.getItem('theme') as Theme
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     
-    // Update CSS custom properties
-    if (theme === 'light') {
-      root.style.setProperty('--bg', '#ffffff')
-      root.style.setProperty('--text', '#1a1a1a')
-      root.style.setProperty('--muted', '#666666')
-      root.style.setProperty('--card', '#f8f9fa')
-      root.style.setProperty('--border', 'rgba(0, 0, 0, 0.1)')
-      root.style.setProperty('--shadow', '0 10px 25px rgba(0, 0, 0, 0.1)')
+    if (savedTheme) {
+      setTheme(savedTheme)
+    } else if (prefersDark) {
+      setTheme('dark')
     } else {
-      root.style.setProperty('--bg', '#0b1020')
-      root.style.setProperty('--text', '#f8fafc')
-      root.style.setProperty('--muted', '#cbd5e1')
-      root.style.setProperty('--card', '#0f172a')
-      root.style.setProperty('--border', 'rgba(255, 255, 255, 0.08)')
-      root.style.setProperty('--shadow', '0 10px 25px rgba(0, 0, 0, 0.25)')
+      setTheme('light')
     }
-  }, [theme])
+    
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
-    // Update localStorage when theme changes
-    localStorage.setItem('theme', theme)
-  }, [theme])
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark')
-  }
+    if (mounted) {
+      // Update localStorage and document classes
+      localStorage.setItem('theme', theme)
+      document.documentElement.className = theme
+      document.documentElement.setAttribute('data-theme', theme)
+    }
+  }, [theme, mounted])
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      <div className={theme} data-theme={theme}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   )
 }
 
-export function useTheme(): ThemeContextType {
+export function useTheme() {
   const context = useContext(ThemeContext)
   if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider')

@@ -1,0 +1,219 @@
+PIZZA STOP PROJECT - FILE PURPOSES
+=====================================
+
+CORE COMPONENTS:
+----------------
+
+NavBar.tsx
+- Purpose: Main navigation header with brand, contact info, and cart access
+- Functionality: Displays Pizza Stop branding, contact details, business hours, location
+- Key features: Brand logo, phone number, operating hours, location info, order CTA button
+- Used by: Main layout for consistent navigation across all pages
+
+CartContext.tsx
+- Purpose: React Context provider for managing shopping cart state across the application
+- Functionality: Handles adding/removing items, updating quantities, calculating totals
+- Key features: Cart item management, price calculations, cart persistence
+- Used by: CartModal, CartIcon, and other cart-related components
+
+CartModal.tsx
+- Purpose: Modal dialog for customizing food items before adding to cart
+- Functionality: Size selection, sauce/salad customization, quantity selection, comments
+- Key features: Dynamic pricing based on size, ingredient selection, form validation
+- Used by: Main menu when users click "Add to Cart"
+
+CartIcon.tsx
+- Purpose: Shopping cart icon with item count badge and cart preview
+- Functionality: Shows cart summary, allows item removal, navigation to checkout
+- Key features: Cart preview modal, item count display, quick item removal
+- Used by: Navigation bar for cart access
+
+AddonSelector.tsx
+- Purpose: Component for selecting food addons (sauces, vegetables) with pricing logic
+- Functionality: Addon selection interface, free addon logic (first 3 free), price calculation
+- Key features: Grouped addon display, selection state management, dynamic pricing
+- Used by: CartModal for food customization during order process
+
+Footer.tsx
+- Purpose: Comprehensive footer with company info, contact details, and social links
+- Functionality: Displays business hours, contact info, social media, theme toggle
+- Key features: Organized sections, responsive design, social media integration, theme switching
+- Used by: Main layout for consistent footer across all pages
+
+LoadingContext.tsx
+- Purpose: React Context for managing global loading states
+- Functionality: Provides loading state management across the application
+- Key features: startLoading/stopLoading functions, global loading state
+- Used by: LoadingOverlay and other components that need loading indicators
+
+LoadingOverlay.tsx
+- Purpose: Full-screen loading overlay with animated logo
+- Functionality: Displays during loading operations with spinning logo animation
+- Key features: Animated logo rotation, backdrop blur, auto-hide after 800ms
+- Used by: Application-wide loading states
+
+ThemeProvider.tsx
+- Purpose: React Context for managing light/dark theme switching
+- Functionality: Theme state management, localStorage persistence, system preference detection
+- Key features: Theme switching, automatic theme detection, persistent storage
+- Used by: ThemeToggle and layout components
+
+ThemeToggle.tsx
+- Purpose: UI component for switching between light and dark themes
+- Functionality: Toggle button with sun/moon icons, theme switching
+- Key features: Animated toggle, icon changes based on current theme
+- Used by: Navigation bar for theme switching
+
+AddressSelectionModal.tsx
+- Purpose: Modal for selecting delivery address with Google Maps integration
+- Functionality: Address geocoding, map-based location selection, coordinate handling
+- Key features: Google Maps integration, address validation, exact location picking
+- Used by: Checkout process for delivery address selection
+
+DATA & UTILITIES:
+-----------------
+
+menuData.ts
+- Purpose: Data layer for fetching and managing menu items from Supabase database
+- Functionality: Database queries, data transformation, fallback data handling
+- Key features: Supabase integration, category mapping, size pricing, error handling
+- Used by: Main menu components for displaying food items
+
+supabase.ts
+- Purpose: Supabase client configuration and database type definitions
+- Functionality: Database connection setup, TypeScript interfaces for database schema
+- Key features: Supabase client initialization, Product and ProductType interfaces
+- Used by: menuData.ts and other database operations
+
+STYLING:
+--------
+
+Footer.module.css
+- Purpose: CSS module for footer component styling
+- Functionality: Footer-specific styles, responsive design
+- Key features: Module-based CSS, component-scoped styling
+
+ThemeToggle.module.css
+- Purpose: CSS module for theme toggle component styling
+- Functionality: Toggle button animations, theme-specific styles
+- Key features: Custom animations, theme-aware styling
+
+PAGES:
+------
+
+page.tsx (main)
+- Purpose: Main landing page/homepage of the Pizza Stop application
+- Functionality: Hero section, menu display, user engagement
+- Key features: Landing page design, menu integration, call-to-action
+
+admin/page.tsx
+- Purpose: Administrative interface for managing the application
+- Functionality: Admin controls, system management
+- Key features: Admin dashboard, system administration
+
+checkout/page.tsx
+- Purpose: Checkout process for completing orders
+- Functionality: Order review, delivery details, payment processing
+- Key features: Order confirmation, address selection, payment flow
+
+order/page.tsx
+- Purpose: Order management and tracking interface
+- Functionality: Order status, order history, order details
+- Key features: Order tracking, order management
+
+CONFIGURATION:
+--------------
+
+layout.tsx
+- Purpose: Root layout component wrapping all pages
+- Functionality: Global providers, navigation, footer
+- Key features: Context providers, global layout structure
+
+globals.css
+- Purpose: Global CSS styles and Tailwind CSS imports
+- Functionality: Base styles, CSS variables, global styling
+- Key features: Tailwind integration, custom CSS variables, global styles
+
+tailwind.config.js
+- Purpose: Tailwind CSS configuration and custom theme settings
+- Functionality: Custom colors, fonts, animations, responsive breakpoints
+- Key features: Pizza Stop brand colors, custom design system
+
+next.config.js
+- Purpose: Next.js configuration and build settings
+- Functionality: Build optimization, environment variables, plugins
+- Key features: Next.js configuration, build optimization
+
+TYPES & DEFINITIONS:
+--------------------
+
+google-maps.d.ts
+- Purpose: TypeScript type definitions for Google Maps API
+- Functionality: Google Maps types, interfaces, and declarations
+- Key features: Type safety for Google Maps integration
+
+next-env.d.ts
+- Purpose: Next.js environment type definitions
+- Functionality: Next.js specific types and declarations
+- Key features: Next.js type support
+
+TESTING & UTILITIES:
+--------------------
+
+test-auth.js
+- Purpose: Authentication testing utilities
+- Functionality: Auth system testing, validation testing
+- Key features: Authentication testing tools
+
+test-db.js
+- Purpose: Database connection and query testing
+- Functionality: Database testing, connection validation
+- Key features: Database testing utilities
+
+test-simple.js
+- Purpose: Basic application testing utilities
+- Functionality: Simple test cases, basic validation
+- Key features: Basic testing tools
+
+PROJECT DOCUMENTATION:
+----------------------
+
+README.md
+- Purpose: Project documentation and setup instructions
+- Functionality: Project overview, installation guide, usage instructions
+- Key features: Project documentation, setup guide
+
+prompt.txt
+- Purpose: AI prompt instructions for development
+- Functionality: Development guidelines, AI assistance instructions
+- Key features: Development prompts, AI guidance
+
+design-and-colors.txt
+- Purpose: Design system documentation and color specifications
+- Functionality: Design guidelines, color palette, styling rules
+- Key features: Design system documentation, brand guidelines
+
+PACKAGE MANAGEMENT:
+-------------------
+
+package.json
+- Purpose: Node.js project dependencies and scripts
+- Functionality: Dependency management, build scripts, project metadata
+- Key features: Project configuration, dependency list
+
+package-lock.json
+- Purpose: Locked dependency versions for consistent builds
+- Functionality: Version locking, dependency resolution
+- Key features: Build consistency, dependency locking
+
+This file structure follows Next.js App Router conventions with:
+- Components organized by functionality
+- Data layer separated from UI components
+- Type definitions for type safety
+- CSS modules for component-scoped styling
+- Context providers for state management
+- Responsive design with Tailwind CSS
+- Dark theme support with theme switching
+- Google Maps integration for delivery
+- Supabase backend integration
+- Comprehensive testing utilities
