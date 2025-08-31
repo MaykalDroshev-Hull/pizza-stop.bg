@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom fast spin animation for logo */
+@keyframes spin-fast {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-fast {
+  animation: spin-fast 0.8s linear infinite;
+}
+
+/* Logo spin once animation - exactly 1 second */
+@keyframes logoSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 :root{
   --red:#e11d48; /* ярко червено */
   --orange:#ff7f11; /* портокалово */
@@ -54,6 +78,7 @@ body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-s
 .dark body {
   background: linear-gradient(180deg, #0b1020 0%, #0b1020 50%, #111827 100%);
 }
+
 a{color:inherit;text-decoration:none}
 img{max-width:100%;height:auto;border-radius:var(--radius);transition:transform 0.3s ease,box-shadow 0.3s ease;cursor:pointer}
 img:hover{transform:scale(1.1);box-shadow:0 20px 40px rgba(0,0,0,.4)}
