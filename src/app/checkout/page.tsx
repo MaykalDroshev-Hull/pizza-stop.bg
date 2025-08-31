@@ -31,6 +31,7 @@ export default function CheckoutPage() {
   const [coordinateInput, setCoordinateInput] = useState({ lat: '', lng: '' })
   const [clickedLocation, setClickedLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [interactiveMap, setInteractiveMap] = useState<any>(null)
+  const [mapMarker, setMapMarker] = useState<any>(null)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [gpsPermissionStatus, setGpsPermissionStatus] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
   const addressInputRef = useRef<HTMLInputElement>(null)
@@ -114,7 +115,7 @@ export default function CheckoutPage() {
     const mapInstance = new window.google.maps.Map(mapContainerRef.current, {
       center: defaultCenter,
       zoom: 10,
-      mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+      mapTypeId: 'roadmap' as google.maps.MapTypeId,
       styles: [
         {
           featureType: 'poi',
@@ -140,12 +141,12 @@ export default function CheckoutPage() {
         setClickedLocation(location)
         
         // Clear any previous markers
-        if (window.mapMarker) {
-          window.mapMarker.setMap(null)
+        if (mapMarker) {
+          mapMarker.setMap(null)
         }
         
         // Add new marker at clicked location
-        window.mapMarker = new window.google.maps.Marker({
+        const newMarker = new window.google.maps.Marker({
           position: location,
           map: mapInstance,
           title: 'Избрана локация',
@@ -160,6 +161,7 @@ export default function CheckoutPage() {
             anchor: new window.google.maps.Point(16, 16)
           }
         })
+        setMapMarker(newMarker)
       }
     })
 
@@ -193,8 +195,8 @@ export default function CheckoutPage() {
       setClickedLocation(null)
       
       // Clear map marker
-      if (window.mapMarker) {
-        window.mapMarker.setMap(null)
+      if (mapMarker) {
+        mapMarker.setMap(null)
       }
     }
   }
@@ -298,8 +300,8 @@ export default function CheckoutPage() {
             setClickedLocation(null)
             
             // Clear map marker
-            if (window.mapMarker) {
-              window.mapMarker.setMap(null)
+            if (mapMarker) {
+              mapMarker.setMap(null)
             }
           } else {
             alert('Неуспешно намиране на адрес за тази локация')
@@ -363,13 +365,13 @@ export default function CheckoutPage() {
           }
           
           // Clear any previous markers
-          if (window.mapMarker) {
-            window.mapMarker.setMap(null)
+          if (mapMarker) {
+            mapMarker.setMap(null)
           }
           
           // Add marker at current location
           if (interactiveMap) {
-            window.mapMarker = new window.google.maps.Marker({
+            const newMarker = new window.google.maps.Marker({
               position: { lat, lng },
               map: interactiveMap,
               title: 'Текуща GPS локация',
@@ -385,6 +387,7 @@ export default function CheckoutPage() {
                 anchor: new window.google.maps.Point(16, 16)
             }
             })
+            setMapMarker(newMarker)
           }
           
           // Hide loading state

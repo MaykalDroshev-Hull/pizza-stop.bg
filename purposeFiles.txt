@@ -144,13 +144,18 @@ next.config.js
 - Functionality: Build optimization, environment variables, plugins
 - Key features: Next.js configuration, build optimization
 
+.gitignore
+- Purpose: Git ignore file for excluding files from version control
+- Functionality: Specifies which files and directories should not be tracked by Git
+- Key features: Environment files, build artifacts, dependencies, IDE files
+
 TYPES & DEFINITIONS:
 --------------------
 
 google-maps.d.ts
 - Purpose: TypeScript type definitions for Google Maps API
 - Functionality: Google Maps types, interfaces, and declarations
-- Key features: Type safety for Google Maps integration
+- Key features: Type safety for Google Maps integration, MapTypeId enum definitions
 
 next-env.d.ts
 - Purpose: Next.js environment type definitions

@@ -1,6 +1,14 @@
 import { supabase, Product } from './supabase'
 
 // Database types based on your structure
+export interface ProductAddon {
+  AddonID: number
+  Name: string
+  Price: number
+  AddonType: string
+  ProductTypeID: number
+}
+
 export interface MenuItem {
   id: number
   name: string
