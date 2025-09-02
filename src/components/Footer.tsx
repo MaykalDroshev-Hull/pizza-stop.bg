@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { FaFacebook, FaGoogle, FaCog } from 'react-icons/fa'
+import { FaFacebook, FaPhone, FaMapMarkerAlt, FaClock, FaCalendarAlt, FaCog } from 'react-icons/fa'
+import ThemeToggle from './ThemeToggle'
 import styles from '../styles/Footer.module.css'
 import { isRestaurantOpen } from '../utils/openingHours'
 

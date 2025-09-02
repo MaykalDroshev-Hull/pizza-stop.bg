@@ -1,70 +1,101 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import '../styles/globals.css'
+import './globals.css'
+import { ThemeProvider } from '../components/ThemeProvider'
+import { LoadingProvider } from '../components/LoadingContext'
+import LoadingOverlay from '../components/LoadingOverlay'
 import NavBar from '../components/NavBar'
 import Footer from '../components/Footer'
 import { CartProvider } from '../components/CartContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata = {
-  title: 'Pizza Stop — Пица • Дюнер • Бургер — Ловеч',
-  description: 'Pizza Stop — пици, дюнери и бургери в Ловеч. Домашно изпечени хлебчета за дюнер, бърза доставка и внимателно подбрани продукти. Поръчай сега на 068 670070.',
-  keywords: 'пица, дюнер, бургер, доставка, храна, ресторант, Ловеч',
-  themeColor: '#e11d48',
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico',
+export const metadata: Metadata = {
+  title: 'Pizza Stop - Най-вкусните пици в Ловеч',
+  description: 'Поръчай най-вкусните пици, дюнери и бургери в Ловеч. Бърза доставка и качествена храна.',
+  keywords: 'пица, дюнер, бургер, доставка, Ловеч, храна, ресторант',
+  authors: [{ name: 'Pizza Stop' }],
+  creator: 'Pizza Stop',
+  publisher: 'Pizza Stop',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL('https://pizza-stop.bg'),
+  openGraph: {
+    title: 'Pizza Stop - Най-вкусните пици в Ловеч',
+    description: 'Поръчай най-вкусните пици, дюнери и бургери в Ловеч',
+    url: 'https://pizza-stop.bg',
+    siteName: 'Pizza Stop',
+    locale: 'bg_BG',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Pizza Stop - Най-вкусните пици в Ловеч',
+    description: 'Поръчай най-вкусните пици, дюнери и бургери в Ловеч',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'your-google-verification-code',
   },
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="bg" className="dark" data-theme="dark">
+    <html lang="bg" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="color-scheme" content="dark" />
-        <meta name="supported-color-schemes" content="dark" />
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            /* Critical CSS to prevent white flash on Safari */
-            html { background-color: #0b1020 !important; }
-            body { background-color: #0b1020 !important; color: #f8fafc !important; }
-            
-          `
-        }} />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-        <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" />
-
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  // Ensure dark theme is applied
-                  document.documentElement.className = 'dark';
-                  document.documentElement.setAttribute('data-theme', 'dark');
-                } catch (e) {
-                  // Fallback to dark theme if anything fails
-                  document.documentElement.className = 'dark';
-                  document.documentElement.setAttribute('data-theme', 'dark');
-                }
-              })();
-            `,
-          }}
-        />
+        <meta name="theme-color" content="#dc2626" />
+        <meta name="color-scheme" content="dark light" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Pizza Stop" />
+        <meta name="application-name" content="Pizza Stop" />
+        <meta name="msapplication-TileColor" content="#dc2626" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#dc2626" />
+        <link rel="canonical" href="https://pizza-stop.bg" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body className={inter.className}>
-          <CartProvider>
-            <NavBar />
-            {children}
-            <Footer />
-          </CartProvider>
+        <ThemeProvider>
+          <LoadingProvider>
+            <CartProvider>
+              <div className="min-h-screen bg-bg text-text">
+                <NavBar />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
+                <LoadingOverlay />
+              </div>
+            </CartProvider>
+          </LoadingProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

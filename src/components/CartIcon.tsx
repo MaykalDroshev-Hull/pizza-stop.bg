@@ -61,14 +61,9 @@ export default function CartIcon() {
                         <p className="text-sm text-muted">
                           {item.size} • {item.quantity}x
                         </p>
-                        {item.sauces && item.sauces.length > 0 && (
+                        {item.addons && item.addons.length > 0 && (
                           <p className="text-xs text-muted">
-                            Сосове: {item.sauces.join(', ')}
-                          </p>
-                        )}
-                        {item.salads && item.salads.length > 0 && (
-                          <p className="text-xs text-muted">
-                            Салати: {item.salads.join(', ')}
+                            Добавки: {item.addons.map(addon => addon.Name).join(', ')}
                           </p>
                         )}
                         {item.comment && (
