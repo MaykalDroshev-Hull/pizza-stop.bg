@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ShoppingCart, X, Trash2 } from 'lucide-react'
 import { useCart } from './CartContext'
+import { isRestaurantOpen } from '../utils/openingHours'
 
 export default function CartIcon() {
   const { items, removeItem, totalItems, totalPrice } = useCart()
@@ -107,7 +108,7 @@ export default function CartIcon() {
                   href="/checkout"
                   className="w-full bg-gradient-to-r from-red to-orange text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 block text-center"
                 >
-                  Поръчай сега
+                  {isRestaurantOpen() ? 'Поръчай сега' : 'Поръчай за по-късно'}
                 </a>
               ) : (
                 <button

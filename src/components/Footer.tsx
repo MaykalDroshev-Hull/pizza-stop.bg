@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { FaFacebook, FaGoogle, FaCog } from 'react-icons/fa'
 import styles from '../styles/Footer.module.css'
+import { isRestaurantOpen } from '../utils/openingHours'
 
 export default function Footer() {
   // Business status - should match NavBar component
-  const isOpen = true // This can be made dynamic later
+  const isOpen = isRestaurantOpen()
   
   return (
     <footer className={styles.footer}>

@@ -20,11 +20,13 @@ function FlyingFoodAnimation() {
   );
 }
 
+import { isRestaurantOpen } from '../utils/openingHours'
+
 export default function HomePage() {
   const timelineRef = useRef<HTMLDivElement>(null);
   
   // Business status - should match NavBar component
-  const isOpen = true // This can be made dynamic later
+  const isOpen = isRestaurantOpen()
   
   // Hide sticky CTA when footer is in view
   useEffect(() => {

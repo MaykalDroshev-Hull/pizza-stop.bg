@@ -1,4 +1,4 @@
-/* User Page Styles - Adapted from original design with Pizza Stop theming */
+/* User Page Styles - Mobile Optimized with Smooth Animations */
 
 .userPage {
   display: flex;
@@ -6,13 +6,15 @@
   align-items: flex-start;
   min-height: 100vh;
   background: var(--bg);
-  padding: 40px 20px 20px 20px;
+  padding: 20px;
 }
 
 .wrapper {
   position: relative;
-  width: 850px;
-  height: 520px;
+  width: 100%;
+  max-width: 850px;
+  height: auto;
+  min-height: 520px;
   background: var(--card);
   border: 2px solid var(--border);
   border-radius: 18px;
@@ -21,7 +23,7 @@
   margin-top: 20px;
 }
 
-/* Rotating background elements */
+/* Mobile-optimized background elements */
 .rotateBg {
   position: absolute;
   top: -4px;
@@ -31,13 +33,13 @@
   background: linear-gradient(135deg, var(--red), var(--orange));
   transform: rotate(10deg) skewY(40deg);
   transform-origin: bottom right;
-  transition: 1.5s ease;
-  transition-delay: 1.6s;
+  transition: 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-delay: 0.8s;
 }
 
 .wrapper.active .rotateBg {
   transform: rotate(0) skewY(0);
-  transition-delay: 0.5s;
+  transition-delay: 0.3s;
 }
 
 .rotateBg2 {
@@ -49,13 +51,13 @@
   background: var(--card);
   transform: rotate(0) skewY(0);
   transform-origin: bottom left;
-  transition: 1.5s ease;
-  transition-delay: 0.5s;
+  transition: 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-delay: 0.3s;
 }
 
 .wrapper.active .rotateBg2 {
   transform: rotate(-11deg) skewY(-40deg);
-  transition-delay: 1.2s;
+  transition-delay: 0.8s;
 }
 
 /* Form Box Styles */
@@ -67,7 +69,7 @@
   display: flex;
   justify-content: center;
   flex-direction: column;
-  transition: all 0.7s ease;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .formBox.login {
@@ -80,36 +82,60 @@
   right: 0;
 }
 
-/* Login Form Animation */
+.formBox.resetPassword {
+  padding: 0 40px 0 60px;
+  left: 0;
+  transform: translateX(-120%);
+  opacity: 0;
+  filter: blur(8px);
+}
+
+/* Login Form Animation - Smoother transitions */
 .wrapper .formBox.login .animation {
   transform: translateX(0);
-  transition: 0.7s ease;
+  transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 1;
   filter: blur(0);
-  transition-delay: calc(.1s * var(--j));
+  transition-delay: calc(.08s * var(--j));
 }
 
 .wrapper.active .formBox.login .animation {
   transform: translateX(-120%);
   opacity: 0;
-  filter: blur(10px);
-  transition-delay: calc(.1s * var(--i));
+  filter: blur(8px);
+  transition-delay: calc(.08s * var(--i));
 }
 
-/* Registration Form Animation */
+/* Registration Form Animation - Smoother transitions */
 .wrapper .formBox.register .animation {
   transform: translateX(120%);
   opacity: 0;
-  filter: blur(10px);
-  transition: 0.7s ease;
-  transition-delay: calc(.1s * var(--j));
+  filter: blur(8px);
+  transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-delay: calc(.08s * var(--j));
 }
 
 .wrapper.active .formBox.register .animation {
   transform: translateX(0);
   opacity: 1;
   filter: blur(0);
-  transition-delay: calc(.1s * var(--i));
+  transition-delay: calc(.08s * var(--i));
+}
+
+/* Reset Password Form Animation */
+.wrapper .formBox.resetPassword .animation {
+  transform: translateX(-120%);
+  opacity: 0;
+  filter: blur(8px);
+  transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-delay: calc(.08s * var(--j));
+}
+
+.wrapper.resetActive .formBox.resetPassword .animation {
+  transform: translateX(0);
+  opacity: 1;
+  filter: blur(0);
+  transition-delay: calc(.08s * var(--i));
 }
 
 /* Title Styles */
@@ -152,9 +178,11 @@
   border: none;
   outline: none;
   border-bottom: 2px solid var(--border);
-  transition: 0.5s;
+  transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   padding-right: 50px;
   padding-left: 0;
+  border-radius: 8px;
+  padding: 8px 50px 8px 12px;
 }
 
 .inputBox input:focus,
@@ -170,7 +198,7 @@
   font-size: 16px;
   color: var(--muted);
   pointer-events: none;
-  transition: 0.5s;
+  transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 500;
 }
 
@@ -185,10 +213,10 @@
 .inputIcon {
   position: absolute;
   top: 50%;
-  right: 0;
+  right: 12px;
   transform: translateY(-50%);
   color: var(--muted);
-  transition: 0.5s;
+  transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .inputBox input:focus ~ .inputIcon,
@@ -199,14 +227,14 @@
 .passwordToggle {
   position: absolute;
   top: 50%;
-  right: 25px;
+  right: 40px;
   transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--muted);
   cursor: pointer;
   padding: 0;
-  transition: 0.3s;
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .passwordToggle:hover {
@@ -221,17 +249,28 @@
   color: white;
   border: none;
   outline: none;
-  border-radius: 40px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 16px;
   font-weight: 700;
-  transition: 0.3s;
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 8px 20px rgba(225, 29, 72, 0.45);
 }
 
 .btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(225, 29, 72, 0.6);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn:disabled:hover {
+  transform: none;
+  box-shadow: 0 8px 20px rgba(225, 29, 72, 0.45);
 }
 
 /* Link Text Styles */
@@ -249,11 +288,31 @@
   text-decoration: none;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.3s;
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .linkBtn:hover {
   color: var(--red);
+}
+
+.forgotPassword {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.forgotLink {
+  background: none;
+  border: none;
+  color: var(--orange);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.forgotLink:hover {
+  color: var(--red);
+  text-decoration: underline;
 }
 
 /* Info Text Styles */
@@ -265,7 +324,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  transition: all 0.7s ease;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .infoText.login {
@@ -285,36 +344,53 @@
   pointer-events: auto;
 }
 
-/* Login Info Text Animation */
+.infoText.resetPassword {
+  left: 0;
+  text-align: left;
+  padding: 0 150px 60px 40px;
+  pointer-events: none;
+  transform: translateX(-120%);
+  opacity: 0;
+  filter: blur(8px);
+}
+
+.wrapper.resetActive .infoText.resetPassword {
+  pointer-events: auto;
+  transform: translateX(0);
+  opacity: 1;
+  filter: blur(0);
+}
+
+/* Login Info Text Animation - Smoother */
 .wrapper .infoText.login .animation {
   transform: translateX(0);
   opacity: 1;
   filter: blur(0);
-  transition: 0.7s ease;
-  transition-delay: calc(.1s * var(--j));
+  transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-delay: calc(.08s * var(--j));
 }
 
 .wrapper.active .infoText.login .animation {
   transform: translateX(120px);
   opacity: 0;
-  filter: blur(10px);
-  transition-delay: calc(.1s * var(--i));
+  filter: blur(8px);
+  transition-delay: calc(.08s * var(--i));
 }
 
-/* Registration Info Text Animation */
+/* Registration Info Text Animation - Smoother */
 .wrapper .infoText.register .animation {
   transform: translateX(-120%);
   opacity: 0;
-  filter: blur(10px);
-  transition: 0.7s ease;
-  transition-delay: calc(.1s * var(--j));
+  filter: blur(8px);
+  transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-delay: calc(.08s * var(--j));
 }
 
 .wrapper.active .infoText.register .animation {
   transform: translateX(0);
   opacity: 1;
   filter: blur(0);
-  transition-delay: calc(.1s * var(--i));
+  transition-delay: calc(.08s * var(--i));
 }
 
 .infoText h2 {
@@ -332,65 +408,244 @@
   line-height: 1.5;
 }
 
-/* Responsive Design */
+/* Mobile-First Responsive Design */
 @media (max-width: 768px) {
+  .userPage {
+    padding: 10px;
+    align-items: flex-start;
+    padding-top: 20px;
+  }
+
   .wrapper {
     width: 100%;
     max-width: 400px;
     height: auto;
-    min-height: 500px;
+    min-height: 380px;
+    margin-top: 0;
+    border-radius: 16px;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
   }
 
+  /* Mobile wrapper height transitions */
+  .wrapper.active {
+    min-height: 520px;
+  }
+
+  /* Mobile-optimized form layout */
   .formBox {
     width: 100%;
     position: relative;
-    padding: 40px 20px;
+    padding: 20px 20px 30px 20px;
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .formBox.login,
   .formBox.register {
     left: 0;
     right: 0;
+    position: relative;
   }
 
-  .infoText {
-    display: none;
-  }
-
+  /* Hide complex background animations on mobile */
   .rotateBg,
   .rotateBg2 {
     display: none;
   }
 
+  /* Hide info text on mobile for cleaner form */
+  .infoText {
+    display: none;
+  }
+
+  /* Mobile-optimized animations */
+  .wrapper .formBox.login .animation,
+  .wrapper .formBox.register .animation,
+  .wrapper.active .formBox.login .animation,
+  .wrapper.active .formBox.register .animation {
+    transform: none;
+    opacity: 1;
+    filter: none;
+    transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition-delay: calc(.05s * var(--i));
+  }
+
+  /* Mobile form toggle animation with smooth transitions */
+  .formBox.login {
+    transform: translateX(0);
+    opacity: 1;
+    position: relative;
+  }
+
+  .formBox.register {
+    transform: translateX(100%);
+    opacity: 0;
+    position: absolute;
+    top: 0;
+  }
+
+  .formBox.resetPassword {
+    transform: translateX(-100%);
+    opacity: 0;
+    position: absolute;
+    top: 0;
+  }
+
+  .wrapper.active .formBox.login {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  .wrapper.active .formBox.register {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  .wrapper.resetActive .formBox.login {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  .wrapper.resetActive .formBox.resetPassword {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
   .title {
-    font-size: 28px;
+    font-size: 26px;
+    margin-bottom: 15px;
+  }
+
+  .title::after {
+    width: 30px;
+    height: 3px;
   }
 
   .inputBox {
-    margin: 20px 0;
+    margin: 18px 0;
+    height: 45px;
+  }
+
+  .inputBox input {
+    font-size: 15px;
+  }
+
+  .inputBox label {
+    font-size: 15px;
+  }
+
+  .btn {
+    height: 42px;
+    font-size: 15px;
+    margin-top: 10px;
+  }
+
+  .linkTxt {
+    margin: 15px 0 8px;
+    font-size: 13px;
   }
 }
 
 @media (max-width: 480px) {
+  .userPage {
+    padding: 5px;
+    padding-top: 15px;
+  }
+
   .wrapper {
     border-radius: 12px;
-    margin: 10px;
+    margin: 5px;
+    min-height: 350px;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Small mobile wrapper height transitions */
+  .wrapper.active {
+    min-height: 480px;
   }
 
   .formBox {
-    padding: 30px 15px;
+    padding: 20px 15px 25px 15px;
   }
 
   .title {
     font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .title::after {
+    width: 25px;
+    height: 2px;
+  }
+
+  .inputBox {
+    margin: 15px 0;
+    height: 42px;
   }
 
   .inputBox input {
     font-size: 14px;
   }
 
+  .inputBox label {
+    font-size: 14px;
+  }
+
   .btn {
     height: 40px;
     font-size: 14px;
+  }
+
+  .linkTxt {
+    font-size: 12px;
+    margin: 12px 0 6px;
+  }
+}
+
+/* Error and Success Messages */
+.errorMessage {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.successMessage {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .btn:hover {
+    transform: none;
+    box-shadow: 0 8px 20px rgba(225, 29, 72, 0.45);
+  }
+
+  .linkBtn:hover {
+    color: var(--orange);
+  }
+
+  .passwordToggle:hover {
+    color: var(--muted);
+  }
+
+  .inputBox input:focus ~ .inputIcon {
+    color: var(--orange);
   }
 }

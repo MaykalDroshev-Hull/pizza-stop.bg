@@ -1,10 +1,13 @@
+"use client"
+
+import { useState, useEffect } from 'react'
 import CartIcon from './CartIcon'
 import { User, Phone, Clock, MapPin } from 'lucide-react'
+import { isRestaurantOpen } from '../utils/openingHours'
 
 // Door Sign Component
 function DoorSign() {
-  // You can make this dynamic based on business hours or API
-  const isOpen = true // This can be made dynamic later
+  const isOpen = isRestaurantOpen()
   
   return (
     <div className="door-sign">
@@ -22,8 +25,22 @@ function DoorSign() {
 }
 
 export default function NavBar() {
-  // Get the business status from the DoorSign component
-  const isOpen = true // This should match the DoorSign component
+  const [isOpen, setIsOpen] = useState(isRestaurantOpen())
+  
+  // Update open/closed status every minute
+  useEffect(() => {
+    const updateStatus = () => {
+      setIsOpen(isRestaurantOpen())
+    }
+    
+    // Update immediately
+    updateStatus()
+    
+    // Update every minute
+    const interval = setInterval(updateStatus, 60000)
+    
+    return () => clearInterval(interval)
+  }, [])
   
   return (
     <header>
@@ -51,7 +68,7 @@ export default function NavBar() {
             </div>
           </div>
           <a className="btn" href="/order">
-            {isOpen ? 'ПОРЪЧАЙ СЕГА' : 'ПОРЪЧАЙ ЗА ПО-КЪСНО'}
+            {isOpen ? 'ПОРЪЧАЙ СЕГА' : 'ПОРЪЧАЙ ЗА \r\n ПО-КЪСНО'}
           </a>
           <a href="/user" className="account-icon" aria-label="Акаунт">
             <User size={20} />

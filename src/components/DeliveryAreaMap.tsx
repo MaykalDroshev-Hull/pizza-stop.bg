@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { MapPin, Clock, Phone, Truck, Pizza, CheckCircle, XCircle } from 'lucide-react'
+import { MapPin, Clock, Phone, Truck, Pizza, CheckCircle, XCircle, Navigation } from 'lucide-react'
 import styles from '../styles/DeliveryArea.module.css'
+import { isRestaurantOpen } from '../utils/openingHours'
 
 interface DeliveryAreaMapProps {
   apiKey: string
@@ -17,6 +18,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
   const [isAddressInCoverage, setIsAddressInCoverage] = useState<boolean | null>(null)
   const [isChecking, setIsChecking] = useState(false)
   const [deliveryZone, setDeliveryZone] = useState('')
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false)
 
   useEffect(() => {
     if (!mapRef.current || mapLoaded) return
@@ -112,6 +114,75 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
     setDeliveryZone('')
   }
 
+  const detectDeviceLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Геолокацията не се поддържа от вашия браузър.')
+      return
+    }
+
+    setIsDetectingLocation(true)
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        
+        // Check if the detected location is within delivery range
+        const lovechCenter = { lat: 43.142931, lng: 24.717857 }
+        const distance = window.google.maps.geometry.spherical.computeDistanceBetween(
+          new window.google.maps.LatLng(lovechCenter.lat, lovechCenter.lng),
+          new window.google.maps.LatLng(latitude, longitude)
+        )
+        
+        if (distance <= 30000) { // Within 30km
+          // Reverse geocode to get address
+          const geocoder = new window.google.maps.Geocoder()
+          geocoder.geocode(
+            { location: { lat: latitude, lng: longitude } },
+            (results, status) => {
+              setIsDetectingLocation(false)
+              
+              if (status === 'OK' && results && results[0]) {
+                const detectedAddress = results[0].formatted_address
+                setAddress(detectedAddress)
+                
+                // Automatically check coverage for this address
+                checkAddressCoverage(detectedAddress)
+              } else {
+                alert('Неуспешно определяне на адреса. Моля, въведете го ръчно.')
+              }
+            }
+          )
+        } else {
+          setIsDetectingLocation(false)
+          alert(`Вашата локация е на ${Math.round(distance / 1000)}km от Ловеч, което е извън зоната за доставка. Моля, въведете адрес ръчно.`)
+        }
+      },
+      (error) => {
+        setIsDetectingLocation(false)
+        let errorMessage = 'Грешка при определяне на локацията.'
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Достъпът до геолокацията е отказан. Моля, разрешете достъпа в настройките на браузъра.'
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Информацията за локацията не е налична.'
+            break
+          case error.TIMEOUT:
+            errorMessage = 'Времето за определяне на локацията изтече.'
+            break
+        }
+        
+        alert(errorMessage)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      }
+    )
+  }
+
   const openModal = () => {
     resetModal()
     setIsModalOpen(true)
@@ -120,17 +191,48 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
   const initAutocomplete = () => {
     if (!addressInputRef.current || !window.google) return
 
+    // Lovech center coordinates
+    const lovechCenter = { lat: 43.142931, lng: 24.717857 }
+    
+    // Create a circle with 30km radius around Lovech
+    const circle = new window.google.maps.Circle({
+      center: lovechCenter,
+      radius: 30000, // 30km in meters
+      visible: false // Don't show the circle on the map
+    })
+
     const autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
       types: ['address'],
       componentRestrictions: { country: 'bg' },
-      fields: ['formatted_address', 'geometry']
+      fields: ['formatted_address', 'geometry'],
+      bounds: circle.getBounds(), // Limit results to the circle bounds
+      strictBounds: true // Strictly enforce the bounds
     })
 
+    // Filter autocomplete predictions to only show addresses within 30km
     autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace()
-      if (place.formatted_address) {
-        setAddress(place.formatted_address)
+      if (place.formatted_address && place.geometry) {
+        const placeLocation = place.geometry.location
+        const distance = window.google.maps.geometry.spherical.computeDistanceBetween(
+          new window.google.maps.LatLng(lovechCenter.lat, lovechCenter.lng),
+          placeLocation
+        )
+        
+        // Only accept addresses within 30km
+        if (distance <= 30000) {
+          setAddress(place.formatted_address)
+        } else {
+          // Show error for addresses outside the range
+          alert('Този адрес е извън зоната за доставка (над 30km от Ловеч). Моля, изберете адрес по-близо до града.')
+        }
       }
+    })
+
+    // Additional filtering: Listen to predictions and filter them
+    autocomplete.addListener('predictions_changed', () => {
+      // This event fires when predictions are updated
+      // We can't directly filter the predictions, but the bounds and strictBounds help
     })
   }
 
@@ -167,7 +269,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
 
     const map = new window.google.maps.Map(mapRef.current, {
       center: lovechCenter,
-      zoom: 13,
+      zoom: 12,
       mapTypeId: window.google.maps.MapTypeId.ROADMAP,
       styles: [
         {
@@ -200,17 +302,17 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
       map: map
     })
 
-         // Add restaurant marker
-     new window.google.maps.Marker({
-       position: lovechCenter,
-       map: map,
-       title: 'Pizza Stop - Lovech',
-               icon: {
-          url: '/images/home/logo.png',
-          scaledSize: new window.google.maps.Size(60, 60),
-          anchor: new window.google.maps.Point(30, 30)
+                           // Add restaurant marker with custom logo
+      new window.google.maps.Marker({
+        position: lovechCenter,
+        map: map,
+        title: 'Pizza Stop - Lovech',
+        icon: {
+          url: '/images/home/map-marker.png', // Your custom Canva logo
+          scaledSize: new window.google.maps.Size(80, 80),
+          anchor: new window.google.maps.Point(40, 80) // Anchor at bottom center of pin
         }
-     })
+      })
   }
 
   return (
@@ -294,28 +396,44 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
              </div>
              
              <div className={styles.modalContent}>
-               {isAddressInCoverage === null ? (
-                 <>
-                   <p>Въведете своя адрес, за да проверим дали доставяме до вас:</p>
-                   <div className={styles.addressInput}>
-                     <input
-                       ref={addressInputRef}
-                       type="text"
-                       placeholder="Въведете адрес..."
-                       value={address}
-                       onChange={(e) => setAddress(e.target.value)}
-                       className={styles.input}
-                       autoComplete="off"
-                     />
-                     <button
-                       className={styles.checkButton}
-                       onClick={() => checkAddressCoverage(address)}
-                       disabled={!address.trim() || isChecking}
-                     >
-                       {isChecking ? 'Проверявам...' : 'Провери'}
-                     </button>
-                   </div>
-                 </>
+                               {isAddressInCoverage === null ? (
+                  <>
+                    <p>Въведете своя адрес, за да проверим дали доставяме до вас:</p>
+                    
+                    {/* Location Detection Button */}
+                    <div className={styles.locationDetectionSection}>
+                      <button
+                        className={styles.locationButton}
+                        onClick={detectDeviceLocation}
+                        disabled={isDetectingLocation}
+                      >
+                        <Navigation className={styles.locationIcon} />
+                        {isDetectingLocation ? 'Определям локацията...' : 'Определи моята локация'}
+                      </button>
+                      <p className={styles.locationHint}>
+                        Или въведете адреса ръчно по-долу
+                      </p>
+                    </div>
+                    
+                    <div className={styles.addressInput}>
+                      <input
+                        ref={addressInputRef}
+                        type="text"
+                        placeholder="Въведете адрес..."
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className={styles.input}
+                        autoComplete="off"
+                      />
+                      <button
+                        className={styles.checkButton}
+                        onClick={() => checkAddressCoverage(address)}
+                        disabled={!address.trim() || isChecking}
+                      >
+                        {isChecking ? 'Проверявам...' : 'Провери'}
+                      </button>
+                    </div>
+                  </>
                                                ) : isAddressInCoverage ? (
                   <div className={styles.successMessage}>
                     <div className={styles.successIcon}>
@@ -329,7 +447,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
                       </span>
                     </div>
                     <a href="/order" className={styles.orderButton}>
-                      Поръчай сега
+                      {isRestaurantOpen() ? 'Поръчай сега' : 'Поръчай за по-късно'}
                     </a>
                   </div>
                 ) : (

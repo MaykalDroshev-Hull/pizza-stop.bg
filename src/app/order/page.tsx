@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Search, Star, Clock, Plus } from 'lucide-react'
 import CartModal from '../../components/CartModal'
+import { isRestaurantOpen } from '../../utils/openingHours'
 
 // Mock data (same as main page)
 const menuData = {
@@ -61,7 +62,9 @@ export default function MenuPage() {
       <header className="bg-card border-b border-white/8 sticky top-0 z-40">
         <div className="container py-4">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            <h1 className="text-3xl font-bold text-text">Поръчай сега!</h1>
+            <h1 className="text-3xl font-bold text-text">
+              {isRestaurantOpen() ? 'Поръчай сега!' : 'Поръчай за по-късно!'}
+            </h1>
             <div className="relative">
               <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" />
               <input
@@ -152,7 +155,7 @@ export default function MenuPage() {
                     className="w-full bg-gradient-to-r from-red to-orange text-white py-3 px-4 rounded-xl font-medium transition-all transform hover:scale-105 flex items-center justify-center space-x-2"
                   >
                     <Plus size={20} />
-                    <span>Добави в количката</span>
+                    <span>{isRestaurantOpen() ? 'Добави в количката' : 'Добави за по-късно'}</span>
                   </button>
                 </div>
               </div>

@@ -12,11 +12,16 @@ export const metadata = {
   description: 'Pizza Stop — пици, дюнери и бургери в Ловеч. Домашно изпечени хлебчета за дюнер, бърза доставка и внимателно подбрани продукти. Поръчай сега на 068 670070.',
   keywords: 'пица, дюнер, бургер, доставка, храна, ресторант, Ловеч',
   themeColor: '#e11d48',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="bg">
+    <html lang="bg" className="dark" data-theme="dark">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -30,6 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             
           `
         }} />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+        <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" />
 
@@ -38,20 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `
               (function() {
                 try {
-                  // Immediately set dark theme to prevent white flash
+                  // Ensure dark theme is applied
                   document.documentElement.className = 'dark';
                   document.documentElement.setAttribute('data-theme', 'dark');
-                  
-                  // Then check for user preference
-                  var theme = localStorage.getItem('theme');
-                  if (!theme) {
-                    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    theme = 'dark';
-                  }
-                  
-                  // Apply the detected theme
-                  document.documentElement.className = theme;
-                  document.documentElement.setAttribute('data-theme', theme);
                 } catch (e) {
                   // Fallback to dark theme if anything fails
                   document.documentElement.className = 'dark';
