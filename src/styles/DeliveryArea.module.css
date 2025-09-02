@@ -258,7 +258,7 @@
   gap: 12px;
   padding: 16px 32px;
   background: linear-gradient(135deg, var(--red), var(--orange));
-  color: white;
+  color: var(--text);
   border: none;
   border-radius: 12px;
   font-size: 1.1rem;
@@ -363,7 +363,7 @@
   gap: 8px;
   padding: 12px 24px;
   background: linear-gradient(135deg, var(--blue), #1d4ed8);
-  color: white;
+  color: var(--text);
   border: none;
   border-radius: 8px;
   font-size: 16px;
@@ -454,7 +454,7 @@
 .checkButton {
   padding: 12px 24px;
   background: linear-gradient(135deg, var(--red), var(--orange));
-  color: white;
+  color: var(--text);
   border: none;
   border-radius: 8px;
   font-weight: 600;
@@ -494,17 +494,17 @@
 .errorIcon .icon {
   width: 48px;
   height: 48px;
-  color: white;
+  color: var(--text);
 }
 
 .successIcon {
   background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
+  color: var(--text);
 }
 
 .errorIcon {
   background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
+  color: var(--text);
 }
 
 .successMessage h4,
@@ -537,7 +537,7 @@
   display: inline-block;
   padding: 8px 16px;
   background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
+  color: var(--text);
   border-radius: 20px;
   font-weight: 600;
   font-size: 0.9rem;
@@ -548,7 +548,7 @@
   display: inline-block;
   padding: 16px 32px;
   background: linear-gradient(135deg, var(--red), var(--orange));
-  color: white;
+  color: var(--text);
   text-decoration: none;
   border-radius: 12px;
   font-weight: 700;
@@ -583,7 +583,7 @@
 
 .callButton {
   background: linear-gradient(135deg, var(--red), var(--orange));
-  color: white;
+  color: var(--text);
 }
 
 .callButton:hover {

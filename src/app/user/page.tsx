@@ -85,7 +85,12 @@ export default function UserPage() {
 
       setSuccess('Успешен вход!')
       console.log('Login successful:', data.user)
-      // Here you can redirect or set user context
+      
+      // Store user data in localStorage and redirect to dashboard
+      localStorage.setItem('user', JSON.stringify(data.user))
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 1500)
       
     } catch (err: any) {
       setError(err.message || 'Грешка при влизане')

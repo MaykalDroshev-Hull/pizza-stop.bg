@@ -45,34 +45,24 @@
   --tw-scale-y: 1;
 }
 
-/* Light theme variables (default) */
-:root, .light {
-  --bg: #ffffff;
-  --text: #1a1a1a;
-  --muted: #666666;
-  --card: #f8f9fa;
-  --border: rgba(0, 0, 0, 0.1);
-  --shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  --green: #10b981;
-}
-
-/* Dark theme variables */
-.dark {
+/* Dark theme variables (forced) */
+:root, .dark, .light {
   --bg: #0b1020;
   --text: #f8fafc;
   --muted: #cbd5e1;
   --card: #0f172a;
   --border: rgba(255, 255, 255, 0.08);
   --shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  --green: #10b981;
 }
 
-/* Safari fallback - ensure dark theme works without CSS variables */
-html.dark {
+/* Force dark theme - no light theme option */
+html, html.light, html.dark {
   background-color: #0b1020 !important;
   color: #f8fafc !important;
 }
 
-html.dark body {
+html body, html.light body, html.dark body {
   background-color: #0b1020 !important;
   color: #f8fafc !important;
 }
@@ -85,19 +75,13 @@ body{
   background:var(--bg);
   color:var(--text);
   transition:background-color 0.3s ease;
-  /* Safari fallback colors */
+  /* Force dark theme colors */
   background-color: #0b1020;
   color: #f8fafc;
 }
 
-/* Theme-specific backgrounds */
-.light body {
-  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 50%, #e9ecef 100%);
-  background-color: #ffffff;
-  color: #1a1a1a;
-}
-
-.dark body {
+/* Force dark theme backgrounds */
+body, .light body, .dark body {
   background: linear-gradient(180deg, #0b1020 0%, #0b1020 50%, #111827 100%);
   background-color: #0b1020;
   color: #f8fafc;
@@ -256,13 +240,13 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
 
 .sign-main.open {
   background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
+  color: var(--text);
   border: 2px solid #047857;
 }
 
 .sign-main.closed {
   background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
+  color: var(--text);
   border: 2px solid #b91c1c;
 }
 
@@ -278,7 +262,7 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
   height: 16px;
   border: 3px solid currentColor;
   border-radius: 50%;
-  background: white;
+  background: var(--card);
   margin: 0 auto;
 }
 
@@ -305,6 +289,32 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
 .brand h1{font-size:18px;line-height:1.1;margin:0}
 .brand small{display:block;color:var(--yellow);font-weight:700;font-size:13px}
 .nav-contact{display:flex;align-items:center;gap:16px}
+
+/* User Menu Styles */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-btn:hover {
+  background: var(--border);
+  border-color: var(--red);
+  color: var(--red);
+}
 .contact-info{display:flex;gap:12px;align-items:center}
 .contact-item{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;font-weight:500}
 .contact-icon {
@@ -346,6 +356,11 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
   .account-icon {
     width: 36px;
     height: 36px;
+  }
+
+  /* Hide logo on mobile */
+  .logo {
+    display: none;
   }
 
   /* Mobile door sign adjustments */
@@ -817,6 +832,14 @@ button {
     height: 1rem;
     font-size: 0.5rem;
     border-width: 1px;
+  }
+  
+  .user-menu {
+    gap: 6px;
+  }
+  
+  .logout-btn {
+    padding: 6px;
   }
   
   .max-w-md {

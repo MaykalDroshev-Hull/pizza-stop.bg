@@ -18,20 +18,31 @@ You'll need to create a `users` table in your Supabase database with the followi
 
 ```sql
 
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.Addon (
+  AddonID integer NOT NULL DEFAULT nextval('"ProductAddons_AddonID_seq"'::regclass),
+  Name character varying NOT NULL,
+  Price numeric NOT NULL DEFAULT 0,
+  ProductTypeID integer NOT NULL,
+  CONSTRAINT Addon_pkey PRIMARY KEY (AddonID),
+  CONSTRAINT ProductAddons_ProductTypeID_fkey FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID)
+);
 CREATE TABLE public.LkOrderProduct (
   LkOrderProductID bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   OrderID bigint NOT NULL,
   ProductID bigint,
   CONSTRAINT LkOrderProduct_pkey PRIMARY KEY (LkOrderProductID),
-  CONSTRAINT fk_lkorderproduct_order FOREIGN KEY (OrderID) REFERENCES public.Order(OrderID),
-  CONSTRAINT fk_lkorderproduct_product FOREIGN KEY (ProductID) REFERENCES public.Product(ProductID)
+  CONSTRAINT fk_lkorderproduct_product FOREIGN KEY (ProductID) REFERENCES public.Product(ProductID),
+  CONSTRAINT fk_lkorderproduct_order FOREIGN KEY (OrderID) REFERENCES public.Order(OrderID)
 );
 CREATE TABLE public.LkProductTypeAddons (
   ProductTypeID integer NOT NULL,
   AddonID integer NOT NULL,
   CONSTRAINT LkProductTypeAddons_pkey PRIMARY KEY (ProductTypeID, AddonID),
   CONSTRAINT LkProductTypeAddons_ProductTypeID_fkey FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID),
-  CONSTRAINT LkProductTypeAddons_AddonID_fkey FOREIGN KEY (AddonID) REFERENCES public.ProductAddons(AddonID)
+  CONSTRAINT LkProductTypeAddons_AddonID_fkey FOREIGN KEY (AddonID) REFERENCES public.Addon(AddonID)
 );
 CREATE TABLE public.Login (
   LoginID bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -46,6 +57,8 @@ CREATE TABLE public.Login (
   PreferedPaymentMethodID bigint,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  reset_token text,
+  reset_token_expiry timestamp with time zone,
   CONSTRAINT Login_pkey PRIMARY KEY (LoginID),
   CONSTRAINT Login_PreferedPaymentMethodID_fkey FOREIGN KEY (PreferedPaymentMethodID) REFERENCES public.RfPaymentMethod(PaymentMethodID)
 );
@@ -56,6 +69,8 @@ CREATE TABLE public.Order (
   OrderLocation text NOT NULL,
   OrderLocationCoordinates text NOT NULL,
   OrderStatusID smallint NOT NULL,
+  RfPaymentMethodID smallint NOT NULL,
+  IsPaid boolean NOT NULL DEFAULT false,
   CONSTRAINT Order_pkey PRIMARY KEY (OrderID),
   CONSTRAINT fk_order_login FOREIGN KEY (LoginID) REFERENCES public.Login(LoginID),
   CONSTRAINT fk_order_orderstatus FOREIGN KEY (OrderStatusID) REFERENCES public.RfOrderStatus(OrderStatusID)
@@ -71,16 +86,8 @@ CREATE TABLE public.Product (
   LargePrice double precision DEFAULT '0'::double precision,
   MediumPrice double precision,
   CONSTRAINT Product_pkey PRIMARY KEY (ProductID),
-  CONSTRAINT fk_product_producttype FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID),
-  CONSTRAINT Product_ProductTypeID_fkey FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID)
-);
-CREATE TABLE public.ProductAddons (
-  AddonID integer NOT NULL DEFAULT nextval('"ProductAddons_AddonID_seq"'::regclass),
-  Name character varying NOT NULL,
-  Price numeric NOT NULL DEFAULT 0,
-  ProductTypeID integer NOT NULL,
-  CONSTRAINT ProductAddons_pkey PRIMARY KEY (AddonID),
-  CONSTRAINT ProductAddons_ProductTypeID_fkey FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID)
+  CONSTRAINT Product_ProductTypeID_fkey FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID),
+  CONSTRAINT fk_product_producttype FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID)
 );
 CREATE TABLE public.ProductType (
   ProductTypeID bigint GENERATED ALWAYS AS IDENTITY NOT NULL,

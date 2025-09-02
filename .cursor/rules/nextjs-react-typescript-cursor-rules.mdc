@@ -54,6 +54,13 @@ alwaysApply: true
     - Use only for Web API access in small components.
     - Avoid for data fetching or state management.
   
+  Data Handling
+  - NEVER use mock data, fake data, or placeholder values.
+  - Always return actual data from the database or API.
+  - If no data exists, return empty arrays/objects and let the UI handle empty states.
+  - Use proper error handling and loading states instead of fake data.
+  - Empty states should be handled gracefully in the UI with appropriate messaging.
+  
   Product Funnel (Pizza Stop)
   - Company: Pizza Stop (food delivery, JustEat / UberEats style).
   - Build a landing page and funnel that hooks users from first scroll.

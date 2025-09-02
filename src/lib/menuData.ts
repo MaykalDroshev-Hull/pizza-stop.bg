@@ -65,7 +65,7 @@ const ratingMap: { [key: number]: number } = {
 }
 
 // Function to fetch addons for a specific product type
-export async function fetchProductAddons(productTypeID: number) {
+export async function fetchAddons(productTypeID: number) {
   try {
     console.log(`🔍 Fetching addons for product type: ${productTypeID}`)
     
@@ -88,9 +88,9 @@ export async function fetchProductAddons(productTypeID: number) {
     const addonIDs = linkedAddons.map(item => item.AddonID)
     console.log(`Found linked AddonIDs for product type ${productTypeID}:`, addonIDs)
     
-    // Now fetch the actual addon details from ProductAddons
+    // Now fetch the actual addon details from Addons
     const { data: addons, error: addonError } = await supabase
-      .from('ProductAddons')
+      .from('Addon')
       .select('*')
       .in('AddonID', addonIDs)
       .in('ProductTypeID', [5, 6]) // Only sauces (5) and vegetables (6)
@@ -116,7 +116,7 @@ export async function fetchProductAddons(productTypeID: number) {
     return transformedAddons
     
   } catch (error) {
-    console.error('Error in fetchProductAddons:', error)
+    console.error('Error in fetchAddons:', error)
     return []
   }
 }
@@ -245,7 +245,7 @@ export async function fetchMenuData() {
     
     // Fetch addons for pizza (ProductTypeID = 1)
     if (menuData.pizza.length > 0) {
-      const pizzaAddons = await fetchProductAddons(1)
+      const pizzaAddons = await fetchAddons(1)
       console.log('🍕 Pizza addons:', pizzaAddons)
       menuData.pizza.forEach(item => {
         item.addons = pizzaAddons
@@ -254,7 +254,7 @@ export async function fetchMenuData() {
     
     // Fetch addons for burgers (ProductTypeID = 2)
     if (menuData.burgers.length > 0) {
-      const burgerAddons = await fetchProductAddons(2)
+      const burgerAddons = await fetchAddons(2)
       console.log('🍔 Burger addons:', burgerAddons)
       menuData.burgers.forEach(item => {
         item.addons = burgerAddons
@@ -263,7 +263,7 @@ export async function fetchMenuData() {
     
     // Fetch addons for doners (ProductTypeID = 3)
     if (menuData.doners.length > 0) {
-      const donerAddons = await fetchProductAddons(3)
+      const donerAddons = await fetchAddons(3)
       console.log('🥙 Doner addons:', donerAddons)
       menuData.doners.forEach(item => {
         item.addons = donerAddons

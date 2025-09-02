@@ -216,7 +216,7 @@
   transform: translateX(-50%);
   z-index: 1000;
   background: linear-gradient(135deg, var(--red), var(--orange));
-  color: white;
+  color: var(--text);
   padding: 12px 24px;
   border-radius: 999px;
   font-weight: 700;
@@ -386,7 +386,7 @@
   display: inline-block;
   padding: 8px 16px;
   background: linear-gradient(135deg, var(--red), var(--orange));
-  color: white;
+  color: var(--text);
   border-radius: 20px;
   font-size: 0.875rem;
   font-weight: 600;
@@ -680,7 +680,7 @@
   position: absolute;
   width: 280px;
   height: 380px;
-  background: white;
+  background: var(--card);
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
@@ -827,7 +827,7 @@
   top: 50%;
   transform: translateY(-50%);
   background: linear-gradient(135deg, var(--red), var(--orange));
-  color: white;
+  color: var(--text);
   width: 40px;
   height: 40px;
   border-radius: 50%;

@@ -205,14 +205,14 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
       types: ['address'],
       componentRestrictions: { country: 'bg' },
       fields: ['formatted_address', 'geometry'],
-      bounds: circle.getBounds(), // Limit results to the circle bounds
+      bounds: circle.getBounds() || undefined, // Limit results to the circle bounds
       strictBounds: true // Strictly enforce the bounds
     })
 
     // Filter autocomplete predictions to only show addresses within 30km
     autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace()
-      if (place.formatted_address && place.geometry) {
+      if (place.formatted_address && place.geometry && place.geometry.location) {
         const placeLocation = place.geometry.location
         const distance = window.google.maps.geometry.spherical.computeDistanceBetween(
           new window.google.maps.LatLng(lovechCenter.lat, lovechCenter.lng),

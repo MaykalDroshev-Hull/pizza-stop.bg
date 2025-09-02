@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import CartIcon from './CartIcon'
-import { User, Phone, Clock, MapPin } from 'lucide-react'
+import { User, Phone, Clock, MapPin, LogOut } from 'lucide-react'
 import { isRestaurantOpen } from '../utils/openingHours'
 
 // Door Sign Component
@@ -26,6 +26,7 @@ function DoorSign() {
 
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(isRestaurantOpen())
+  const [user, setUser] = useState(null)
   
   // Update open/closed status every minute
   useEffect(() => {
@@ -41,6 +42,25 @@ export default function NavBar() {
     
     return () => clearInterval(interval)
   }, [])
+  
+  // Check if user is logged in
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData))
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+        localStorage.removeItem('user')
+      }
+    }
+  }, [])
+  
+  const handleLogout = () => {
+    localStorage.removeItem('user')
+    setUser(null)
+    window.location.href = '/user'
+  }
   
   return (
     <header>
@@ -70,9 +90,20 @@ export default function NavBar() {
           <a className="btn" href="/order">
             {isOpen ? 'ПОРЪЧАЙ СЕГА' : 'ПОРЪЧАЙ ЗА \r\n ПО-КЪСНО'}
           </a>
-          <a href="/user" className="account-icon" aria-label="Акаунт">
-            <User size={20} />
-          </a>
+          {user ? (
+            <div className="user-menu">
+              <a href="/dashboard" className="account-icon" aria-label="Dashboard">
+                <User size={20} />
+              </a>
+              <button onClick={handleLogout} className="logout-btn" aria-label="Logout">
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <a href="/user" className="account-icon" aria-label="Акаунт">
+              <User size={20} />
+            </a>
+          )}
           <CartIcon />
         </div>
       </nav>

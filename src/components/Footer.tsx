@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { FaFacebook, FaPhone, FaMapMarkerAlt, FaClock, FaCalendarAlt, FaCog } from 'react-icons/fa'
-import ThemeToggle from './ThemeToggle'
+import { Facebook, Settings, MapPin } from 'lucide-react'
 import styles from '../styles/Footer.module.css'
 import { isRestaurantOpen } from '../utils/openingHours'
 
@@ -66,7 +65,7 @@ export default function Footer() {
                   className={styles.socialLink}
                   aria-label="Facebook"
                 >
-                  <FaFacebook />
+                  <Facebook />
                 </a>
                 <a
                   href='https://www.google.com/maps/place/?q=place_id:ChIJr9f-_gndq0AR-_mEi-V-yl4'
@@ -75,7 +74,7 @@ export default function Footer() {
                   className={styles.socialLink}
                   aria-label="Google Maps"
                 >
-                  <FaGoogle />
+                  <MapPin />
                 </a>
               </div>
             </div>
@@ -84,7 +83,7 @@ export default function Footer() {
             <div className={styles.adminSection}>
               <h3 className={styles.adminTitle}>Администрация</h3>
               <Link href="/admin" className={styles.adminLink}>
-                <FaCog className={styles.adminIcon} />
+                <Settings className={styles.adminIcon} />
                 <span>Управление</span>
               </Link>
             </div>
