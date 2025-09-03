@@ -5,15 +5,9 @@ import { useLoading } from './LoadingContext'
 export default function LoadingOverlay() {
   const { isLoading } = useLoading()
 
-  // Debug logging
-  console.log('🔄 LoadingOverlay render - isLoading:', isLoading)
-
   if (!isLoading) {
-    console.log('❌ LoadingOverlay: not showing (isLoading = false)')
     return null
   }
-
-  console.log('✅ LoadingOverlay: showing (isLoading = true)')
 
   return (
     <>

@@ -158,7 +158,6 @@
 ### **Potential Enhancements**
 1. **Micro-Interactions**: Subtle button hover states
 2. **Loading Skeletons**: Better perceived performance
-3. **Dark/Light Toggle**: User preference option
 4. **Advanced Animations**: Scroll-triggered effects
 5. **Interactive Menu**: 3D food item previews
 

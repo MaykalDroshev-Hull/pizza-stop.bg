@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Plus, Minus } from 'lucide-react'
 import { useCart } from './CartContext'
+import { isRestaurantOpen } from '../utils/openingHours'
 
 interface CartModalProps {
   isOpen: boolean
@@ -327,7 +328,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize }: CartM
             disabled={!size && !selectedSize?.name}
             className="w-full bg-gradient-to-r from-red to-orange text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            Добави в количката
+            {isRestaurantOpen() ? 'Добави в количката' : 'Добави за по-късно'}
           </button>
         </div>
       </div>

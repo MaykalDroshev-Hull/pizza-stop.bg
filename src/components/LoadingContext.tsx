@@ -20,12 +20,9 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   }
 
   const stopLoading = () => {
-    console.log('🛑 LoadingContext: stopLoading() called')
     setIsLoading(false)
-    console.log('❌ LoadingContext: isLoading set to false')
   }
 
-  console.log('🔄 LoadingContext render - isLoading:', isLoading)
 
   return (
     <LoadingContext.Provider value={{ isLoading, startLoading, stopLoading }}>

@@ -1,0 +1,625 @@
+/* Delivery Area Section Styles */
+
+.deliveryAreaSection {
+  padding: 80px 0;
+  background: var(--bg);
+  position: relative;
+  z-index: 1;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  font-weight: 900;
+  text-align: center;
+  margin: 0 0 60px;
+  color: var(--text);
+  position: relative;
+}
+
+.sectionTitle::after {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--red), var(--orange));
+  border-radius: 2px;
+}
+
+/* Delivery Info Cards */
+.deliveryInfo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 60px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.infoCard {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 32px 24px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.infoCard:hover {
+  transform: translateY(-5px);
+}
+
+.infoIcon {
+  width: 48px;
+  height: 48px;
+  color: var(--yellow);
+  margin: 0 auto 20px;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(255, 209, 102, 0.3));
+}
+
+.infoCard h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: var(--yellow);
+}
+
+.infoCard p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.infoCard a {
+  color: var(--red);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.infoCard a:hover {
+  color: var(--orange);
+}
+
+/* Map Container */
+.mapContainer {
+  margin-bottom: 60px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.map {
+  width: 100%;
+  height: 500px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(220, 38, 38, 0.3);
+}
+
+/* Map Legend */
+.mapLegend {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.legendColor {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.legendItem span {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Delivery Details */
+.deliveryDetails {
+  max-width: 800px;
+  margin: 0 auto;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 32px;
+}
+
+.deliveryDetails h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 24px;
+  color: var(--yellow);
+  text-align: center;
+}
+
+.deliveryDetails ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.deliveryDetails li {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+  position: relative;
+  padding-left: 24px;
+}
+
+.deliveryDetails li:last-child {
+  border-bottom: none;
+}
+
+.deliveryDetails li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 16px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20,6 9,17 4,12'/%3E%3C/svg%3E") no-repeat center;
+  background-size: contain;
+  opacity: 0.8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .deliveryAreaSection {
+    padding: 60px 0;
+  }
+  
+  .sectionTitle {
+    font-size: 2rem;
+    margin-bottom: 40px;
+  }
+  
+  .deliveryInfo {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  
+  .infoCard {
+    padding: 24px 20px;
+  }
+  
+  .map {
+    height: 350px;
+  }
+  
+  .mapLegend {
+    gap: 20px;
+    margin-top: 20px;
+  }
+  
+  .legendItem {
+    padding: 10px 16px;
+  }
+  
+  .legendItem span {
+    font-size: 13px;
+  }
+  
+  .deliveryDetails {
+    padding: 24px 20px;
+    margin: 0 20px;
+  }
+  
+  .deliveryDetails h3 {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .sectionTitle {
+    font-size: 1.75rem;
+  }
+  
+  .map {
+    height: 300px;
+  }
+  
+  .deliveryDetails {
+    padding: 20px 16px;
+    margin: 0 16px;
+  }
+}
+
+/* Address Check Section */
+.addressCheckSection {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.addressCheckButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  color: var(--text);
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+}
+
+.addressCheckButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(220, 38, 38, 0.4);
+}
+
+.buttonIcon {
+  width: 24px;
+  height: 24px;
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 0;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+}
+
+.modalHeader h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.modalContent {
+  padding: 24px;
+}
+
+.modalContent p {
+  margin: 0 0 20px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.locationDetectionSection {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.locationButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--blue), #1d4ed8);
+  color: var(--text);
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.locationButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.locationButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.locationIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.locationHint {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.addressInput {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+/* Google Places Autocomplete Styling */
+.pac-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.pac-item {
+  padding: 12px 16px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.pac-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pac-item:last-child {
+  border-bottom: none;
+}
+
+.pac-item-selected {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.pac-matched {
+  font-weight: 700;
+  color: var(--red);
+}
+
+.checkButton {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  color: var(--text);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.checkButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+}
+
+.checkButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.successMessage,
+.errorMessage {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.successIcon,
+.errorIcon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.successIcon .icon,
+.errorIcon .icon {
+  width: 48px;
+  height: 48px;
+  color: var(--text);
+}
+
+.successIcon {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: var(--text);
+}
+
+.errorIcon {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: var(--text);
+}
+
+.successMessage h4,
+.errorMessage h4 {
+  margin: 0 0 12px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.successMessage h4 {
+  color: #10b981;
+}
+
+.errorMessage h4 {
+  color: #ef4444;
+}
+
+.successMessage p,
+.errorMessage p {
+  margin: 0 0 24px;
+  color: var(--muted);
+}
+
+.deliveryZoneInfo {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.zoneBadge {
+  display: inline-block;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: var(--text);
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.orderButton {
+  display: inline-block;
+  padding: 16px 32px;
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+}
+
+.orderButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(220, 38, 38, 0.4);
+}
+
+.actionButtons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.callButton,
+.areaButton {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.callButton {
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  color: var(--text);
+}
+
+.callButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+}
+
+.areaButton {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.areaButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--red);
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+  .modal {
+    margin: 20px;
+    max-height: calc(100vh - 40px);
+  }
+  
+  .addressInput {
+    flex-direction: column;
+  }
+  
+  .actionButtons {
+    flex-direction: column;
+  }
+  
+  .callButton,
+  .areaButton {
+    width: 100%;
+    text-align: center;
+  }
+}
