@@ -32,16 +32,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Convert email to lowercase for consistent database queries
+    const normalizedEmail = email.toLowerCase().trim()
+
     // Find user by email
     const { data: user, error: fetchError } = await supabase
       .from('Login')
-      .select('LoginID, Name, email, phone, Password, created_at')
-      .eq('email', email)
+      .select('LoginID, Name, email, phone, Password, LocationText, LocationCoordinates, addressInstructions, created_at')
+      .eq('email', normalizedEmail)
       .single()
-
+      
     if (fetchError || !user) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Невалиден имейл или парола' },
         { status: 401 }
       )
     }
@@ -51,9 +54,19 @@ export async function POST(request: NextRequest) {
 
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Невалиден имейл или парола' },
         { status: 401 }
       )
+    }
+
+    // Parse coordinates if available
+    let coordinates = null
+    if (user.LocationCoordinates) {
+      try {
+        coordinates = JSON.parse(user.LocationCoordinates)
+      } catch (error) {
+        console.warn('Failed to parse coordinates:', user.LocationCoordinates)
+      }
     }
 
     // Return user data (without password)
@@ -64,6 +77,9 @@ export async function POST(request: NextRequest) {
         name: user.Name,
         email: user.email,
         phone: user.phone,
+        LocationText: user.LocationText || '',
+        LocationCoordinates: user.LocationCoordinates || '',
+        addressInstructions: user.addressInstructions || '',
         created_at: user.created_at
       }
     })

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { isRestaurantOpen } from '@/utils/openingHours'
 import styles from './dashboard.module.css'
+import { useLoginID } from '@/components/LoginIDContext'
 
 interface User {
   id: string
@@ -31,17 +32,27 @@ interface Order {
   OrderDate: string
   TotalAmount: number
   Status: string
+  PaymentMethod: string
+  IsPaid: boolean
   DeliveryAddress: string
   Products: Array<{
     ProductName: string
+    ProductSize: string
     Quantity: number
-    Price: number
+    UnitPrice: number
+    TotalPrice: number
+    Addons: Array<{
+      Name: string
+      Price: number
+      AddonType: string
+    }>
+    Comment?: string
   }>
 }
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useLoginID()
   const [activeTab, setActiveTab] = useState('orders')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -65,8 +76,14 @@ export default function DashboardPage() {
   const [isOpen, setIsOpen] = useState(isRestaurantOpen())
 
   useEffect(() => {
-    checkAuth()
-  }, []) // Only run once on mount
+    // Don't redirect while auth is still loading
+    if (authLoading) return
+    
+    if (!isAuthenticated) {
+      router.push('/user')
+      return
+    }
+  }, [isAuthenticated, authLoading, router])
 
   useEffect(() => {
     if (user && !hasFetchedData) {
@@ -90,22 +107,7 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [])
 
-  const checkAuth = async () => {
-    try {
-      // Check if user is logged in (you might want to use a more robust auth check)
-      const userData = localStorage.getItem('user')
-      if (!userData) {
-        router.push('/user')
-        return
-      }
-      
-      const userObj = JSON.parse(userData)
-      setUser(userObj)
-    } catch (error) {
-      console.error('Auth check failed:', error)
-      router.push('/user')
-    }
-  }
+
 
   const fetchUserData = async () => {
     if (!user) return
@@ -150,7 +152,7 @@ export default function DashboardPage() {
         if (profileData.user) {
           // Update address data with existing user data
           setAddressData({
-            address: profileData.user.address || '',
+            address: profileData.user.LocationText || '',
             phone: profileData.user.phone || '',
             addressInstructions: profileData.user.addressInstructions || ''
           })
@@ -166,7 +168,7 @@ export default function DashboardPage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('user')
+    logout()
     router.push('/user')
   }
 
@@ -252,7 +254,7 @@ export default function DashboardPage() {
     router.push('/order')
   }
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className={styles.loadingContainer}>
         <div className={styles.loadingSpinner}></div>
@@ -334,15 +336,33 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <div className={styles.orderTotal}>
-                      ${favouriteOrder.TotalAmount.toFixed(2)}
+                      {favouriteOrder.TotalAmount.toFixed(2)} лв.
                     </div>
                   </div>
                   <div className={styles.orderProducts}>
                     {favouriteOrder.Products.map((product, index) => (
                       <div key={index} className={styles.productItem}>
-                        <span>{product.ProductName}</span>
-                        <span>x{product.Quantity}</span>
-                        <span>${product.Price.toFixed(2)}</span>
+                        <div className={styles.productMain}>
+                          <span className={styles.productName}>{product.ProductName}</span>
+                          <span className={styles.productSize}>{product.ProductSize}</span>
+                          <span className={styles.productQuantity}>x{product.Quantity}</span>
+                          <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} лв.</span>
+                        </div>
+                        {product.Addons && product.Addons.length > 0 && (
+                          <div className={styles.productAddons}>
+                            {product.Addons.map((addon, addonIndex) => (
+                              <span key={addonIndex} className={styles.addonItem}>
+                                {addon.Name}
+                                {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {product.Comment && (
+                          <div className={styles.productComment}>
+                            <em>"{product.Comment}"</em>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -377,28 +397,53 @@ export default function DashboardPage() {
                           <p className={styles.orderStatus}>{order.Status}</p>
                         </div>
                         <div className={styles.orderTotal}>
-                          ${order.TotalAmount.toFixed(2)}
+                          {order.TotalAmount.toFixed(2)} лв.
                         </div>
                       </div>
                       <div className={styles.orderProducts}>
-                        {order.Products.slice(0, 3).map((product, index) => (
+                        {order.Products.slice(0, 2).map((product, index) => (
                           <div key={index} className={styles.productItem}>
-                            <span>{product.ProductName}</span>
-                            <span>x{product.Quantity}</span>
-                            <span>${product.Price.toFixed(2)}</span>
+                            <div className={styles.productMain}>
+                              <span className={styles.productName}>{product.ProductName}</span>
+                              <span className={styles.productSize}>{product.ProductSize}</span>
+                              <span className={styles.productQuantity}>x{product.Quantity}</span>
+                              <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} лв.</span>
+                            </div>
+                            {product.Addons && product.Addons.length > 0 && (
+                              <div className={styles.productAddons}>
+                                {product.Addons.slice(0, 2).map((addon, addonIndex) => (
+                                  <span key={addonIndex} className={styles.addonItem}>
+                                    {addon.Name}
+                                    {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                                  </span>
+                                ))}
+                                {product.Addons.length > 2 && (
+                                  <span className={styles.moreAddons}>+{product.Addons.length - 2} още</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
-                        {order.Products.length > 3 && (
-                          <p className={styles.moreItems}>+{order.Products.length - 3} още продукти</p>
+                        {order.Products.length > 2 && (
+                          <p className={styles.moreItems}>+{order.Products.length - 2} още продукти</p>
                         )}
                       </div>
-                                             <button 
-                         onClick={() => handleOrderAgain(order)}
-                         className={styles.orderAgainBtn}
-                       >
-                         <Plus size={20} />
-                         Поръчай отново
-                       </button>
+                      <div className={styles.orderActions}>
+                        <button 
+                          onClick={() => router.push(`/order-tracking?orderId=${order.OrderID}`)}
+                          className={styles.followOrderBtn}
+                        >
+                          <Clock size={16} />
+                          Следи поръчката
+                        </button>
+                        <button 
+                          onClick={() => handleOrderAgain(order)}
+                          className={styles.orderAgainBtn}
+                        >
+                          <Plus size={16} />
+                          Поръчай отново
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { ProductAddon } from '../lib/menuData'
 
 interface CartItem {
@@ -29,7 +29,21 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
+  // Initialize cart from localStorage if available
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('pizza-stop-cart')
+      if (savedCart) {
+        try {
+          return JSON.parse(savedCart)
+        } catch (error) {
+          console.error('Error parsing saved cart:', error)
+          localStorage.removeItem('pizza-stop-cart')
+        }
+      }
+    }
+    return []
+  })
 
   // Calculate addon cost for an item (first 3 free, others cost money)
   const calculateAddonCost = (addons: ProductAddon[]) => {
@@ -81,10 +95,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => {
     setItems([])
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('pizza-stop-cart')
+    }
   }
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
   const totalPrice = items.reduce((sum, item) => sum + getItemTotalPrice(item), 0)
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pizza-stop-cart', JSON.stringify(items))
+    }
+  }, [items])
 
   return (
     <CartContext.Provider value={{

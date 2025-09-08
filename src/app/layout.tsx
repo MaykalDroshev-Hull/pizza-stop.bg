@@ -6,6 +6,7 @@ import LoadingOverlay from '../components/LoadingOverlay'
 import NavBar from '../components/NavBar'
 import Footer from '../components/Footer'
 import { CartProvider } from '../components/CartContext'
+import { LoginIDProvider } from '../components/LoginIDContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -49,6 +50,7 @@ export const metadata: Metadata = {
   verification: {
     google: 'your-google-verification-code',
   },
+  manifest: '/site.webmanifest',
 }
 
 export default function RootLayout({
@@ -82,16 +84,18 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
           <LoadingProvider>
-            <CartProvider>
-              <div className="min-h-screen bg-bg text-text">
-                <NavBar />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-                <LoadingOverlay />
-              </div>
-            </CartProvider>
+            <LoginIDProvider>
+              <CartProvider>
+                <div className="min-h-screen bg-bg text-text">
+                  <NavBar />
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <Footer />
+                  <LoadingOverlay />
+                </div>
+              </CartProvider>
+            </LoginIDProvider>
           </LoadingProvider>
       </body>
     </html>

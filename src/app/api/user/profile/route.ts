@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
         email,
         phone,
         LocationText,
+        LocationCoordinates,
         addressInstructions,
         created_at
       `)
@@ -47,6 +48,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Parse coordinates if available
+    let coordinates = null
+    if (user.LocationCoordinates) {
+      try {
+        coordinates = JSON.parse(user.LocationCoordinates)
+      } catch (error) {
+        console.warn('Failed to parse coordinates:', user.LocationCoordinates)
+      }
+    }
+
     // Return user profile with address information
     return NextResponse.json({
       user: {
@@ -54,7 +65,8 @@ export async function GET(request: NextRequest) {
         name: user.Name,
         email: user.email,
         phone: user.phone,
-        address: user.LocationText || '',
+        LocationText: user.LocationText || '',
+        LocationCoordinates: user.LocationCoordinates || '',
         addressInstructions: user.addressInstructions || '',
         created_at: user.created_at
       }

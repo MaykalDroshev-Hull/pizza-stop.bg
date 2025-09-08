@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-// Create Supabase client with service role key for admin operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-})
+import { createServerClient } from '@/lib/supabase'
 
 // Type definitions for the database response
-interface OrderProductData {
+interface LkOrderProductData {
   LkOrderProductID: number
   ProductID: number
+  ProductName: string
+  ProductSize: string
+  Quantity: number
+  UnitPrice: number
+  TotalPrice: number
+  Addons: string | null
+  Comment: string | null
 }
 
 interface OrderData {
@@ -27,7 +23,10 @@ interface OrderData {
   OrderStatusID: number
   RfPaymentMethodID: number
   IsPaid: boolean
-  LkOrderProduct: OrderProductData[]
+  LkOrderProduct: LkOrderProductData[]
+  RfOrderStatus: {
+    OrderStatus: string
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -51,7 +50,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch user's orders with product details
+    // Create server-side Supabase client
+    const supabase = createServerClient()
+
+    // Fetch user's orders with complete details
     const { data: orders, error: ordersError } = await supabase
       .from('Order')
       .select(`
@@ -65,7 +67,17 @@ export async function GET(request: NextRequest) {
         IsPaid,
         LkOrderProduct (
           LkOrderProductID,
-          ProductID
+          ProductID,
+          ProductName,
+          ProductSize,
+          Quantity,
+          UnitPrice,
+          TotalPrice,
+          Addons,
+          Comment
+        ),
+        RfOrderStatus (
+          OrderStatus
         )
       `)
       .eq('LoginID', userIdNum)
@@ -85,19 +97,58 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Get unique payment method IDs to fetch payment method names
+    const paymentMethodIds = [...new Set(orders?.map(order => order.RfPaymentMethodID) || [])]
+    
+    // Fetch payment method names
+    const { data: paymentMethods, error: paymentMethodsError } = await supabase
+      .from('RfPaymentMethod')
+      .select('PaymentMethodID, PaymentMethod')
+      .in('PaymentMethodID', paymentMethodIds)
+    
+    // Create a lookup map for payment methods
+    const paymentMethodMap = new Map()
+    if (paymentMethods) {
+      paymentMethods.forEach(pm => {
+        paymentMethodMap.set(pm.PaymentMethodID, pm.PaymentMethod)
+      })
+    }
+
     // Transform the data to match the expected format
-    const transformedOrders = (orders as any[])?.map(order => ({
-      OrderID: order.OrderID.toString(),
-      OrderDate: order.OrderDT,
-      TotalAmount: 0, // Not available in current schema
-      Status: 'Completed', // Not available in current schema  
-      DeliveryAddress: order.OrderLocation,
-      Products: order.LkOrderProduct?.map((item: any) => ({
-        ProductName: `Product ${item.ProductID}`,
-        Quantity: 1, // Not available in current schema
-        Price: 0 // Not available in current schema
-      })) || []
-    })) || []
+    const transformedOrders = (orders as OrderData[])?.map(order => {
+      // Calculate total amount from order items
+      const totalAmount = order.LkOrderProduct?.reduce((sum, item) => sum + Number(item.TotalPrice), 0) || 0
+      
+      return {
+        OrderID: order.OrderID.toString(),
+        OrderDate: order.OrderDT,
+        TotalAmount: totalAmount,
+        Status: order.RfOrderStatus?.OrderStatus || 'Unknown',
+        PaymentMethod: paymentMethodMap.get(order.RfPaymentMethodID) || 'Unknown',
+        IsPaid: order.IsPaid,
+        DeliveryAddress: order.OrderLocation,
+        Products: order.LkOrderProduct?.map(item => {
+          let addons = []
+          if (item.Addons) {
+            try {
+              addons = JSON.parse(item.Addons)
+            } catch (e) {
+              console.warn('Failed to parse addons:', item.Addons)
+            }
+          }
+          
+          return {
+            ProductName: item.ProductName,
+            ProductSize: item.ProductSize,
+            Quantity: item.Quantity,
+            UnitPrice: Number(item.UnitPrice),
+            TotalPrice: Number(item.TotalPrice),
+            Addons: addons,
+            Comment: item.Comment
+          }
+        }) || []
+      }
+    }) || []
 
     return NextResponse.json({
       orders: transformedOrders,

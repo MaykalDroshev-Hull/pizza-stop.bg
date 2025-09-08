@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ShoppingCart, X, Trash2 } from 'lucide-react'
 import { useCart } from './CartContext'
 import { isRestaurantOpen } from '../utils/openingHours'
@@ -8,6 +8,12 @@ import { isRestaurantOpen } from '../utils/openingHours'
 export default function CartIcon() {
   const { items, removeItem, totalItems, totalPrice } = useCart()
   const [isOpen, setIsOpen] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Prevent hydration mismatch by only showing cart badge after hydration
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   return (
     <>
@@ -17,7 +23,7 @@ export default function CartIcon() {
         aria-label="Количка"
       >
         <ShoppingCart size={24} />
-        {totalItems > 0 && (
+        {isHydrated && totalItems > 0 && (
           <span className="cart-badge">
             {totalItems > 99 ? '99+' : totalItems}
           </span>
