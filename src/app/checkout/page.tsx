@@ -843,19 +843,19 @@ export default function CheckoutPage() {
                    {/* Order Time Info */}
                    <div className="flex items-center justify-between text-sm text-muted mb-3">
                      <span>Време за поръчка:</span>
-                     <span className="text-text">
+                     <span className="text-white">
                                              {orderTime.type === null ? (
-                        <span className="text-muted flex items-center gap-1">
+                        <span className="text-white flex items-center gap-1">
                           <HelpCircle size={16} />
                           Не е избрано
                         </span>
                       ) : orderTime.type === 'immediate' ? (
-                        <span className="text-orange flex items-center gap-1">
+                        <span className="text-white flex items-center gap-1">
                           <Clock size={16} />
                           Веднага
                         </span>
                       ) : (
-                        <span className="text-orange flex items-center gap-1">
+                        <span className="text-white flex items-center gap-1">
                           <Calendar size={16} />
                           {orderTime.scheduledTime?.toLocaleDateString('bg-BG')} в {orderTime.scheduledTime?.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -865,7 +865,7 @@ export default function CheckoutPage() {
                    
                    <div className="flex items-center justify-between text-lg font-bold">
                      <span>Обща сума:</span>
-                     <span className="text-orange">{totalPrice.toFixed(2)} лв.</span>
+                     <span className="text-white">{totalPrice.toFixed(2)} лв.</span>
                    </div>
                  </div>
               </>
@@ -1415,13 +1415,13 @@ export default function CheckoutPage() {
               {/* Order Time */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted">Време за поръчка:</span>
-                <span className="text-text">
+                <span className="text-white">
                   {orderTime.type === null ? (
-                    <span className="text-muted">Не е избрано</span>
+                    <span className="text-white">Не е избрано</span>
                   ) : orderTime.type === 'immediate' ? (
-                    <span className="text-orange">Веднага</span>
+                    <span className="text-white">Веднага</span>
                   ) : (
-                    <span className="text-orange">
+                    <span className="text-white">
                       {orderTime.scheduledTime?.toLocaleDateString('bg-BG')} в {orderTime.scheduledTime?.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   )}
@@ -1431,11 +1431,11 @@ export default function CheckoutPage() {
               {/* Collection/Delivery Status */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted">Начин на получаване:</span>
-                <span className="text-text">
+                <span className="text-white">
                   {isCollection ? (
-                    <span className="text-orange">Вземане от ресторанта</span>
+                    <span className="text-white">Вземане от ресторанта</span>
                   ) : (
-                    <span className="text-orange">Доставка</span>
+                    <span className="text-white">Доставка</span>
                   )}
                 </span>
               </div>
@@ -1444,13 +1444,13 @@ export default function CheckoutPage() {
               {!isCollection && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">Адрес:</span>
-                  <span className="text-text">
+                  <span className="text-white">
                     {!customerInfo.address ? (
-                      <span className="text-muted">Не е въведен</span>
+                      <span className="text-white">Не е въведен</span>
                     ) : addressConfirmed ? (
-                      <span className="text-orange">Потвърден</span>
+                      <span className="text-white">Потвърден</span>
                     ) : (
-                      <span className="text-orange">Не е потвърден</span>
+                      <span className="text-white">Не е потвърден</span>
                     )}
                   </span>
                 </div>
@@ -1460,12 +1460,7 @@ export default function CheckoutPage() {
               {customerInfo.coordinates && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">Зона за доставка:</span>
-                  <span className={`font-medium ${
-                    addressZone === 'yellow' ? 'text-orange' :
-                    addressZone === 'blue' ? 'text-orange' :
-                    addressZone === 'outside' ? 'text-orange' :
-                    'text-muted'
-                  }`}>
+                  <span className="text-white font-medium">
                     {addressZone === 'yellow' ? 'Жълта зона (3 лв.)' :
                      addressZone === 'blue' ? 'Синя зона (7 лв.)' :
                      addressZone === 'outside' ? 'Извън зоната' :
@@ -1477,18 +1472,18 @@ export default function CheckoutPage() {
               {/* Order Total */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted">Сума на продуктите:</span>
-                <span className="text-text">{totalPrice.toFixed(2)} лв.</span>
+                <span className="text-white">{totalPrice.toFixed(2)} лв.</span>
               </div>
 
               {/* Delivery Cost */}
               {!isCollection && deliveryCost !== null && addressZone !== 'outside' && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">Доставка:</span>
-                  <span className="text-text">
+                  <span className="text-white">
                     {deliveryCost === 0 ? (
-                      <span className="text-orange">Безплатна</span>
+                      <span className="text-white">Безплатна</span>
                     ) : (
-                      <span className="text-orange">{deliveryCost.toFixed(2)} лв.</span>
+                      <span className="text-white">{deliveryCost.toFixed(2)} лв.</span>
                     )}
                   </span>
                 </div>
@@ -1498,7 +1493,7 @@ export default function CheckoutPage() {
               <div className="border-t border-white/12 pt-3">
                 <div className="flex items-center justify-between text-lg font-bold">
                   <span>Обща сума:</span>
-                  <span className="text-orange">
+                  <span className="text-white">
                     {(totalPrice + (isCollection ? 0 : (deliveryCost || 0))).toFixed(2)} лв.
                   </span>
                 </div>

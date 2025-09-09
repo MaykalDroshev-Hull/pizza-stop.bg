@@ -57,8 +57,13 @@ export default function ResetPasswordPage() {
       return
     }
 
-    if (passwordData.password.length < 6) {
-      setError('Паролата трябва да бъде поне 6 символа дълга')
+    if (passwordData.password.length < 8) {
+      setError('Паролата трябва да е поне 8 символа дълга')
+      return
+    }
+
+    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(passwordData.password)) {
+      setError('Паролата трябва да съдържа поне една буква и една цифра')
       return
     }
 
