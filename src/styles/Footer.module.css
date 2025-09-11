@@ -323,6 +323,13 @@
   text-align: center;
 }
 
+.adminLinks {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* Payment Methods */
 .paymentMethods {
   display: flex;
@@ -526,6 +533,10 @@
   
   .adminSection {
     margin: 1rem 0;
+  }
+  
+  .adminLinks {
+    gap: 0.5rem;
   }
   
   .paymentMethods {
