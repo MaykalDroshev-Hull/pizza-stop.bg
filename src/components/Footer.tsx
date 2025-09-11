@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Facebook, Settings, MapPin } from 'lucide-react'
+import { Facebook, Settings, MapPin, Car, Pizza } from 'lucide-react'
 import styles from '../styles/Footer.module.css'
 import { isRestaurantOpen } from '../utils/openingHours'
 
@@ -82,10 +82,20 @@ export default function Footer() {
             {/* Administration */}
             <div className={styles.adminSection}>
               <h3 className={styles.adminTitle}>Администрация</h3>
-              <Link href="/admin" className={styles.adminLink}>
-                <Settings className={styles.adminIcon} />
-                <span>Управление</span>
-              </Link>
+              <div className={styles.adminLinks}>
+                <Link href="/admin" className={styles.adminLink}>
+                  <Settings className={styles.adminIcon} />
+                  <span>Управление</span>
+                </Link>
+                <Link href="/delivery" className={styles.adminLink}>
+                  <Car className={styles.adminIcon} />
+                  <span>Доставка</span>
+                </Link>
+                <Link href="/kitchen" className={styles.adminLink}>
+                  <Pizza className={styles.adminIcon} />
+                  <span>Кухня</span>
+                </Link>
+              </div>
             </div>
             
             {/* Payment Methods */}

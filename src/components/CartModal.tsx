@@ -322,13 +322,25 @@ export default function CartModal({ isOpen, onClose, item, selectedSize }: CartM
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-white/12">
+        <div className="p-6 border-t border-white/12 space-y-3">
           <button
             onClick={handleAddToCart}
             disabled={!size && !selectedSize?.name}
             className="w-full bg-gradient-to-r from-red to-orange text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {isRestaurantOpen() ? 'Добави в количката' : 'Добави за по-късно'}
+          </button>
+          
+          {/* Proceed to Checkout Button - Only show if there are items in cart */}
+          <button
+            onClick={() => {
+              onClose()
+              // Navigate to checkout
+              window.location.href = '/checkout'
+            }}
+            className="w-full bg-white/10 border border-white/20 text-text py-3 px-6 rounded-xl font-medium transition-all hover:bg-white/20 hover:border-white/30"
+          >
+            🛒 Отиди към количката
           </button>
         </div>
       </div>

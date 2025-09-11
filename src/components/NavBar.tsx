@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import CartIcon from './CartIcon'
 import { User, Phone, Clock, MapPin, LogOut } from 'lucide-react'
 import { isRestaurantOpen } from '../utils/openingHours'
+import { useLoginID } from './LoginIDContext'
 
 // Door Sign Component
 function DoorSign() {
@@ -26,7 +27,7 @@ function DoorSign() {
 
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(isRestaurantOpen())
-  const [user, setUser] = useState(null)
+  const { user, logout } = useLoginID()
   
   // Update open/closed status every minute
   useEffect(() => {
@@ -43,22 +44,8 @@ export default function NavBar() {
     return () => clearInterval(interval)
   }, [])
   
-  // Check if user is logged in
-  useEffect(() => {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      try {
-        setUser(JSON.parse(userData))
-      } catch (error) {
-        console.error('Error parsing user data:', error)
-        localStorage.removeItem('user')
-      }
-    }
-  }, [])
-  
   const handleLogout = () => {
-    localStorage.removeItem('user')
-    setUser(null)
+    logout()
     window.location.href = '/user'
   }
   
