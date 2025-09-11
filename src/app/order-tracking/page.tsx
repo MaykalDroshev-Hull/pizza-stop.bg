@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Clock, MapPin, Phone, CreditCard, Truck, Store, CheckCircle, AlertCircle, Package, ChefHat, Utensils } from 'lucide-react'
 
@@ -38,7 +38,7 @@ interface OrderStatus {
   completed: boolean
 }
 
-export default function OrderTrackingPage() {
+function OrderTrackingContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
   
@@ -403,5 +403,20 @@ export default function OrderTrackingPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function OrderTrackingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-red/5 via-orange/5 to-yellow/5 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange mx-auto mb-4"></div>
+          <p className="text-text">Зареждане...</p>
+        </div>
+      </div>
+    }>
+      <OrderTrackingContent />
+    </Suspense>
   )
 }

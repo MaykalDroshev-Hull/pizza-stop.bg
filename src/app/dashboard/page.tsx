@@ -487,7 +487,7 @@ export default function DashboardPage() {
                 </div>
                 <div className={styles.infoRow}>
                                      <label>Член от:</label>
-                  <span>{new Date(user.created_at).toLocaleDateString()}</span>
+                  <span>{user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Не е налична'}</span>
                 </div>
               </div>
             </section>

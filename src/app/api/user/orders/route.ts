@@ -26,7 +26,7 @@ interface OrderData {
   LkOrderProduct: LkOrderProductData[]
   RfOrderStatus: {
     OrderStatus: string
-  }
+  }[]
 }
 
 export async function GET(request: NextRequest) {
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
         OrderID: order.OrderID.toString(),
         OrderDate: order.OrderDT,
         TotalAmount: totalAmount,
-        Status: order.RfOrderStatus?.OrderStatus || 'Unknown',
+        Status: order.RfOrderStatus?.[0]?.OrderStatus || 'Unknown',
         PaymentMethod: paymentMethodMap.get(order.RfPaymentMethodID) || 'Unknown',
         IsPaid: order.IsPaid,
         DeliveryAddress: order.OrderLocation,
