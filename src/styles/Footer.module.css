@@ -352,7 +352,7 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .paymentIcon {
@@ -360,8 +360,9 @@
   width: auto;
   filter: brightness(0.9);
   transition: all 0.3s ease;
-  border-radius: 4px;
-  padding: 0 8px;
+  border-radius: 12px;
+  padding: 0 16px;
+  background-color: white;
 }
 
 .paymentIcon:hover {
@@ -417,7 +418,7 @@
 
 .bottomContent {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
@@ -429,8 +430,37 @@
   margin: 0;
 }
 
+.creatorSection {
+  display: flex;
+  align-items: center;
+}
+
+.creatorText {
+  color: #999999;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.creatorLink {
+  color: #f97316;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.creatorLink:hover {
+  color: #ea580c;
+  text-decoration: underline;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+  .bottomContent {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
   .footerContent {
     padding: 30px 0 20px;
   }

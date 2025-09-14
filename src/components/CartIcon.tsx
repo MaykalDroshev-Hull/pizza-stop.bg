@@ -33,11 +33,17 @@ export default function CartIcon() {
       {/* Cart Preview Modal */}
       {isOpen && (
         <div className="fixed inset-0 z-50">
-          {/* Backdrop - only covers content below navbar */}
-          <div className="absolute top-16 left-0 right-0 bottom-0 bg-black/50 backdrop-blur-sm"></div>
+          {/* Backdrop - covers entire screen with blur */}
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-md"
+            onClick={() => setIsOpen(false)}
+          ></div>
           
-          {/* Cart Modal - positioned below navbar */}
-          <div className="absolute top-16 right-0 bg-card border border-white/12 rounded-2xl max-w-md w-full max-h-[calc(100vh-4rem)] overflow-y-auto m-4 shadow-2xl">
+          {/* Cart Modal - positioned below navbar on mobile, under cart icon on PC */}
+          <div 
+            className="absolute top-16 right-0 md:top-20 md:right-4 bg-card border border-white/12 rounded-2xl max-w-md w-full max-h-[calc(100vh-4rem)] max-md:max-h-[75vh] overflow-y-auto m-4 md:m-0 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/12">
               <h2 className="text-xl font-bold text-text">Количка</h2>

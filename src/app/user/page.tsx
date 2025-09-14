@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import { User, Mail, Lock, Phone, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import styles from './user.module.css'
 import { useLoginID } from '../../components/LoginIDContext'
+import { useLoading } from '../../components/LoadingContext'
 
 export default function UserPage() {
   const { login, user } = useLoginID()
+  const { isLoading, startLoading, stopLoading } = useLoading()
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [returnUrl, setReturnUrl] = useState<string | null>(null)
@@ -68,7 +69,6 @@ export default function UserPage() {
   })
 
   // Loading overlay state
-  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false)
 
   // Comprehensive email validation function
   const validateEmail = (email: string) => {
@@ -216,7 +216,7 @@ export default function UserPage() {
       }
     }
     
-    setIsLoading(true)
+    startLoading()
     setError('')
     setSuccess('')
 
@@ -234,9 +234,6 @@ export default function UserPage() {
       }
 
       console.log('Login successful:', data.user)
-      
-      // Show loading overlay
-      setShowLoadingOverlay(true)
       
       // Fetch complete profile data including coordinates
       try {
@@ -270,7 +267,7 @@ export default function UserPage() {
     } catch (err: any) {
       setError(err.message || 'Невалиден имейл или парола')
     } finally {
-      setIsLoading(false)
+      stopLoading()
     }
   }
 
@@ -290,7 +287,7 @@ export default function UserPage() {
       }
     }
     
-    setIsLoading(true)
+    startLoading()
     setError('')
     setSuccess('')
 
@@ -323,7 +320,7 @@ export default function UserPage() {
     } catch (err: any) {
       setError(err.message || 'Грешка при регистрация')
     } finally {
-      setIsLoading(false)
+      stopLoading()
     }
   }
 
@@ -337,7 +334,7 @@ export default function UserPage() {
 
         {/* Login Form */}
         <div className={`${styles.formBox} ${styles.login}`}>
-          <h2 className={`${styles.title} ${styles.animation}`} style={{ '--i': 0, '--j': 21 } as React.CSSProperties}>
+          <h2 className={`${styles.title} ${styles.animation}`} style={{ '--i': 0, '--j': 21, paddingTop: '20px' } as React.CSSProperties}>
             Вход
           </h2>
 
@@ -572,17 +569,6 @@ export default function UserPage() {
 
       </div>
 
-      {/* Loading Overlay */}
-      {showLoadingOverlay && (
-        <div className={styles.loadingOverlay}>
-          <div className={styles.loadingContent}>
-            <div className={styles.loadingText}>Моля Изчакайте</div>
-            <div className={styles.loaderContainer}>
-              <div className={styles.loader}></div>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   )
 }

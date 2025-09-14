@@ -18,6 +18,7 @@ import {
 import { isRestaurantOpen } from '@/utils/openingHours'
 import styles from './dashboard.module.css'
 import { useLoginID } from '@/components/LoginIDContext'
+import { useLoading } from '@/components/LoadingContext'
 
 interface User {
   id: string
@@ -53,8 +54,8 @@ interface Order {
 export default function DashboardPage() {
   const router = useRouter()
   const { user, isAuthenticated, isLoading: authLoading, logout } = useLoginID()
+  const { startLoading, stopLoading } = useLoading()
   const [activeTab, setActiveTab] = useState('orders')
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [orders, setOrders] = useState<Order[]>([])
   const [favouriteOrder, setFavouriteOrder] = useState<Order | null>(null)
@@ -113,7 +114,7 @@ export default function DashboardPage() {
     if (!user) return
     
     try {
-      setIsLoading(true)
+      startLoading()
       
       // Fetch user's orders
       const ordersResponse = await fetch(`/api/user/orders?userId=${user.id}`)
@@ -163,7 +164,7 @@ export default function DashboardPage() {
       console.error('Failed to fetch user data:', error)
       setError('Грешка при зареждане на данните')
     } finally {
-      setIsLoading(false)
+      stopLoading()
     }
   }
 
@@ -254,13 +255,8 @@ export default function DashboardPage() {
     router.push('/order')
   }
 
-  if (isLoading || authLoading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.loadingSpinner}></div>
-        <p>Зареждане на вашия панел...</p>
-      </div>
-    )
+  if (authLoading) {
+    return null
   }
 
   if (!user) {
@@ -329,7 +325,7 @@ export default function DashboardPage() {
                 <div className={styles.orderCard}>
                   <div className={styles.orderHeader}>
                     <div>
-                      <h3>Order #{favouriteOrder.OrderID}</h3>
+                      <h3>Поръчка #{favouriteOrder.OrderID}</h3>
                       <p className={styles.orderDate}>
                         <Clock size={16} />
                         {new Date(favouriteOrder.OrderDate).toLocaleDateString()}
@@ -389,7 +385,7 @@ export default function DashboardPage() {
                     <div key={order.OrderID} className={styles.orderCard}>
                       <div className={styles.orderHeader}>
                         <div>
-                          <h3>Order #{order.OrderID}</h3>
+                          <h3>Поръчка #{order.OrderID}</h3>
                           <p className={styles.orderDate}>
                             <Clock size={16} />
                             {new Date(order.OrderDate).toLocaleDateString()}

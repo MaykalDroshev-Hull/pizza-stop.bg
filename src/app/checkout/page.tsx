@@ -13,6 +13,7 @@ import { useCart } from '../../components/CartContext'
 import AddressSelectionModal from '../../components/AddressSelectionModal'
 import { isRestaurantOpen } from '../../utils/openingHours'
 import { useLoginID } from '../../components/LoginIDContext'
+import { encryptOrderId } from '../../utils/orderEncryption'
 
 interface CustomerInfo {
   name: string
@@ -599,14 +600,14 @@ export default function CheckoutPage() {
          return
        }
        
-       // Check if within 72 hours
+       // Check if within 5 days (120 hours)
        const timeDiff = scheduledTime.getTime() - now.getTime()
        const hoursDiff = timeDiff / (1000 * 60 * 60)
        
-       if (hoursDiff > 72) {
-         alert('❌ Поръчките могат да се правят максимум 72 часа напред')
-         return
-       }
+      if (hoursDiff > 120) {
+        alert('❌ Поръчките могат да се правят максимум 5 дни напред')
+        return
+      }
        
        // Check if within business hours (11:00-23:00)
        const hour = scheduledTime.getHours()
@@ -688,8 +689,9 @@ export default function CheckoutPage() {
        // Clear the cart after successful order
        clearCart()
        
-       // Redirect to order success page
-       window.location.href = `/order-success?orderId=${result.orderId}`
+       // Redirect to order success page with encrypted order ID
+       const encryptedOrderId = encryptOrderId(result.orderId.toString())
+       window.location.href = `/order-success?orderId=${encryptedOrderId}`
      } else {
        throw new Error(result.error || 'Failed to confirm order')
      }
@@ -955,14 +957,14 @@ export default function CheckoutPage() {
                 <Calendar size={20} className="text-orange" />
                 <div className="flex-1">
                   <span className="font-medium">Поръчай за по-късно</span>
-                  <p className="text-sm text-muted">Избери време за доставка (до 72 часа напред)</p>
+                  <p className="text-sm text-muted">Избери време за доставка (до 5 дни напред)</p>
                 </div>
               </label>
 
               {/* Date and Time Picker for Scheduled Orders */}
               {orderTime.type === 'scheduled' && (
                 <div className="p-4 bg-white/6 border border-white/12 rounded-xl">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-2 lg:grid-cols-2 gap-6 max-md:px-4">
                     <div className="flex-1">
                       <label className="block text-sm font-medium text-text mb-3 flex items-center gap-2">
                         <Calendar size={16} />
@@ -986,13 +988,30 @@ export default function CheckoutPage() {
                       <input
                         type="date"
                         min={new Date().toISOString().split('T')[0]}
-                        max={new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                        max={new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                           value={orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime.toISOString().split('T')[0] : ''}
                         onChange={(e) => {
                           const selectedDate = new Date(e.target.value)
-                            if (isNaN(selectedDate.getTime())) return
-                            
-                            const currentTime = orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime : new Date()
+                          if (isNaN(selectedDate.getTime())) return
+                          
+                          // Validate date range (today to 5 days ahead)
+                          const today = new Date()
+                          today.setHours(0, 0, 0, 0) // Start of today
+                          const maxDate = new Date()
+                          maxDate.setDate(maxDate.getDate() + 5) // 5 days = 120 hours
+                          maxDate.setHours(23, 59, 59, 999) // End of day
+                          
+                          if (selectedDate < today) {
+                            alert('Не можете да изберете дата в миналото. Моля, изберете днешна дата или по-късна.')
+                            return
+                          }
+                          
+                          if (selectedDate > maxDate) {
+                            alert('Поръчките могат да се правят до 5 дни напред. Моля, изберете по-ранна дата.')
+                            return
+                          }
+                          
+                          const currentTime = orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime : new Date()
                           selectedDate.setHours(currentTime.getHours())
                           selectedDate.setMinutes(currentTime.getMinutes())
                           setOrderTime(prev => ({ ...prev, scheduledTime: selectedDate }))
@@ -1014,8 +1033,8 @@ export default function CheckoutPage() {
                             }
                           }}
                         />
-                        {/* Calendar icon overlay */}
-                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                        {/* Calendar icon overlay - hidden on mobile */}
+                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none max-md:hidden">
                           <Calendar size={20} className="text-orange" />
                         </div>
                       </div>
@@ -1055,13 +1074,24 @@ export default function CheckoutPage() {
                             return
                           }
                           
-                            const currentDate = orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime : new Date()
+                          const currentDate = orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime : new Date()
                           currentDate.setHours(hours, minutes, 0, 0)
+                          
+                          // If selecting time for today, validate it's not in the past
+                          const today = new Date()
+                          if (currentDate.toDateString() === today.toDateString()) {
+                            const now = new Date()
+                            if (currentDate < now) {
+                              alert('Не можете да изберете време в миналото. Моля, изберете по-късно време.')
+                              return
+                            }
+                          }
+                          
                           setOrderTime(prev => ({ ...prev, scheduledTime: currentDate }))
                         }}
-                          className="w-full p-4 bg-white/8 border border-white/20 rounded-xl text-text focus:border-orange focus:ring-2 focus:ring-orange/20 focus:outline-none transition-all cursor-pointer"
+                        className="w-full p-4 bg-white/8 border border-white/20 rounded-xl text-text focus:border-orange focus:ring-2 focus:ring-orange/20 focus:outline-none transition-all cursor-pointer"
                         required
-                          onKeyDown={(e) => {
+                        onKeyDown={(e) => {
                             // Allow arrow keys, tab, enter, and escape for navigation
                             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
                               return
@@ -1075,9 +1105,21 @@ export default function CheckoutPage() {
                               e.preventDefault()
                             }
                           }}
+                          onBlur={(e) => {
+                            // Re-validate time on blur
+                            const [hours, minutes] = e.target.value.split(':').map(Number)
+                            if (isNaN(hours) || isNaN(minutes)) return
+                            
+                            if (hours < 11 || hours >= 23) {
+                              // Reset to valid time if invalid
+                              const currentDate = orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime : new Date()
+                              currentDate.setHours(11, 0, 0, 0)
+                              setOrderTime(prev => ({ ...prev, scheduledTime: currentDate }))
+                            }
+                          }}
                         />
-                        {/* Clock icon overlay */}
-                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                        {/* Clock icon overlay - hidden on mobile */}
+                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none max-md:hidden">
                           <Clock size={20} className="text-orange" />
                         </div>
                       </div>
@@ -1085,7 +1127,7 @@ export default function CheckoutPage() {
                   </div>
                   <div className="mt-3 text-xs text-muted flex items-center gap-2">
                     <Lightbulb size={14} className="text-blue" />
-                    <span>Работно време: 11:00 - 23:00. Поръчките могат да се правят до 72 часа напред.</span>
+                    <span>Работно време: 11:00 - 23:00. Поръчките могат да се правят до 5 дни напред.</span>
                   </div>
                 </div>
               )}
@@ -1196,7 +1238,7 @@ export default function CheckoutPage() {
                <Truck size={20} className="inline mr-2" />
                Начин на получаване *
              </h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                <button
                  type="button"
                  onClick={() => setIsCollection(false)}
@@ -1239,7 +1281,7 @@ export default function CheckoutPage() {
                <CreditCard size={20} className="inline mr-2" />
                Начин на плащане *
              </h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                {isCollection ? (
                  // Collection payment methods (1: Card at Restaurant, 2: Cash at Restaurant)
                  <>

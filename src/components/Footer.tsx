@@ -159,6 +159,11 @@ export default function Footer() {
             <p className={styles.copyright}>
               © {new Date().getFullYear()} Pizza Stop — Всички права запазени.
             </p>
+            <div className={styles.creatorSection}>
+              <span className={styles.creatorText}>
+                Изработка от <a href="https://hm-wspro.vercel.app/bg" target="_blank" rel="noopener noreferrer" className={styles.creatorLink}>H&M WS Pro</a>
+              </span>
+            </div>
           </div>
         </div>
       </div>
