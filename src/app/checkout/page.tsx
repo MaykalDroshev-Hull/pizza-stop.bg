@@ -346,16 +346,46 @@ export default function CheckoutPage() {
     ]
     
     // Define extended area (7 BGN delivery) - Blue zone
-    // Includes: Prodimchets, Lisets, Bahovitsa, Goran, Umarevtsi, Skobelevo
+    // Updated polygon coordinates for blue zone
     const extendedArea = [
-      { lat: 43.1700, lng: 24.6500 }, // North
-      { lat: 43.1750, lng: 24.7500 }, // Northeast
-      { lat: 43.1650, lng: 24.8000 }, // East
-      { lat: 43.1400, lng: 24.8000 }, // Southeast
-      { lat: 43.1100, lng: 24.7500 }, // South
-      { lat: 43.1150, lng: 24.6800 }, // Southwest
-      { lat: 43.1350, lng: 24.6200 }, // West
-      { lat: 43.1700, lng: 24.6500 }  // Back to start
+      { lat: 43.19740, lng: 24.67377 },
+      { lat: 43.19530, lng: 24.68420 },
+      { lat: 43.18795, lng: 24.69091 },
+      { lat: 43.18184, lng: 24.69271 },
+      { lat: 43.16906, lng: 24.70673 },
+      { lat: 43.18185, lng: 24.73747 },
+      { lat: 43.19690, lng: 24.78520 },
+      { lat: 43.19429, lng: 24.78849 },
+      { lat: 43.19177, lng: 24.79354 },
+      { lat: 43.18216, lng: 24.77405 },
+      { lat: 43.15513, lng: 24.78379 },
+      { lat: 43.14733, lng: 24.78212 },
+      { lat: 43.14837, lng: 24.76925 },
+      { lat: 43.14629, lng: 24.74900 },
+      { lat: 43.13578, lng: 24.74945 },
+      { lat: 43.12876, lng: 24.76489 },
+      { lat: 43.12203, lng: 24.75945 },
+      { lat: 43.11969, lng: 24.76062 },
+      { lat: 43.10933, lng: 24.75319 },
+      { lat: 43.10442, lng: 24.75046 },
+      { lat: 43.09460, lng: 24.75211 },
+      { lat: 43.09237, lng: 24.74715 },
+      { lat: 43.09868, lng: 24.73602 },
+      { lat: 43.10296, lng: 24.72085 },
+      { lat: 43.10702, lng: 24.70585 },
+      { lat: 43.11009, lng: 24.70742 },
+      { lat: 43.11222, lng: 24.71048 },
+      { lat: 43.12163, lng: 24.70547 },
+      { lat: 43.12097, lng: 24.67849 },
+      { lat: 43.14318, lng: 24.67233 },
+      { lat: 43.15453, lng: 24.68183 },
+      { lat: 43.15655, lng: 24.68643 },
+      { lat: 43.16302, lng: 24.69263 },
+      { lat: 43.17894, lng: 24.67871 },
+      { lat: 43.17927, lng: 24.65107 },
+      { lat: 43.18665, lng: 24.64179 },
+      { lat: 43.19006, lng: 24.64309 },
+      { lat: 43.19788, lng: 24.64881 }
     ]
     
     console.log('📍 User coordinates:', coordinates)

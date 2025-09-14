@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { Laptop, ChefHat, Pizza } from 'lucide-react'
+import { Laptop, ChefHat, Pizza, Sandwich, Utensils } from 'lucide-react'
 import styles from '../styles/home.module.css'
 import TeamCarousel from '../components/TeamCarousel'
 import DeliveryAreaMap from '../components/DeliveryAreaMap'
@@ -150,7 +150,7 @@ export default function HomePage() {
 
             {/* ИСТОРИЯ - Modern Timeline Design */}
             <div className={styles.modernTimelineSection}>
-              <h3 className={styles.sectionSubtitle}>История</h3>
+              <h3 className={styles.sectionSubtitle}>Нашата история</h3>
               
               <div className={styles.modernTimeline} ref={timelineRef}>
                 {/* Vertical line */}
@@ -163,21 +163,9 @@ export default function HomePage() {
                     
                     {/* Content */}
                     <div className={styles.timelineContent}>
-                      <div className={styles.timelineYear}>2019</div>
-                      <h4>Основаване</h4>
-                      <p>Pizza Stop е създаден в Ловеч от хора, които обичат простите неща — добро тесто, качествени продукти и честно отношение.</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.timelineMilestone}>
-                    {/* Timeline dot */}
-                    <div className={styles.timelineDot}></div>
-                    
-                    {/* Content */}
-                    <div className={styles.timelineContent}>
-                      <div className={styles.timelineYear}>2021</div>
-                      <h4>Разширяване на менюто</h4>
-                      <p>Добавихме дюнери с домашно изпечени питки и сочни бургери за разнообразие.</p>
+                      <div className={styles.timelineYear}>2023</div>
+                      <h4>Началото</h4>
+                      <p>Pizza Stop отвори врати на 1 март 2023 г. в Ловеч – с една проста, но силна идея: да предложим пица, направена с внимание, страст и истински вкус.</p>
                     </div>
                   </div>
 
@@ -188,8 +176,32 @@ export default function HomePage() {
                     {/* Content */}
                     <div className={styles.timelineContent}>
                       <div className={styles.timelineYear}>2024</div>
-                      <h4>Днес</h4>
-                      <p>Предлагаме пици, дюнери и бургери, приготвени с грижа и фокус върху свежи продукти и постоянство.</p>
+                      <h4>Разширяване</h4>
+                      <p>Само година по-късно, през 2024 г., разширихме менюто с още повече пици и бургери и стартирахме доставка до адрес с нашия личен брандиран автомобил, за да стигаме по-бързо и по-удобно до клиентите си.</p>
+                    </div>
+                  </div>
+
+                  <div className={styles.timelineMilestone}>
+                    {/* Timeline dot */}
+                    <div className={styles.timelineDot}></div>
+                    
+                    {/* Content */}
+                    <div className={styles.timelineContent}>
+                      <div className={styles.timelineYear}>2025</div>
+                      <h4>Модернизация</h4>
+                      <p>През 2025 г. направихме голяма крачка напред – основен ремонт, ново професионално оборудване и най-добрата пещ за пици. Днес можем да предложим не само повече качество, но и още по-бързо обслужване.</p>
+                    </div>
+                  </div>
+
+                  <div className={styles.timelineMilestone}>
+                    {/* Timeline dot */}
+                    <div className={styles.timelineDot}></div>
+                    
+                    {/* Content */}
+                    <div className={styles.timelineContent}>
+                      <div className={styles.timelineYear}>Днес</div>
+                      <h4>Нашата философия</h4>
+                      <p>Pizza Stop е не просто място за храна – това е място, където всеки ден влагаме желание, усмивки и вкус в това, което правим. Всички наши пици се приготвят с жива квас и отлежало тесто, което е напълно безвредно за човешкия организъм. Работим само с подбрани и качествени продукти, за да гарантираме най-добрия вкус.</p>
                     </div>
                   </div>
                 </div>
@@ -288,16 +300,89 @@ export default function HomePage() {
             <h2 className="section-title">Често задавани въпроси</h2>
             <div className="grid">
               <div className="card">
-                <h3>Правите ли доставка?</h3>
-                <p>Да — доставяме в рамките на гр. Ловеч. Обадете се на <a href="tel:+35968670070">068 670070</a> за подробности.</p>
+                <h3>Мога ли да направя поръчка без телефонен номер?</h3>
+                <p>Не – за да бъде доставена поръчката, е нужен телефон за връзка.</p>
               </div>
               <div className="card">
-                <h3>Какви са работните ви часове?</h3>
-                <p>Пон.–Съб.: 11:00–23:00, Нед.: 11:00–21:00. Прием на поръчки: 9:30–22:30.</p>
+                <h3>Мога ли да комбинирам различни половини пица?</h3>
+                <p>Да – това важи за пиците 60 см.</p>
               </div>
               <div className="card">
-                <h3>Имате ли вегетариански опции?</h3>
-                <p>Да — предлагаме вегетариански пици и гарнитури. Попитайте екипа при поръчка.</p>
+                <h3>Какви начини на плащане предлагате?</h3>
+                <p>Плащане в брой или с карта при доставка / на място.</p>
+              </div>
+              <div className="card">
+                <h3>Мога ли да направя предварителна поръчка за купон или събитие?</h3>
+                <p>Да – приемаме поръчки с отложен час до 5 дни предварително.</p>
+              </div>
+              <div className="card">
+                <h3>Доставяте ли извън Ловеч?</h3>
+                <p>Да – доставяме и до близките села (в зона 2, с такса 7 лв. и минимална поръчка от 30 лв.).</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ДОПЪЛНИТЕЛНА ИНФОРМАЦИЯ */}
+        <section id="additional-info" className={styles.additionalInfoSection}>
+          <div className="container">
+            <h2 className="section-title">Добавки и правила за поръчки</h2>
+            
+            <div className="grid">
+              <div className="card">
+                <h3>
+                  <Sandwich className={styles.lucideIcon} />
+                  Дюнери и бургери
+                </h3>
+                <div className={styles.rulesContent}>
+                  <div className={styles.ruleItem}>
+                    <h4>Включени добавки</h4>
+                    <p>Всеки дюнер или бургер включва до <strong>3 зеленчука</strong> по избор и <strong>2 соса</strong> (например чеснов и самурай).</p>
+                  </div>
+                  
+                  <div className={styles.ruleItem}>
+                    <h4>Допълнителни добавки</h4>
+                    <p>Всяка допълнителна добавка над включените се заплаща по <span className={styles.price}>0.50 лв.</span></p>
+                  </div>
+                  
+                  <div className={styles.ruleItem}>
+                    <h4>Допълнително месо</h4>
+                    <p>При дюнерите може да се добави допълнително месо (100 г) – <span className={styles.price}>2.00 лв.</span></p>
+                  </div>
+                  
+                  <div className={styles.ruleItem}>
+                    <h4>Бургери с двойно месо</h4>
+                    <p>При бургерите няма нужда да се добавят допълнителни кюфтета, защото в менюто вече се предлагат варианти с двойно месо.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="card">
+                <h3>
+                  <Pizza className={styles.lucideIcon} />
+                  Пици
+                </h3>
+                <div className={styles.rulesContent}>
+                  <div className={styles.ruleItem}>
+                    <h4>Персонализация</h4>
+                    <p>Всеки продукт от наличното меню може да бъде добавян или премахван.</p>
+                  </div>
+                  
+                  <div className={styles.ruleItem}>
+                    <h4>Пример</h4>
+                    <p><strong>Пица Маргарита</strong> може да се направи без маслини и с добавена царевица.</p>
+                  </div>
+                  
+                  <div className={styles.ruleItem}>
+                    <h4>Ограничения за замяни</h4>
+                    <p>Не е позволена директна замяна на зеленчук за месо или на зеленчук за сирена/моцарела.</p>
+                  </div>
+                  
+                  <div className={styles.ruleItem}>
+                    <h4>Замени чрез коментар</h4>
+                    <p>Ако клиентът иска да направи замяна, това може да се отбележи като коментар към поръчката, а останалите добавки се таксуват по стандартната цена.</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

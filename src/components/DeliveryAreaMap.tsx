@@ -244,27 +244,69 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
     
     // Define Lovech city area (3 BGN delivery) - Golden color
     const lovechArea = [
-      { lat: 43.1500, lng: 24.6800 }, // North
-      { lat: 43.1550, lng: 24.7200 }, // Northeast
-      { lat: 43.1450, lng: 24.7500 }, // East
-      { lat: 43.1300, lng: 24.7500 }, // Southeast
-      { lat: 43.1200, lng: 24.7200 }, // South
-      { lat: 43.1250, lng: 24.6800 }, // Southwest
-      { lat: 43.1350, lng: 24.6500 }, // West
-      { lat: 43.1500, lng: 24.6800 }  // Back to start
+      { lat: 43.12525, lng: 24.71518 },
+      { lat: 43.12970, lng: 24.70579 },
+      { lat: 43.13005, lng: 24.69994 },
+      { lat: 43.12483, lng: 24.68928 },
+      { lat: 43.12299, lng: 24.67855 },
+      { lat: 43.13595, lng: 24.67501 },
+      { lat: 43.14063, lng: 24.67991 },
+      { lat: 43.14337, lng: 24.67877 },
+      { lat: 43.14687, lng: 24.67553 },
+      { lat: 43.15432, lng: 24.68221 },
+      { lat: 43.15486, lng: 24.68312 },
+      { lat: 43.15629, lng: 24.69245 },
+      { lat: 43.15968, lng: 24.70306 },
+      { lat: 43.16907, lng: 24.72538 },
+      { lat: 43.15901, lng: 24.74022 },
+      { lat: 43.15548, lng: 24.73935 },
+      { lat: 43.14960, lng: 24.73785 },
+      { lat: 43.13553, lng: 24.73599 },
+      { lat: 43.13952, lng: 24.72210 },
+      { lat: 43.12939, lng: 24.72549 }
     ]
     
     // Define extended area (7 BGN delivery) - Blue color
-    // Includes: Prodimchets, Lisets, Bahovitsa, Goran, Umarevtsi, Skobelevo
+    // Updated polygon coordinates for blue zone
     const extendedArea = [
-      { lat: 43.1700, lng: 24.6500 }, // North
-      { lat: 43.1750, lng: 24.7500 }, // Northeast
-      { lat: 43.1650, lng: 24.8000 }, // East
-      { lat: 43.1400, lng: 24.8000 }, // Southeast
-      { lat: 43.1100, lng: 24.7500 }, // South
-      { lat: 43.1150, lng: 24.6800 }, // Southwest
-      { lat: 43.1350, lng: 24.6200 }, // West
-      { lat: 43.1700, lng: 24.6500 }  // Back to start
+      { lat: 43.19740, lng: 24.67377 },
+      { lat: 43.19530, lng: 24.68420 },
+      { lat: 43.18795, lng: 24.69091 },
+      { lat: 43.18184, lng: 24.69271 },
+      { lat: 43.16906, lng: 24.70673 },
+      { lat: 43.18185, lng: 24.73747 },
+      { lat: 43.19690, lng: 24.78520 },
+      { lat: 43.19429, lng: 24.78849 },
+      { lat: 43.19177, lng: 24.79354 },
+      { lat: 43.18216, lng: 24.77405 },
+      { lat: 43.15513, lng: 24.78379 },
+      { lat: 43.14733, lng: 24.78212 },
+      { lat: 43.14837, lng: 24.76925 },
+      { lat: 43.14629, lng: 24.74900 },
+      { lat: 43.13578, lng: 24.74945 },
+      { lat: 43.12876, lng: 24.76489 },
+      { lat: 43.12203, lng: 24.75945 },
+      { lat: 43.11969, lng: 24.76062 },
+      { lat: 43.10933, lng: 24.75319 },
+      { lat: 43.10442, lng: 24.75046 },
+      { lat: 43.09460, lng: 24.75211 },
+      { lat: 43.09237, lng: 24.74715 },
+      { lat: 43.09868, lng: 24.73602 },
+      { lat: 43.10296, lng: 24.72085 },
+      { lat: 43.10702, lng: 24.70585 },
+      { lat: 43.11009, lng: 24.70742 },
+      { lat: 43.11222, lng: 24.71048 },
+      { lat: 43.12163, lng: 24.70547 },
+      { lat: 43.12097, lng: 24.67849 },
+      { lat: 43.14318, lng: 24.67233 },
+      { lat: 43.15453, lng: 24.68183 },
+      { lat: 43.15655, lng: 24.68643 },
+      { lat: 43.16302, lng: 24.69263 },
+      { lat: 43.17894, lng: 24.67871 },
+      { lat: 43.17927, lng: 24.65107 },
+      { lat: 43.18665, lng: 24.64179 },
+      { lat: 43.19006, lng: 24.64309 },
+      { lat: 43.19788, lng: 24.64881 }
     ]
 
     const map = new window.google.maps.Map(mapRef.current, {
@@ -324,13 +366,13 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
            <div className={styles.infoCard}>
              <MapPin className={styles.infoIcon} />
              <h3>Ловеч - 3 лв.</h3>
-             <p>Доставка в град Ловеч и близките райони</p>
+             <p>Доставка в град Ловеч и близките райони - Гозница, Продимчец, Вилна зона - Бабаковец, Синантепе</p>
            </div>
            
                        <div className={styles.infoCard}>
               <MapPin className={styles.infoIcon} />
               <h3>Разширена зона - 7 лв.</h3>
-              <p>Продъмчец, Лисец, Баховица, Горан, Умаревци, Скобелево</p>
+              <p>Лисец, Баховица, Сливек, Пресяка, Умаревци</p>
             </div>
            
            <div className={styles.infoCard}>
@@ -371,12 +413,12 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
          <div className={styles.deliveryDetails}>
            <h3>Допълнителна информация</h3>
            <ul>
-             <li>Работно време: Пон.–Съб. 11:00–23:00, Нед. 11:00–21:00</li>
-             <li>Прием на поръчки: 9:30–22:30</li>
-             <li>Поръчките не могат да бъдат променяни след потвърждаването</li>
-             <li>Минимална сума за доставка: 15 лв.</li>
-             <li>Безплатна доставка за поръчки над 25 лв.</li>
-             <li>Може да се поръчва до 3 дни напред</li>
+             <li><strong>Работно време:</strong><br/> Понеделник – Петък: 08:00 – 23:00<br/>Събота и Неделя: 11:00 – 21:00</li>
+             <li><strong>Онлайн поръчки:</strong><br/> Понеделник – Петък: 09:00 - 22:30<br/>Събота и Неделя: 11:00 - 20:30</li>
+             <li><strong>Телефон за поръчки:</strong> <br/> 068 670 070</li>
+             <li><strong>Минимална сума за доставка:</strong> 15 лв.</li>
+             <li><strong>Безплатна доставка за поръчки над:</strong> 50 лв.</li>
+             <li><strong>Поръчки с отложен час:</strong> <br/> приемат се до 5 дни предварително</li>
            </ul>
          </div>
        </div>
