@@ -19,11 +19,12 @@ interface CartModalProps {
     addons?: any[]
   }
   selectedSize?: any
+  onSizeChange?: (itemId: number, size: any) => void
 }
 
 
 
-export default function CartModal({ isOpen, onClose, item, selectedSize }: CartModalProps) {
+export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeChange }: CartModalProps) {
   const { addItem } = useCart()
   const [size, setSize] = useState(selectedSize?.name || '')
   const [selectedAddons, setSelectedAddons] = useState<any[]>([])
@@ -34,6 +35,8 @@ export default function CartModal({ isOpen, onClose, item, selectedSize }: CartM
   useEffect(() => {
     if (selectedSize?.name) {
       setSize(selectedSize.name)
+    } else {
+      setSize('')
     }
   }, [selectedSize])
 
@@ -134,10 +137,10 @@ export default function CartModal({ isOpen, onClose, item, selectedSize }: CartM
           {/* Size Selection */}
           <div>
             <h4 className="font-medium text-text mb-4">
-              {selectedSize?.name ? `Избран размер: ${selectedSize.name}` : 'Избери размер:'}
+              {(selectedSize?.name && size) ? `Избран размер: ${selectedSize.name}` : 'Избери размер:'}
             </h4>
             
-            {selectedSize?.name ? (
+            {(selectedSize?.name && size) ? (
               // Show selected size info
               <div className="p-4 bg-orange/10 border border-orange/20 rounded-xl">
                 <div className="flex justify-between items-center">
@@ -145,8 +148,19 @@ export default function CartModal({ isOpen, onClose, item, selectedSize }: CartM
                   <span className="text-orange font-bold text-lg">{selectedSize.price?.toFixed(2)} лв.</span>
                 </div>
                 <button
-                  onClick={() => setSize('')}
-                  className="text-sm text-orange/70 hover:text-orange mt-2 underline"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    console.log('CartModal Промени размер clicked!', item.id)
+                    setSize('')
+                    if (onSizeChange) {
+                      console.log('Calling onSizeChange with null')
+                      onSizeChange(item.id, null)
+                    } else {
+                      console.log('onSizeChange is not defined')
+                    }
+                  }}
+                  className="text-sm text-orange/70 hover:text-orange mt-2 underline cursor-pointer block w-full text-left"
                 >
                   Промени размер
                 </button>
@@ -157,14 +171,26 @@ export default function CartModal({ isOpen, onClose, item, selectedSize }: CartM
                 {isDrink ? (
                   <>
                     <button
-                      onClick={() => setSize('0.5L')}
+                      onClick={() => {
+                        const sizeOption = { name: '0.5L', price: item.price || item.basePrice || 0 }
+                        setSize('0.5L')
+                        if (onSizeChange) {
+                          onSizeChange(item.id, sizeOption)
+                        }
+                      }}
                       className="w-full p-4 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-center text-muted hover:text-orange"
                     >
                       <div className="text-sm font-medium mb-1">0.5L</div>
                       <div className="text-xs opacity-75">{(item.price || item.basePrice || 0).toFixed(2)} лв.</div>
                     </button>
                     <button
-                      onClick={() => setSize('1.5L')}
+                      onClick={() => {
+                        const sizeOption = { name: '1.5L', price: (item.price || item.basePrice || 0) * 2 }
+                        setSize('1.5L')
+                        if (onSizeChange) {
+                          onSizeChange(item.id, sizeOption)
+                        }
+                      }}
                       className="w-full p-4 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-center text-muted hover:text-orange"
                     >
                       <div className="text-sm font-medium mb-1">1.5L</div>
@@ -176,7 +202,13 @@ export default function CartModal({ isOpen, onClose, item, selectedSize }: CartM
                   item.sizes.map((sizeOption: any) => (
                     <button
                       key={sizeOption.name}
-                      onClick={() => setSize(sizeOption.name)}
+                      onClick={() => {
+                        console.log('Size selected in CartModal:', sizeOption.name, sizeOption)
+                        setSize(sizeOption.name)
+                        if (onSizeChange) {
+                          onSizeChange(item.id, sizeOption)
+                        }
+                      }}
                       className="w-full p-4 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-center text-muted hover:text-orange"
                     >
                       <div className="text-sm font-medium mb-1">{sizeOption.name}</div>

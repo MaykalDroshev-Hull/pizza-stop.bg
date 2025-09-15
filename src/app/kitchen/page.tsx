@@ -44,6 +44,7 @@ const KitchenCommandCenter = () => {
   const [soundTheme, setSoundTheme] = useState<'classic' | 'modern' | 'kitchen' | 'custom'>('classic');
   const [volume, setVolume] = useState(0.7);
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'info' | 'warning' | 'urgent', timestamp: Date}>>([]);
+  const [lastActionTime, setLastActionTime] = useState<{[key: string]: number}>({});
   
   // Touch/swipe state
   const [touchStart, setTouchStart] = useState<{x: number, y: number, orderId: number} | null>(null);
@@ -63,12 +64,32 @@ const KitchenCommandCenter = () => {
       customerName: kitchenOrder.CustomerName,
       address: kitchenOrder.OrderLocation || kitchenOrder.CustomerLocation || '',
       phone: kitchenOrder.CustomerPhone,
-      items: kitchenOrder.Products.map(product => ({
-        name: `${product.ProductName}${product.ProductSize ? ` (${product.ProductSize})` : ''}`,
-        quantity: product.Quantity,
-        price: product.UnitPrice,
-        customizations: product.Addons ? product.Addons.split(',').map(a => a.trim()) : []
-      })),
+      items: kitchenOrder.Products.map(product => {
+        let customizations: string[] = [];
+        
+        if (product.Addons) {
+          try {
+            // Try to parse as JSON array first
+            const addonsData = JSON.parse(product.Addons);
+            if (Array.isArray(addonsData)) {
+              customizations = addonsData.map((addon: any) => addon.Name || addon.name || addon).filter(Boolean);
+            } else {
+              // Fallback to comma-separated string
+              customizations = product.Addons.split(',').map(a => a.trim()).filter(Boolean);
+            }
+          } catch (error) {
+            // If JSON parsing fails, treat as comma-separated string
+            customizations = product.Addons.split(',').map(a => a.trim()).filter(Boolean);
+          }
+        }
+        
+        return {
+          name: `${product.ProductName}${product.ProductSize ? ` (${product.ProductSize})` : ''}`,
+          quantity: product.Quantity,
+          price: product.UnitPrice,
+          customizations
+        };
+      }),
       totalPrice: kitchenOrder.TotalOrderPrice,
       status,
       orderTime,
@@ -83,22 +104,25 @@ const KitchenCommandCenter = () => {
 
   const getStatusFromId = (orderStatusId: number): string => {
     switch (orderStatusId) {
-      case ORDER_STATUS.PAID: return 'new';        // Платена - New order
-      case ORDER_STATUS.ACCEPTED: return 'new';    // Приета - Accepted, still new
-      case ORDER_STATUS.COOKING: return 'working'; // Готвене - Cooking
-      case ORDER_STATUS.READY: return 'completed'; // Приготвена - Ready/Finished
-      case ORDER_STATUS.CANCELED: return 'cancelled'; // Отказана - Canceled
+      case ORDER_STATUS.ACCEPTED: return 'new';           // ID 1 - Приета → НОВИ ПОРЪЧКИ
+      case ORDER_STATUS.IN_PREPARATION: return 'working'; // ID 2 - В процес на приготвяне → РАБОТИ СЕ
+      case ORDER_STATUS.READY: return 'completed';        // ID 3 - Приготвена → ЗАВЪРШЕНИ
+      case ORDER_STATUS.WITH_DRIVER: return 'delivery';   // ID 4 - При шофьора → Delivery page
+      case ORDER_STATUS.IN_DELIVERY: return 'delivery';   // ID 5 - В процес на доставка → Delivery page
+      case ORDER_STATUS.DELIVERED: return 'delivered';    // ID 6 - Доставена → Delivered (not shown in kitchen)
       default: return 'new';
     }
   };
 
   const getStatusIdFromStatus = (status: string): number => {
     switch (status) {
-      case 'new': return ORDER_STATUS.ACCEPTED;    // Move from PAID to ACCEPTED when appearing on dashboard
-      case 'working': return ORDER_STATUS.COOKING; // Move to COOKING when started
-      case 'completed': return ORDER_STATUS.READY; // Move to READY when finished
-      case 'cancelled': return ORDER_STATUS.CANCELED;
-      default: return ORDER_STATUS.PAID;
+      case 'new': return ORDER_STATUS.ACCEPTED;           // ID 1 - Приета → НОВИ ПОРЪЧКИ
+      case 'working': return ORDER_STATUS.IN_PREPARATION; // ID 2 - В процес на приготвяне → РАБОТИ СЕ
+      case 'completed': return ORDER_STATUS.READY;        // ID 3 - Приготвена → ЗАВЪРШЕНИ
+      case 'delivery': return ORDER_STATUS.WITH_DRIVER;   // ID 4 - При шофьора → Delivery page
+      case 'delivered': return ORDER_STATUS.DELIVERED;    // ID 6 - Доставена → Delivered
+      case 'cancelled': return ORDER_STATUS.DELIVERED;    // Use DELIVERED as cancelled
+      default: return ORDER_STATUS.ACCEPTED;
     }
   };
 
@@ -147,8 +171,8 @@ const KitchenCommandCenter = () => {
   useEffect(() => {
     fetchOrders();
     
-    // Refresh orders every 30 seconds
-    const interval = setInterval(fetchOrders, 30000);
+    // Refresh orders every 60 seconds
+    const interval = setInterval(fetchOrders, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -164,14 +188,6 @@ const KitchenCommandCenter = () => {
     setStats(prev => ({ ...prev, activeOrders: activeCount }));
   }, [orders]);
 
-  // Auto-refresh orders every 60 seconds (only for new orders)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchOrders();
-    }, 60000);
-    
-    return () => clearInterval(interval);
-  }, []);
 
   // Sound library with different themes
   const soundLibrary = {
@@ -361,7 +377,24 @@ const KitchenCommandCenter = () => {
   };
 
   const getTotalTime = (orderTime: Date) => {
-    return Math.floor((new Date().getTime() - orderTime.getTime()) / 1000 / 60);
+    const now = new Date();
+    
+    // Simple calculation - both dates should be in the same timezone context
+    const diffMs = now.getTime() - orderTime.getTime();
+    const minutes = Math.floor(diffMs / 1000 / 60);
+    
+    // Ensure we don't get negative values and cap at reasonable maximum
+    return Math.max(0, Math.min(minutes, 9999));
+  };
+
+  // Format time for display in Bulgarian timezone
+  const formatTimeForDisplay = (date: Date) => {
+    return date.toLocaleString('bg-BG', {
+      timeZone: 'Europe/Sofia',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
   };
 
   const getWorkingTime = (workingStartTime: Date | null) => {
@@ -370,6 +403,17 @@ const KitchenCommandCenter = () => {
   };
 
   const updateOrderStatus = async (orderId: number, newStatus: string, showConfirm = false) => {
+    const actionKey = `${orderId}-${newStatus}`;
+    const now = Date.now();
+    
+    // Prevent rapid duplicate actions (within 2 seconds)
+    if (lastActionTime[actionKey] && now - lastActionTime[actionKey] < 2000) {
+      console.log(`Preventing duplicate action: ${actionKey}`);
+      return;
+    }
+    
+    setLastActionTime(prev => ({ ...prev, [actionKey]: now }));
+    
     if (showConfirm) {
       const order = orders.find(o => o.id === orderId);
       if (order) {
@@ -384,43 +428,37 @@ const KitchenCommandCenter = () => {
 
     try {
       const statusId = getStatusIdFromStatus(newStatus);
-      console.log(`Updating order ${orderId} to status: ${newStatus} (ID: ${statusId})`);
-      
       const success = await updateOrderStatusInDB(orderId, statusId);
       
       if (success) {
         console.log(`Successfully updated order ${orderId} in database`);
         
         // Update local state immediately
-    setOrders(prevOrders => 
-      prevOrders.map(order => {
-        if (order.id === orderId) {
-          const updatedOrder = { ...order };
-          const now = new Date();
-          
-          updatedOrder.status = newStatus;
+        setOrders(prevOrders => 
+          prevOrders.map(order => {
+            if (order.id === orderId) {
+              const updatedOrder = { ...order };
+              const now = new Date();
+              
+              updatedOrder.status = newStatus;
               updatedOrder.orderStatusId = statusId;
-          
-          if (newStatus === 'working' && !updatedOrder.workingStartTime) {
-            updatedOrder.workingStartTime = now;
+              
+              if (newStatus === 'working' && !updatedOrder.workingStartTime) {
+                updatedOrder.workingStartTime = now;
                 addNotification(`Order #${orderId} started`, 'info');
                 playNotificationSound('new');
-          } else if (newStatus === 'completed') {
-            updatedOrder.completedTime = now;
+              } else if (newStatus === 'completed' && !updatedOrder.completedTime) {
+                updatedOrder.completedTime = now;
                 addNotification(`Order #${orderId} completed!`, 'info');
                 playNotificationSound('complete');
-          }
-          
-              console.log(`Updated local order ${orderId} to status: ${newStatus}`);
-          return updatedOrder;
-        }
-        return order;
-      })
-    );
-    
-        // Status updated successfully
+              }
+              
+              return updatedOrder;
+            }
+            return order;
+          })
+        );
       } else {
-        console.log(`Failed to update order ${orderId} in database`);
         addNotification(`Failed to update order #${orderId}`, 'warning');
       }
     } catch (error) {
@@ -451,8 +489,8 @@ const KitchenCommandCenter = () => {
           // Swipe right - start order
           updateOrderStatus(touchStart.orderId, 'working');
         } else {
-          // Swipe left - complete order
-          updateOrderStatus(touchStart.orderId, 'completed', true);
+          // Swipe left - disabled to prevent duplicate completion
+          console.log('Swipe left disabled to prevent duplicate completion');
         }
       } else {
         // Vertical swipe
@@ -555,15 +593,15 @@ const KitchenCommandCenter = () => {
             prevOrders.filter(o => o.id !== order.id)
           );
           console.log(`Successfully sent order ${order.id} to driver with OrderStatusID = ${ORDER_STATUS.WITH_DRIVER}`);
-          addNotification(`Order #${order.id} sent to driver`, 'info');
+          addNotification(`Order #${order.id} sent to delivery page`, 'info');
           playNotificationSound('complete');
         } else {
           console.error(`Failed to send order ${order.id} to driver in database`);
-          addNotification(`Failed to send order #${order.id} to driver`, 'warning');
+          addNotification(`Failed to send order #${order.id} to delivery page`, 'warning');
         }
       } catch (error) {
         console.error('Error sending order to driver:', error);
-        addNotification(`Error sending order #${order.id} to driver`, 'urgent');
+        addNotification(`Error sending order #${order.id} to delivery page`, 'urgent');
       }
     } else {
       updateOrderStatus(order.id, action, false);
@@ -662,9 +700,9 @@ const KitchenCommandCenter = () => {
     const isUrgent = totalTime > 10;
     
     const cardSizeClasses = {
-      small: 'p-2 text-xs',
-      medium: 'p-4 text-sm',
-      large: 'p-6 text-base'
+      small: 'p-1 text-xs',        // Minimal padding
+      medium: 'p-3 text-sm',       // Real medium: more padding and larger text
+      large: 'p-5 text-base'       // Large: even more padding and text
     };
     
     return (
@@ -684,6 +722,9 @@ const KitchenCommandCenter = () => {
             <div className="text-sm text-gray-400">
               Получена преди: {totalTime}мин
             </div>
+            <div className="text-xs text-gray-500">
+              Време: {formatTimeForDisplay(order.orderTime)}
+            </div>
           </div>
         </div>
 
@@ -700,8 +741,8 @@ const KitchenCommandCenter = () => {
                 {item.quantity}x {item.name}
               </span>
               {item.customizations.length > 0 && (
-                <div className="text-yellow-400 text-xs ml-2">
-                  {item.customizations.join(', ')}
+                <div className="text-yellow-400 text-xs ml-2 mt-1">
+                  🧂 {item.customizations.join(', ')}
                 </div>
               )}
             </div>
@@ -735,8 +776,14 @@ const KitchenCommandCenter = () => {
     const totalTime = getTotalTime(order.orderTime);
     const workingTime = getWorkingTime(order.workingStartTime);
     
+    const workingCardSizeClasses = {
+      small: 'p-1.5 min-w-40',    // Minimal padding and width
+      medium: 'p-4 min-w-72',     // Real medium: more padding and width
+      large: 'p-5 min-w-96'       // Large: even more padding and width
+    };
+    
     return (
-      <div className="bg-orange-900 border-2 border-orange-500 rounded-lg p-3 min-w-64 transition-all duration-300 hover:bg-orange-800">
+      <div className={`bg-orange-900 border-2 border-orange-500 rounded-lg transition-all duration-300 hover:bg-orange-800 ${workingCardSizeClasses[cardSize]}`}>
         <div className="flex justify-between items-start mb-2">
           <div>
             <div className="text-lg font-bold text-white flex items-center space-x-2">
@@ -754,18 +801,26 @@ const KitchenCommandCenter = () => {
             className="text-blue-400 hover:text-blue-300 p-1 rounded transition-colors"
             title="Върни към нови поръчки"
           >
-            <RotateCcw size={16} />
+            <RotateCcw className="w-4 h-4" />
           </button>
         </div>
 
         <div className="text-xs text-orange-300 mb-2">
           Общо: {totalTime}мин | Работи: {workingTime}мин
         </div>
+        <div className="text-xs text-orange-400 mb-2">
+          Време: {formatTimeForDisplay(order.orderTime)}
+        </div>
 
         <div className="mb-2">
           {order.items.map((item, index) => (
             <div key={index} className="text-xs text-white">
-              {item.quantity}x {item.name}
+              <div>{item.quantity}x {item.name}</div>
+              {item.customizations.length > 0 && (
+                <div className="text-yellow-300 text-xs ml-2 mt-1">
+                  🧂 {item.customizations.join(', ')}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -791,12 +846,39 @@ const KitchenCommandCenter = () => {
     );
   };
 
-  const HistoryOrderCard = ({ order }: { order: Order }) => {
+  const HistoryOrderCard = ({ order, cardSize }: { order: Order, cardSize: 'small' | 'medium' | 'large' }) => {
     const totalTime = getTotalTime(order.orderTime);
     const workingTime = getWorkingTime(order.workingStartTime);
     
+    const historyCardSizeClasses = {
+      small: 'p-1.5 text-xs',     // Minimal padding
+      medium: 'p-4 text-sm',      // Real medium: more padding
+      large: 'p-5 text-base'      // Large: even more padding
+    };
+    
+    const buttonSizeClasses = {
+      small: 'p-2 text-sm',
+      medium: 'p-4 text-lg', 
+      large: 'p-6 text-xl'
+    };
+    
+    const emojiSizeClasses = {
+      small: 'text-2xl',   // 24px (40% smaller than 36px)
+      medium: 'text-4xl',  // 36px (40% smaller than 60px)
+      large: 'text-5xl'    // 48px (40% smaller than 72px)
+    };
+    
+    const iconSizes = {
+      small: 24,  // px
+      medium: 36,
+      large: 48,
+    };
+    
+    console.log('HistoryOrderCard cardSize:', cardSize, 'emojiClass:', emojiSizeClasses[cardSize]);
+    console.log('CARD SIZE DEBUG:', cardSize, 'EMOJI SIZE:', emojiSizeClasses[cardSize]);
+    
     return (
-      <div className="bg-gray-700 border border-gray-600 rounded p-3 mb-2 text-sm">
+      <div className={`bg-gray-700 border border-gray-600 rounded mb-2 ${historyCardSizeClasses[cardSize]}`}>
         <div className="flex justify-between items-start mb-2">
           <div>
             <div className="text-white font-bold">#{order.id}</div>
@@ -804,27 +886,27 @@ const KitchenCommandCenter = () => {
             <div className="text-gray-400 text-xs">📞 {order.phone}</div>
             <div className="text-gray-400 text-xs">📍 {order.address}</div>
           </div>
-          <div className="flex space-x-1">
+          <div className="flex space-x-2">
             <button
               onClick={() => updateOrderStatus(order.id, 'working', true)}
-              className="text-orange-400 hover:text-orange-300 p-1 rounded transition-colors"
+              className={`text-orange-400 hover:text-orange-300 ${buttonSizeClasses[cardSize]} rounded-lg transition-colors hover:bg-orange-900/20`}
               title="Върни към работни поръчки"
             >
-              <RotateCcw size={16} />
+              <span className={`${emojiSizeClasses[cardSize]} text-red-500 bg-yellow-200 border-2 border-black`}>🔄</span>
             </button>
           <button
             onClick={() => returnOrderToNew(order)}
-              className="text-blue-400 hover:text-blue-300 p-1 rounded transition-colors"
+              className={`text-blue-400 hover:text-blue-300 ${buttonSizeClasses[cardSize]} rounded-lg transition-colors hover:bg-blue-900/20`}
             title="Върни към нови поръчки"
           >
-            <RotateCcw size={16} />
+            <span className={`${emojiSizeClasses[cardSize]} text-red-500`}>🔄</span>
           </button>
             <button
               onClick={() => sendToDriver(order)}
-              className="text-green-400 hover:text-green-300 p-1 rounded transition-colors"
-              title="Препрати към шофьор"
+              className={`text-green-400 hover:text-green-300 ${buttonSizeClasses[cardSize]} rounded-lg transition-colors hover:bg-green-900/20`}
+              title="Препрати към доставка"
             >
-              🚗
+              <span className={`${emojiSizeClasses[cardSize]} text-green-500`}>🚗</span>
             </button>
           </div>
         </div>
@@ -870,11 +952,7 @@ const KitchenCommandCenter = () => {
         
         <div className="flex items-center space-x-8">
           <div className="text-2xl font-mono">
-            {currentTime.toLocaleTimeString('bg-BG', { 
-              hour: '2-digit', 
-              minute: '2-digit', 
-              second: '2-digit' 
-            })}
+            {formatTimeForDisplay(currentTime)}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -1034,7 +1112,7 @@ const KitchenCommandCenter = () => {
           </div>
           <div className="flex-1 p-4 overflow-y-auto">
             {completedOrders.map(order => (
-              <HistoryOrderCard key={order.id} order={order} />
+              <HistoryOrderCard key={order.id} order={order} cardSize={cardSize} />
             ))}
           </div>
         </div>
@@ -1106,7 +1184,7 @@ const KitchenCommandCenter = () => {
                 : confirmDialog.action === 'working'
                 ? `Върни поръчка #${confirmDialog.order?.id} към работни поръчки?`
                 : confirmDialog.action === 'send_to_driver'
-                ? `Препрати поръчка #${confirmDialog.order?.id} към шофьор?`
+                ? `Препрати поръчка #${confirmDialog.order?.id} към доставка?`
                 : `Отбележи поръчка #${confirmDialog.order?.id} като завършена?`
               }
             </p>

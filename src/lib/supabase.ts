@@ -49,6 +49,82 @@ export async function testDatabaseConnection() {
 }
 
 // Kitchen board query functions
+export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
+  const supabase = createServerClient();
+  
+  const { data: orders, error: ordersError } = await supabase
+    .from('Order')
+    .select(`
+      OrderID,
+      LoginID,
+      OrderDT,
+      OrderLocation,
+      OrderLocationCoordinates,
+      OrderStatusID,
+      RfPaymentMethodID,
+      IsPaid
+    `)
+    .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
+    .order('OrderDT', { ascending: false })
+    .limit(50);
+
+  if (ordersError) {
+    console.error('Error fetching delivery orders:', ordersError);
+    return [];
+  }
+
+  if (!orders || orders.length === 0) {
+    return [];
+  }
+
+  // Get customer details for each order
+  const ordersWithCustomers = await Promise.all(
+    orders.map(async (order) => {
+      let customer = null;
+      if (order.LoginID) {
+        const { data: customerData } = await supabase
+          .from('Login')
+          .select('Name, phone, Email')
+          .eq('LoginID', order.LoginID)
+          .single();
+        customer = customerData;
+      }
+
+      // Get products for this order
+      const { data: products, error: productsError } = await supabase
+        .from('LkOrderProduct')
+        .select(`
+          ProductName,
+          Quantity,
+          UnitPrice,
+          TotalPrice,
+          Addons
+        `)
+        .eq('OrderID', order.OrderID);
+
+      if (productsError) {
+        console.error('Error fetching products for order', order.OrderID, ':', productsError);
+      }
+
+      return {
+        OrderID: order.OrderID,
+        OrderDT: order.OrderDT,
+        OrderLocation: order.OrderLocation,
+        OrderLocationCoordinates: order.OrderLocationCoordinates,
+        OrderStatusID: order.OrderStatusID,
+        IsPaid: order.IsPaid,
+        CustomerName: customer?.Name || 'Unknown',
+        CustomerPhone: customer?.phone || '',
+        CustomerEmail: customer?.Email || '',
+        Products: products || [],
+        SpecialInstructions: '' // Add this field if needed
+      };
+    })
+  );
+
+  return ordersWithCustomers;
+}
+
 export async function getKitchenOrders(): Promise<KitchenOrder[]> {
   try {
     const { data: orders, error: ordersError } = await supabase
@@ -63,7 +139,7 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
         RfPaymentMethodID,
         IsPaid
       `)
-      .in('OrderStatusID', [ORDER_STATUS.PAID, ORDER_STATUS.ACCEPTED, ORDER_STATUS.COOKING, ORDER_STATUS.READY])
+      .in('OrderStatusID', [ORDER_STATUS.ACCEPTED, ORDER_STATUS.IN_PREPARATION, ORDER_STATUS.READY])
       .order('OrderDT', { ascending: false })
       .limit(50);
 
@@ -110,6 +186,7 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
         OrderID: order.OrderID,
         OrderDT: order.OrderDT,
         OrderLocation: order.OrderLocation,
+        OrderLocationCoordinates: order.OrderLocationCoordinates,
         OrderStatusID: order.OrderStatusID,
         IsPaid: order.IsPaid,
         CustomerName: customer?.Name || 'Unknown',
@@ -167,14 +244,12 @@ export async function updateOrderStatusInDB(orderId: number, statusId: number) {
 
 // Order status mapping based on your RfOrderStatus table
 export const ORDER_STATUS = {
-  PAID: 1,        // Платена - New order, paid
-  ACCEPTED: 2,    // Приета - Accepted, appears on dashboard
-  COOKING: 3,     // Готвене - Cooking, in "работи се" field
-  WITH_DRIVER: 4, // Със Шофьора - With driver
-  DELIVERED: 5,   // Доставена - Delivered
-  CANCELED: 6,    // Отказана - Canceled
-  READY: 7,       // Приготвена - Ready/Finished
-  ON_WAY: 8       // На път - On way to customer
+  ACCEPTED: 1,           // Приета - Accepted, appears on dashboard
+  IN_PREPARATION: 2,     // В процес на приготвяне - In preparation
+  READY: 3,              // Приготвена - Ready/Finished
+  WITH_DRIVER: 4,        // При шофьора - With driver
+  IN_DELIVERY: 5,        // В процес на доставка - In delivery
+  DELIVERED: 6           // Доставена - Delivered
 } as const;
 
 // Database types based on your structure
@@ -244,6 +319,7 @@ export interface KitchenOrder {
   OrderID: number
   OrderDT: string
   OrderLocation: string | null
+  OrderLocationCoordinates: string | null
   OrderStatusID: number
   IsPaid: boolean
   CustomerName: string
