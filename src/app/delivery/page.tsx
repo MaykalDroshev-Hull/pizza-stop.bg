@@ -21,7 +21,7 @@ import {
   Wifi,
   WifiOff
 } from 'lucide-react';
-import { updateOrderStatusInDB, testDatabaseConnection, ORDER_STATUS, KitchenOrder } from '../../lib/supabase';
+import { updateOrderStatusInDB, testDatabaseConnection, ORDER_STATUS, KitchenOrder, LkOrderProducts } from '../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
 interface DeliveryOrder {
@@ -194,25 +194,30 @@ const DeliveryDashboard = () => {
       // Get customer details and products for each order
       const ordersWithDetails = await Promise.all(
         orders.map(async (order) => {
-          let customer = null;
+          let customer: { Name: string; phone: string; Email: string } | null = null;
           if (order.LoginID) {
             const { data: customerData } = await supabase
               .from('Login')
               .select('Name, phone, Email')
               .eq('LoginID', order.LoginID)
               .single();
-            customer = customerData;
+            customer = customerData || null;
           }
 
           // Get products for this order
           const { data: products } = await supabase
             .from('LkOrderProduct')
             .select(`
+              LkOrderProductID,
+              OrderID,
+              ProductID,
               ProductName,
+              ProductSize,
               Quantity,
               UnitPrice,
               TotalPrice,
-              Addons
+              Addons,
+              Comment
             `)
             .eq('OrderID', order.OrderID);
 
@@ -226,7 +231,9 @@ const DeliveryDashboard = () => {
             CustomerName: customer?.Name || 'Unknown',
             CustomerPhone: customer?.phone || '',
             CustomerEmail: customer?.Email || '',
-            Products: products || [],
+            CustomerLocation: order.OrderLocation,
+            Products: (products as LkOrderProducts[]) || [],
+            TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
             SpecialInstructions: ''
           };
 

@@ -361,9 +361,9 @@ export default function MenuPage() {
                       }
                       handleAddToCart(item)
                     }}
-                    disabled={item.sizes && item.sizes.length > 0 && (item.smallWeight || item.largeWeight) && !selectedSizes[item.id]}
+                    disabled={item.sizes && item.sizes.length > 0 && !!(item.smallWeight || item.largeWeight) && !selectedSizes[item.id]}
                     className={`w-full py-3 px-4 rounded-xl font-medium transition-all transform hover:scale-105 flex items-center justify-center space-x-2 ${
-                      item.sizes && item.sizes.length > 0 && (item.smallWeight || item.largeWeight) && !selectedSizes[item.id]
+                      item.sizes && item.sizes.length > 0 && !!(item.smallWeight || item.largeWeight) && !selectedSizes[item.id]
                         ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
                         : 'bg-gradient-to-r from-red to-orange text-white hover:shadow-lg'
                     }`}
