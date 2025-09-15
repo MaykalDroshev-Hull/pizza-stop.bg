@@ -21,7 +21,8 @@ import {
   Wifi,
   WifiOff
 } from 'lucide-react';
-import { getKitchenOrders, updateOrderStatusInDB, testDatabaseConnection, ORDER_STATUS, KitchenOrder } from '../../lib/supabase';
+import { updateOrderStatusInDB, testDatabaseConnection, ORDER_STATUS, KitchenOrder, LkOrderProducts } from '../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 interface DeliveryOrder {
   id: number;
@@ -55,10 +56,18 @@ interface DeliveryOrder {
 const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
   const orderTime = new Date(kitchenOrder.OrderDT);
   
-  // Parse coordinates if available (using default for now)
+  // Parse coordinates from OrderLocationCoordinates
   let coordinates = { lat: 42.7339, lng: 25.4858 }; // Default to Lovech
-  // Note: OrderLocationCoordinates is not available in current KitchenOrder interface
-  // In a real implementation, you would add this field to the interface
+  if (kitchenOrder.OrderLocationCoordinates) {
+    try {
+      const parsedCoords = JSON.parse(kitchenOrder.OrderLocationCoordinates);
+      if (parsedCoords.lat && parsedCoords.lng) {
+        coordinates = { lat: parsedCoords.lat, lng: parsedCoords.lng };
+      }
+    } catch (error) {
+      console.error('Error parsing OrderLocationCoordinates:', error);
+    }
+  }
   
   // Calculate distance (simplified - in real app you'd use proper distance calculation)
   const distance = Math.random() * 5 + 1; // 1-6 km
@@ -67,7 +76,7 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
   let status: DeliveryOrder['status'] = 'ready';
   if (kitchenOrder.OrderStatusID === ORDER_STATUS.WITH_DRIVER) { // OrderStatusID = 4, Със Шофьора
     status = 'ready';
-  } else if (kitchenOrder.OrderStatusID === ORDER_STATUS.ON_WAY) { // OrderStatusID = 8, На път
+  } else if (kitchenOrder.OrderStatusID === ORDER_STATUS.IN_DELIVERY) { // OrderStatusID = 5, В процес на доставка
     status = 'en_route';
   }
 
@@ -103,7 +112,8 @@ const DeliveryDashboard = () => {
   const [deliveryPhoto, setDeliveryPhoto] = useState<string>('');
   const [signature, setSignature] = useState<string>('');
   const [issueReason, setIssueReason] = useState<string>('');
-  const [driverLocation, setDriverLocation] = useState({ lat: 42.7339, lng: 25.4858 }); // Lovech coordinates
+  const [driverLocation, setDriverLocation] = useState({ lat: 42.7339, lng: 25.4858 }); // Default to Lovech coordinates
+  const [locationError, setLocationError] = useState<string | null>(null);
   
   const [stats, setStats] = useState({
     todaysDeliveries: 12,
@@ -118,19 +128,121 @@ const DeliveryDashboard = () => {
   const [deliveryHistory, setDeliveryHistory] = useState<DeliveryOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Get driver's current location
+  const getCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by this browser');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setDriverLocation({ lat: latitude, lng: longitude });
+        setLocationError(null);
+        console.log('Driver location updated:', { lat: latitude, lng: longitude });
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        setLocationError(`Location error: ${error.message}`);
+        // Keep default location if geolocation fails
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    );
+  }, []);
+
   // Fetch delivery orders from database
   const fetchDeliveryOrders = async () => {
     try {
       setLoading(true);
-      const kitchenOrders = await getKitchenOrders();
       
-      // Filter orders that are ready for delivery (status = WITH_DRIVER or ON_WAY)
-      const deliveryOrders = kitchenOrders
-        .filter(order => order.OrderStatusID === ORDER_STATUS.WITH_DRIVER || order.OrderStatusID === ORDER_STATUS.ON_WAY)
-        .map(convertToDeliveryOrder);
+      // Use client-side Supabase
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
       
-      setOrders(deliveryOrders);
-      console.log(`Fetched ${deliveryOrders.length} delivery orders`);
+      // Fetch orders with status 4 or 5
+      const { data: orders, error: ordersError } = await supabase
+        .from('Order')
+        .select(`
+          OrderID,
+          LoginID,
+          OrderDT,
+          OrderLocation,
+          OrderLocationCoordinates,
+          OrderStatusID,
+          IsPaid
+        `)
+        .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
+        .order('OrderDT', { ascending: false });
+
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
+        return;
+      }
+
+      if (!orders || orders.length === 0) {
+        setOrders([]);
+        return;
+      }
+
+      // Get customer details and products for each order
+      const ordersWithDetails = await Promise.all(
+        orders.map(async (order) => {
+          let customer: { Name: string; phone: string; Email: string } | null = null;
+          if (order.LoginID) {
+            const { data: customerData } = await supabase
+              .from('Login')
+              .select('Name, phone, Email')
+              .eq('LoginID', order.LoginID)
+              .single();
+            customer = customerData || null;
+          }
+
+          // Get products for this order
+          const { data: products } = await supabase
+            .from('LkOrderProduct')
+            .select(`
+              LkOrderProductID,
+              OrderID,
+              ProductID,
+              ProductName,
+              ProductSize,
+              Quantity,
+              UnitPrice,
+              TotalPrice,
+              Addons,
+              Comment
+            `)
+            .eq('OrderID', order.OrderID);
+
+          const kitchenOrder: KitchenOrder = {
+            OrderID: order.OrderID,
+            OrderDT: order.OrderDT,
+            OrderLocation: order.OrderLocation,
+            OrderLocationCoordinates: order.OrderLocationCoordinates,
+            OrderStatusID: order.OrderStatusID,
+            IsPaid: order.IsPaid,
+            CustomerName: customer?.Name || 'Unknown',
+            CustomerPhone: customer?.phone || '',
+            CustomerEmail: customer?.Email || '',
+            CustomerLocation: order.OrderLocation,
+            Products: (products as LkOrderProducts[]) || [],
+            TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
+            SpecialInstructions: ''
+          };
+
+          return convertToDeliveryOrder(kitchenOrder);
+        })
+      );
+      
+      setOrders(ordersWithDetails);
+      console.log(`Fetched ${ordersWithDetails.length} delivery orders`);
     } catch (error) {
       console.error('Error fetching delivery orders:', error);
     } finally {
@@ -154,6 +266,9 @@ const DeliveryDashboard = () => {
       }
     });
     
+    // Get driver's current location
+    getCurrentLocation();
+    
     // Fetch orders on component mount
     fetchDeliveryOrders();
     
@@ -169,19 +284,37 @@ const DeliveryDashboard = () => {
   const updateOrderStatus = async (orderId: number, newStatus: DeliveryOrder['status']) => {
     const now = new Date();
     
-    // Update database for picked up orders (change from WITH_DRIVER to ON_WAY status)
+    // Update database for picked up orders (change from WITH_DRIVER to IN_DELIVERY status)
     if (newStatus === 'en_route') {
       try {
-        console.log(`Updating order ${orderId} from WITH_DRIVER (${ORDER_STATUS.WITH_DRIVER}) to ON_WAY status (${ORDER_STATUS.ON_WAY})`);
-        const success = await updateOrderStatusInDB(orderId, ORDER_STATUS.ON_WAY);
+        console.log(`Updating order ${orderId} from WITH_DRIVER (${ORDER_STATUS.WITH_DRIVER}) to IN_DELIVERY status (${ORDER_STATUS.IN_DELIVERY})`);
+        const success = await updateOrderStatusInDB(orderId, ORDER_STATUS.IN_DELIVERY);
         if (!success) {
-          console.error(`Failed to update order ${orderId} status to ON_WAY in database`);
+          console.error(`Failed to update order ${orderId} status to IN_DELIVERY in database`);
           alert('Грешка при обновяване на статуса на поръчката. Моля опитайте отново.');
           return;
         }
-        console.log(`Successfully updated order ${orderId} to ON_WAY status (OrderStatusID = ${ORDER_STATUS.ON_WAY})`);
+        console.log(`Successfully updated order ${orderId} to IN_DELIVERY status (OrderStatusID = ${ORDER_STATUS.IN_DELIVERY})`);
       } catch (error) {
-        console.error('Error updating order status to ON_WAY:', error);
+        console.error('Error updating order status to IN_DELIVERY:', error);
+        alert('Грешка при обновяване на статуса на поръчката. Моля опитайте отново.');
+        return;
+      }
+    }
+    
+    // Update database for reverting back to WITH_DRIVER status
+    if (newStatus === 'ready') {
+      try {
+        console.log(`Reverting order ${orderId} from IN_DELIVERY to WITH_DRIVER status (${ORDER_STATUS.WITH_DRIVER})`);
+        const success = await updateOrderStatusInDB(orderId, ORDER_STATUS.WITH_DRIVER);
+        if (!success) {
+          console.error(`Failed to revert order ${orderId} status to WITH_DRIVER in database`);
+          alert('Грешка при обновяване на статуса на поръчката. Моля опитайте отново.');
+          return;
+        }
+        console.log(`Successfully reverted order ${orderId} to WITH_DRIVER status (OrderStatusID = ${ORDER_STATUS.WITH_DRIVER})`);
+      } catch (error) {
+        console.error('Error reverting order status to WITH_DRIVER:', error);
         alert('Грешка при обновяване на статуса на поръчката. Моля опитайте отново.');
         return;
       }
@@ -369,6 +502,13 @@ const DeliveryDashboard = () => {
                 ✅ Доставена
               </button>
               <button
+                onClick={() => updateOrderStatus(order.id, 'ready')}
+                className="bg-orange-600 text-white font-bold py-2 px-3 rounded text-sm hover:bg-orange-700 transition-colors"
+                title="Върни към готови за вземане"
+              >
+                ↩️
+              </button>
+              <button
                 onClick={() => {
                   setSelectedOrder(order);
                   setShowIssueDialog(true);
@@ -380,14 +520,13 @@ const DeliveryDashboard = () => {
             </>
           )}
           
-          <a
-            href={`https://www.google.com/maps/dir/${driverLocation.lat},${driverLocation.lng}/${order.coordinates.lat},${order.coordinates.lng}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => setCurrentView('map')}
             className="bg-gray-600 text-white font-bold py-2 px-3 rounded text-sm hover:bg-gray-700 transition-colors"
+            title="Покажи карта с маршрут"
           >
             🗺️
-          </a>
+          </button>
         </div>
       </div>
     );
@@ -604,12 +743,80 @@ const DeliveryDashboard = () => {
 
         {currentView === 'map' && (
           <div className="p-4 h-full">
-            <div className="h-full bg-gray-900 rounded-lg flex items-center justify-center border border-gray-600">
-              <div className="text-center text-gray-400">
-                <MapPin size={64} className="mx-auto mb-4 opacity-50" />
-                <div className="text-lg">Интерактивна карта</div>
-                <div className="text-sm">Google Maps интеграция с всички доставки</div>
-                <div className="text-sm mt-2 text-blue-400">Оптимизирани маршрути • Движение в реално време</div>
+            <div className="h-full bg-gray-900 rounded-lg border border-gray-600 flex flex-col">
+              {/* Map Header */}
+              <div className="p-4 border-b border-gray-600">
+                <h2 className="text-xl font-bold text-white mb-2">🗺️ Карта на доставките</h2>
+                <div className="text-sm text-gray-400">
+                  Активни доставки: {activeOrders.length} | Готови за вземане: {readyOrders.length}
+                </div>
+              </div>
+              
+              {/* Location Controls */}
+              <div className="p-4 border-b border-gray-600">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="text-sm text-gray-300">
+                      <span className="font-medium">Текущо местоположение:</span>
+                      <span className="ml-2 text-green-400">
+                        {driverLocation.lat.toFixed(6)}, {driverLocation.lng.toFixed(6)}
+                      </span>
+                    </div>
+                    {locationError && (
+                      <div className="text-sm text-red-400">
+                        ⚠️ {locationError}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={getCurrentLocation}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center space-x-1"
+                    title="Обнови местоположение"
+                  >
+                    <Navigation size={14} />
+                    <span>Обнови</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Map Content */}
+              <div className="flex-1 p-4">
+                {(() => {
+                  const allOrders = [...readyOrders, ...activeOrders];
+                  if (allOrders.length > 0) {
+                    const firstOrder = allOrders[0];
+                    const destinationLat = firstOrder.coordinates.lat;
+                    const destinationLng = firstOrder.coordinates.lng;
+                    
+                    // Create Google Maps embed URL
+                    const mapsEmbedUrl = `https://www.google.com/maps/embed/v1/directions?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&origin=${driverLocation.lat},${driverLocation.lng}&destination=${destinationLat},${destinationLng}&mode=driving`;
+                    
+                    return (
+                      <div className="h-full bg-gray-800 rounded-lg border border-gray-600 overflow-hidden">
+                        <iframe
+                          src={mapsEmbedUrl}
+                          width="100%"
+                          height="100%"
+                          style={{ border: 0 }}
+                          allowFullScreen
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                          className="rounded-lg"
+                        />
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="h-full bg-gray-800 rounded-lg flex items-center justify-center border border-gray-600">
+                        <div className="text-center text-gray-400">
+                          <MapPin size={64} className="mx-auto mb-4 opacity-50" />
+                          <div className="text-lg">Няма активни доставки</div>
+                          <div className="text-sm">Картата ще се появи когато има поръчки</div>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
               </div>
             </div>
           </div>

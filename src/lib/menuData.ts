@@ -17,14 +17,18 @@ export interface MenuItem {
   category: string
   rating: number
   time: string
+  description?: string
   sizes: Array<{
     name: string
     price: number
     multiplier: number
+    weight?: number | null
   }>
   smallPrice: number
   mediumPrice: number | null
   largePrice: number | null
+  smallWeight: number | null
+  largeWeight: number | null
   addons: any[]
 }
 
@@ -194,16 +198,19 @@ export async function fetchMenuData() {
         category,
         rating: ratingMap[product.ProductTypeID] || 4.5,
         time: timeMap[product.ProductTypeID] || '10-15 мин',
+        description: product.Description || null,
         sizes: [],
         smallPrice: product.SmallPrice,
         mediumPrice: product.MediumPrice || null,
         largePrice: product.LargePrice || null,
+        smallWeight: product.SmallWeight || null,
+        largeWeight: product.LargeWeight || null,
         addons: [] // Initialize addons array
       }
 
       // Create sizes dynamically based on available prices in database
       // No hardcoded size names - let the database control everything
-      const availableSizes: Array<{ name: string; price: number; multiplier: number }> = []
+      const availableSizes: Array<{ name: string; price: number; multiplier: number; weight?: number | null }> = []
       
       // Determine size names based on product category (Bulgarian grammar)
       const isPizza = category === 'pizza'
@@ -212,7 +219,8 @@ export async function fetchMenuData() {
       availableSizes.push({
         name: isPizza ? 'Малка' : 'Малък',
         price: product.SmallPrice,
-        multiplier: 1.0
+        multiplier: 1.0,
+        weight: product.SmallWeight || null
       })
       
       // Add Medium size if available in database
@@ -229,7 +237,8 @@ export async function fetchMenuData() {
         availableSizes.push({
           name: isPizza ? 'Голяма' : 'Голям',
           price: product.LargePrice,
-          multiplier: product.LargePrice / product.SmallPrice
+          multiplier: product.LargePrice / product.SmallPrice,
+          weight: product.LargeWeight || null
         })
       }
       

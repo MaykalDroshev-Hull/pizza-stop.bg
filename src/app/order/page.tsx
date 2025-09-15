@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Star, Clock, Plus } from 'lucide-react'
+import { Search, Star, Clock, Plus, HelpCircle, X } from 'lucide-react'
 import CartModal from '../../components/CartModal'
 import { fetchMenuData, MenuItem } from '../../lib/menuData'
 import { useLoading } from '../../components/LoadingContext'
@@ -13,10 +13,35 @@ export default function MenuPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedSize, setSelectedSize] = useState<any>(null)
   const [selectedSizes, setSelectedSizes] = useState<{ [key: number]: any }>({})
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false)
+  const [selectedDescription, setSelectedDescription] = useState('')
 
   const [menuData, setMenuData] = useState<{ [key: string]: MenuItem[] }>({})
   const [isDataLoaded, setIsDataLoaded] = useState(false)
   const { startLoading, stopLoading } = useLoading()
+
+  // Function to get pizza descriptions
+  const getPizzaDescription = (pizzaName: string) => {
+    const descriptions: { [key: string]: string } = {
+      'BBQ Спешъл': 'Сочна пица с BBQ сос, пилешко месо, лук и моцарела',
+      'BBQ Тексас': 'Американски стил с BBQ сос, говежди месо, бекон и сирене',
+      'Акапулко': 'Мексиканска пица с пикантен сос, пилешко месо, чушки и сирене',
+      'Вегетариан Делукс': 'Свежи зеленчуци, домати, гъби, маслини и моцарела',
+      'Маргарита': 'Класическа пица с доматен сос, моцарела и босилек',
+      'Пеперони': 'Остра пица с пеперони, доматен сос и моцарела',
+      'Капричоза': 'Италианска пица с шунка, гъби, артишоки и моцарела',
+      'Кватро Стаджони': 'Четири сезона с различни вкусове на всеки квадрант',
+      'Морнара': 'Морска пица с риба, скариди и морски дарове',
+      'Романа': 'Римска пица с прошуто, рокола и пармезан'
+    }
+    return descriptions[pizzaName] || 'Вкусна пица с пресни съставки и традиционен вкус'
+  }
+
+  // Function to show full description
+  const showFullDescription = (description: string) => {
+    setSelectedDescription(description)
+    setShowDescriptionModal(true)
+  }
 
   // Fetch menu data from Supabase
   useEffect(() => {
@@ -207,8 +232,32 @@ export default function MenuPage() {
                 <div className="p-6">
                   <h3 className="font-bold text-lg mb-2 text-text">{item.name}</h3>
                   
+                  {/* Pizza Description */}
+                  <div className="mb-3">
+                    <div className="flex items-start gap-2">
+                      <p 
+                        className="text-sm text-muted line-clamp-3 flex-1"
+                        title={item.description || getPizzaDescription(item.name)}
+                      >
+                        {item.description || getPizzaDescription(item.name)}
+                      </p>
+                      <button
+                        onClick={() => showFullDescription(item.description || getPizzaDescription(item.name))}
+                        className="flex-shrink-0 text-muted hover:text-orange transition-colors"
+                        title="Виж пълното описание"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-orange font-bold text-2xl">{item.basePrice?.toFixed(2)} лв.</span>
+                    <span className="text-orange font-bold text-2xl">
+                      {selectedSizes[item.id]?.name === 'Голяма' 
+                        ? (item.largePrice || item.basePrice * 2)?.toFixed(2)
+                        : item.basePrice?.toFixed(2)
+                      } лв.
+                    </span>
                     <div className="flex items-center text-sm text-muted">
                       <Star className="w-4 h-4 text-yellow fill-current mr-1" />
                       {item.rating}
@@ -222,48 +271,85 @@ export default function MenuPage() {
 
                   {item.sizes && item.sizes.length > 0 && (
                     <div className="mb-4">
-                      <p className="text-sm text-muted mb-2">Избери размер:</p>
-                      <div className={`${
-                        // Special case: Any product with 3 sizes gets vertical layout (like doners)
-                        item.sizes.length === 3
-                          ? 'flex flex-col gap-2' // Vertical stack: Small (top) → Medium (middle) → Large (bottom)
-                          : // All other cases use horizontal grid
-                          `grid gap-2 ${
-                            item.sizes.length === 1 ? 'grid-cols-1' :
-                            item.sizes.length === 2 ? 'grid-cols-2' :
-                            'grid-cols-3'
-                          }`
-                      }`}>
-                        {Array.isArray(item.sizes) && item.sizes.map((size, index) => {
-                          const sizeName = typeof size === 'string' ? size : size.name
-                          const sizePrice = typeof size === 'string' ? item.basePrice : size.price
-                          const isSelected = selectedSizes[item.id] && selectedSizes[item.id].name === sizeName
-                          
-                          return (
-                            <button
-                              key={index}
-                              onClick={() => setSelectedSizes(prev => ({
-                                ...prev,
-                                [item.id]: typeof size === 'string' ? { name: size, price: sizePrice } : size
-                              }))}
-                              className={`px-3 py-2 rounded-lg text-xs border transition-all ${
-                                isSelected
-                                  ? 'bg-orange/20 border-orange text-orange shadow-lg shadow-orange/25'
-                                  : 'bg-white/8 border-white/12 text-text hover:border-orange/50 hover:bg-orange/10'
-                              }`}
-                            >
-                              <div className="font-medium">{sizeName}</div>
-                              <div className="text-xs opacity-75">{sizePrice?.toFixed(2)} лв.</div>
-                            </button>
-                          )
-                        })}
-                      </div>
+                      {/* Show size selection only if there are weight values */}
+                      {(item.smallWeight || item.largeWeight) ? (
+                        <>
+                          {selectedSizes[item.id] ? (
+                            /* Show selected size with change option */
+                            <div className="mb-4">
+                              <div className="px-3 py-2 rounded-lg text-xs border transition-all bg-orange/20 border-orange text-orange shadow-lg shadow-orange/25">
+                                <div className="font-medium">
+                                  {selectedSizes[item.id].name} {selectedSizes[item.id].name === 'Малка' 
+                                    ? (item.smallWeight ? `(${item.smallWeight}г)` : 'Стандартен размер')
+                                    : (item.largeWeight ? `(${item.largeWeight}г)` : 'Стандартен размер')
+                                  }
+                                </div>
+                                <div className="text-xs opacity-75">{selectedSizes[item.id].price?.toFixed(2)} лв.</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  console.log('Промени размер clicked!')
+                                  setSelectedSizes(prev => ({
+                                    ...prev,
+                                    [item.id]: null
+                                  }))
+                                }}
+                                className="text-sm text-orange/70 hover:text-orange mt-3 underline cursor-pointer block w-full text-left"
+                              >
+                                Промени размер
+                              </button>
+                            </div>
+                          ) : (
+                            /* Show size selection buttons */
+                            <>
+                              <p className="text-sm text-muted mb-2">Избери размер:</p>
+                              <div className="grid gap-2 grid-cols-2">
+                                <button 
+                                  className="px-3 py-2 rounded-lg text-xs border transition-all bg-white/8 border-white/12 text-text hover:border-orange/50 hover:bg-orange/10"
+                                  onClick={() => setSelectedSizes(prev => ({
+                                    ...prev,
+                                    [item.id]: { name: 'Малка', price: item.basePrice, multiplier: 1.0 }
+                                  }))}
+                                >
+                                  <div className="font-medium">
+                                    Малка {item.smallWeight ? `(${item.smallWeight}г)` : 'Стандартен размер'}
+                                  </div>
+                                  <div className="text-xs opacity-75">{item.basePrice?.toFixed(2)} лв.</div>
+                                </button>
+                                <button 
+                                  className="px-3 py-2 rounded-lg text-xs border transition-all bg-white/8 border-white/12 text-text hover:border-orange/50 hover:bg-orange/10"
+                                  onClick={() => setSelectedSizes(prev => ({
+                                    ...prev,
+                                    [item.id]: { name: 'Голяма', price: item.largePrice || item.basePrice * 2, multiplier: 2.0 }
+                                  }))}
+                                >
+                                  <div className="font-medium">
+                                    Голяма {item.largeWeight ? `(${item.largeWeight}г)` : 'Стандартен размер'}
+                                  </div>
+                                  <div className="text-xs opacity-75">{item.largePrice ? item.largePrice.toFixed(2) : (item.basePrice * 2).toFixed(2)} лв.</div>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        /* Show single button when no weight values */
+                        <div className="text-center">
+                          <div className="inline-block px-4 py-2 bg-orange/20 border border-orange text-orange rounded-lg text-sm font-medium">
+                            Стандартен размер
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   
                   <button
                     onClick={() => {
-                      if (item.sizes && item.sizes.length > 0 && !selectedSizes[item.id]) {
+                      // Only require size selection if there are weight values
+                      const hasWeightValues = item.smallWeight || item.largeWeight
+                      if (item.sizes && item.sizes.length > 0 && hasWeightValues && !selectedSizes[item.id]) {
                         // Auto-select first size if none selected
                         const firstSize = typeof item.sizes[0] === 'string' 
                           ? { name: item.sizes[0], price: item.basePrice }
@@ -275,16 +361,16 @@ export default function MenuPage() {
                       }
                       handleAddToCart(item)
                     }}
-                    disabled={item.sizes && item.sizes.length > 0 && !selectedSizes[item.id]}
+                    disabled={item.sizes && item.sizes.length > 0 && !!(item.smallWeight || item.largeWeight) && !selectedSizes[item.id]}
                     className={`w-full py-3 px-4 rounded-xl font-medium transition-all transform hover:scale-105 flex items-center justify-center space-x-2 ${
-                      item.sizes && item.sizes.length > 0 && !selectedSizes[item.id]
+                      item.sizes && item.sizes.length > 0 && !!(item.smallWeight || item.largeWeight) && !selectedSizes[item.id]
                         ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
                         : 'bg-gradient-to-r from-red to-orange text-white hover:shadow-lg'
                     }`}
                   >
                     <Plus size={20} />
                     <span>
-                      {item.sizes && item.sizes.length > 0 && !selectedSizes[item.id] 
+                      {item.sizes && item.sizes.length > 0 && (item.smallWeight || item.largeWeight) && !selectedSizes[item.id] 
                         ? 'Избери размер първо' 
                         : 'Добави в количката'
                       }
@@ -320,8 +406,35 @@ export default function MenuPage() {
             // Don't reset selectedSizes here - keep them for the product cards
           }}
           item={selectedItem}
-          selectedSize={selectedSize}
+          selectedSize={selectedItem ? selectedSizes[selectedItem.id] : null}
+          onSizeChange={(itemId, size) => {
+            console.log('Parent onSizeChange called:', itemId, size)
+            setSelectedSizes(prev => ({
+              ...prev,
+              [itemId]: size
+            }))
+          }}
         />
+      )}
+
+      {/* Description Modal */}
+      {showDescriptionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800">Описание</h3>
+              <button
+                onClick={() => setShowDescriptionModal(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <p className="text-gray-700 leading-relaxed">
+              {selectedDescription}
+            </p>
+          </div>
+        </div>
       )}
     </div>
   )
