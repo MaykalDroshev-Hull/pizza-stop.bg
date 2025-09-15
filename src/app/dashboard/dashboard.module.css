@@ -226,7 +226,10 @@
 }
 
 .productItem {
-  padding: 0.75rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 0.9rem;
 }
@@ -235,73 +238,14 @@
   border-bottom: none;
 }
 
-.productMain {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.productName {
+.productItem span:first-child {
   flex: 1;
   color: var(--text);
-  font-weight: 500;
 }
 
-.productSize {
+.productItem span:not(:first-child) {
   color: var(--muted);
-  font-size: 0.8rem;
-  margin: 0 0.5rem;
-}
-
-.productQuantity {
-  color: var(--muted);
-  font-size: 0.8rem;
-  margin: 0 0.5rem;
-}
-
-.productPrice {
-  color: var(--orange);
-  font-weight: 600;
   margin-left: 1rem;
-}
-
-.productAddons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-top: 0.5rem;
-}
-
-.addonItem {
-  background: rgba(255, 165, 0, 0.1);
-  color: var(--orange);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.5rem;
-  font-size: 0.75rem;
-  border: 1px solid rgba(255, 165, 0, 0.2);
-}
-
-.moreAddons {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--muted);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.5rem;
-  font-size: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.productComment {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 0.5rem;
-  border-left: 3px solid var(--blue);
-}
-
-.productComment em {
-  color: var(--muted);
-  font-size: 0.8rem;
 }
 
 .moreItems {
@@ -310,34 +254,6 @@
   font-size: 0.9rem;
   font-style: italic;
   margin: 0.5rem 0 0 0;
-}
-
-.orderActions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.followOrderBtn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--blue);
-  border: none;
-  color: white;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
-  flex: 1;
-  justify-content: center;
-  font-size: 0.9rem;
-}
-
-.followOrderBtn:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
 }
 
 .orderAgainBtn {
@@ -352,9 +268,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
-  flex: 1;
+  width: 100%;
   justify-content: center;
-  font-size: 0.9rem;
 }
 
 .orderAgainBtn:hover {

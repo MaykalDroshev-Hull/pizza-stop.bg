@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle, Clock, MapPin, Phone, CreditCard, Home, ArrowLeft } from 'lucide-react'
+import { CheckCircle, Clock, MapPin, Phone, CreditCard, Home, ArrowLeft, RefreshCw } from 'lucide-react'
+import { decryptOrderId } from '../../utils/orderEncryption'
 
 interface OrderDetails {
   orderId: string
@@ -19,19 +20,30 @@ interface OrderDetails {
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams()
-  const orderId = searchParams.get('orderId')
+  const encryptedOrderId = searchParams.get('orderId')
   
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [estimatedTime, setEstimatedTime] = useState<string>('')
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (orderId) {
-      // In a real app, you would fetch order details from the API
+    if (encryptedOrderId) {
+      // Decrypt the order ID
+      const decryptedOrderId = decryptOrderId(encryptedOrderId)
+      
+      if (!decryptedOrderId) {
+        setError('Невалиден или изтекъл линк за поръчката.')
+        setIsLoading(false)
+        return
+      }
+      
+      // In a real app, you would fetch order details from the API using decryptedOrderId
       // For now, we'll simulate the order details
       setTimeout(() => {
         setOrderDetails({
-          orderId,
+          orderId: decryptedOrderId,
           customerName: 'Георги Петров', // This would come from the API
           customerPhone: '+359 88 123 4567',
           orderLocation: 'ул. Витоша 15, Ловеч',
@@ -43,8 +55,11 @@ function OrderSuccessContent() {
         })
         setIsLoading(false)
       }, 1000)
+    } else {
+      setError('Липсва номер на поръчката.')
+      setIsLoading(false)
     }
-  }, [orderId])
+  }, [encryptedOrderId])
 
   const handleGoHome = () => {
     window.location.href = '/'
@@ -54,12 +69,70 @@ function OrderSuccessContent() {
     window.location.href = '/dashboard'
   }
 
+  const handleRefreshTime = async () => {
+    // Start spinning animation
+    setIsRefreshing(true)
+    
+    // Simulate API call to refresh estimated time
+    setEstimatedTime('')
+    
+    // Simulate loading for 2 seconds
+    setTimeout(() => {
+      // In a real app, this would fetch from the API
+      const randomMinutes = Math.floor(Math.random() * 30) + 15 // 15-45 minutes
+      setEstimatedTime(`${randomMinutes} минути`)
+      
+      // Stop spinning animation after a short delay
+      setTimeout(() => {
+        setIsRefreshing(false)
+      }, 100)
+    }, 2000)
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red/5 via-orange/5 to-yellow/5 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange mx-auto mb-4"></div>
-          <p className="text-text">Зареждане на детайли за поръчката...</p>
+          {/* Logo container */}
+          <div className="flex flex-col items-center justify-center">
+            <img 
+              src="https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU2Mzk1NzY5LCJleHAiOjI3MDI0NzU3Njl9.BzjSV5QdUHUyFM8_cf5k1SFWfKqqeRQnCZ09sRjtLvg"
+              alt="PIZZA STOP Logo"
+              className="w-32 h-32 object-contain"
+              style={{
+                animation: 'logoSpin 1s linear forwards'
+              }}
+            />
+            
+            {/* Loading text */}
+            <div className="mt-6 text-center">
+              <p className="text-white text-lg font-semibold mb-2">Зареждане на детайли за поръчката...</p>
+              <div className="flex items-center justify-center space-x-1">
+                <div className="w-2 h-2 bg-orange rounded-full animate-bounce-gentle"></div>
+                <div className="w-2 h-2 bg-orange rounded-full animate-bounce-gentle" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 bg-orange rounded-full animate-bounce-gentle" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red/5 via-orange/5 to-yellow/5 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-6xl mb-4">❌</div>
+          <h1 className="text-2xl font-bold text-text mb-2">Грешка</h1>
+          <p className="text-muted mb-6">{error}</p>
+          <button
+            onClick={handleGoHome}
+            className="bg-gradient-to-r from-orange to-red text-white px-6 py-3 rounded-xl font-medium hover:scale-105 transition-transform"
+          >
+            <Home size={20} className="inline mr-2" />
+            Към началната страница
+          </button>
         </div>
       </div>
     )
@@ -88,7 +161,7 @@ function OrderSuccessContent() {
     <div className="min-h-screen bg-gradient-to-br from-red/5 via-orange/5 to-yellow/5">
       {/* Header */}
       <div className="bg-card border-b border-white/12 sticky top-0 z-30">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-4 py-4 max-md:px-6">
           <div className="flex items-center justify-between">
             <button
               onClick={handleGoHome}
@@ -103,7 +176,7 @@ function OrderSuccessContent() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 max-md:px-6">
         {/* Success Message */}
         <div className="text-center mb-8">
           <div className="text-green-400 text-6xl mb-4">
@@ -114,10 +187,10 @@ function OrderSuccessContent() {
         </div>
 
         {/* Order Details Card */}
-        <div className="bg-card border border-white/12 rounded-2xl p-6 mb-6">
+        <div className="bg-card border border-white/12 rounded-2xl p-6 mb-6 max-md:p-4">
           <h2 className="text-xl font-bold text-text mb-4">Детайли за поръчката</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-md:justify-start max-md:w-80 md:w-full">
             {/* Left Column */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -189,14 +262,24 @@ function OrderSuccessContent() {
         </div>
 
         {/* Estimated Time Section */}
-        <div className="bg-card border border-white/12 rounded-2xl p-6 mb-6">
-          <h2 className="text-xl font-bold text-text mb-4">Очаквано време</h2>
+        <div className="bg-card border border-white/12 rounded-2xl p-6 mb-6 max-md:p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-text">Очаквано време</h2>
+            <button
+              onClick={handleRefreshTime}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-3 py-2 bg-orange/10 border border-orange/20 rounded-lg text-orange hover:bg-orange/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCw size={16} className={isRefreshing ? 'refresh-spinning' : ''} />
+              <span className="text-sm font-medium">Обнови</span>
+            </button>
+          </div>
           
           {estimatedTime ? (
             <div className="flex items-center gap-3 p-4 bg-green/10 border border-green/20 rounded-xl">
               <Clock size={24} className="text-green" />
               <div>
-                <p className="font-medium text-text">Готово за {estimatedTime}</p>
+                <p className="font-medium text-text">Готово след около {estimatedTime}</p>
                 <p className="text-sm text-muted">
                   {orderDetails.isCollection 
                     ? 'Можете да вземете поръчката от ресторанта' 
@@ -219,10 +302,10 @@ function OrderSuccessContent() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 max-md:gap-3">
           <button
             onClick={handleGoHome}
-            className="flex-1 bg-gradient-to-r from-orange to-red text-white py-3 px-6 rounded-xl font-medium hover:scale-105 transition-transform flex items-center justify-center gap-2"
+            className="flex-1 bg-gradient-to-r from-orange to-red text-white py-3 px-6 rounded-xl font-medium hover:scale-105 transition-transform flex items-center justify-center gap-2 max-md:py-4"
           >
             <Home size={20} />
             Към началната страница
@@ -230,7 +313,7 @@ function OrderSuccessContent() {
           
           <button
             onClick={handleBackToOrders}
-            className="flex-1 bg-white/6 border border-white/12 text-text py-3 px-6 rounded-xl font-medium hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+            className="flex-1 bg-white/6 border border-white/12 text-text py-3 px-6 rounded-xl font-medium hover:bg-white/10 transition-colors flex items-center justify-center gap-2 max-md:py-4"
           >
             <CheckCircle size={20} />
             Моите поръчки
@@ -256,8 +339,27 @@ export default function OrderSuccessPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-br from-red/5 via-orange/5 to-yellow/5 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange mx-auto mb-4"></div>
-          <p className="text-text">Зареждане...</p>
+          {/* Logo container */}
+          <div className="flex flex-col items-center justify-center">
+            <img 
+              src="https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU2Mzk1NzY5LCJleHAiOjI3MDI0NzU3Njl9.BzjSV5QdUHUyFM8_cf5k1SFWfKqqeRQnCZ09sRjtLvg"
+              alt="PIZZA STOP Logo"
+              className="w-32 h-32 object-contain"
+              style={{
+                animation: 'logoSpin 1s linear forwards'
+              }}
+            />
+            
+            {/* Loading text */}
+            <div className="mt-6 text-center">
+              <p className="text-white text-lg font-semibold mb-2">Зареждане...</p>
+              <div className="flex items-center justify-center space-x-1">
+                <div className="w-2 h-2 bg-orange rounded-full animate-bounce-gentle"></div>
+                <div className="w-2 h-2 bg-orange rounded-full animate-bounce-gentle" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 bg-orange rounded-full animate-bounce-gentle" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     }>

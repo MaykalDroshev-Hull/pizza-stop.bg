@@ -26,6 +26,41 @@
   }
 }
 
+/* Gentle bounce animation for loading dots */
+@keyframes bounce-gentle {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-8px);
+  }
+  60% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Custom grid template for mobile order details */
+@media (max-width: 768px) {
+  .grid-mobile-minmax {
+    grid-template-columns: repeat(1, minmax(0, 20rem));
+    justify-content: start;
+  }
+}
+
+/* Refresh icon spin animation */
+@keyframes refreshSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.refresh-spinning {
+  animation: refreshSpin 0.6s ease-in-out;
+}
+
 :root{
   --red:#e11d48; /* ярко червено */
   --orange:#ff7f11; /* портокалово */
@@ -170,7 +205,7 @@ img:hover{transform:scale(1.1);box-shadow:0 20px 40px rgba(0,0,0,.4)}
 .group:hover .group-hover\:scale-110 { transform: scale(1.1); }
 .text-center { text-align: center; }
 .grid { display: grid; }
-.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 10rem)); }
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 20rem)); }
 .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 10rem)); }
 .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 10rem)); }
 .gap-2 { gap: 0.5rem; }
@@ -326,6 +361,15 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
 .nav a.btn{padding:10px 14px;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--orange));font-weight:800;box-shadow:0 8px 20px rgba(225,29,72,.45);transition:transform 0.2s ease}
 .nav a.btn:hover{transform:translateY(-1px)}
 
+/* Responsive button text */
+.desktop-text {
+  display: inline;
+}
+
+.mobile-text {
+  display: none;
+}
+
 /* Account icon styling */
 .account-icon {
   display: flex;
@@ -358,9 +402,9 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
     height: 36px;
   }
 
-  /* Hide logo on mobile */
+  /* Show logo on mobile */
   .logo {
-    display: none;
+    display: block;
   }
 
   /* Mobile door sign adjustments */
@@ -380,7 +424,14 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
     border-width: 2px;
   }
 
+  /* Responsive button text for mobile */
+  .desktop-text {
+    display: none;
+  }
 
+  .mobile-text {
+    display: inline;
+  }
 }
 
 /* Hero - Basic styles only (detailed styles moved to home.module.css) */
@@ -807,6 +858,27 @@ button {
   
   .text-4xl {
     font-size: 1.75rem !important;
+  }
+}
+
+/* Hide system date/time picker icons on mobile */
+@media (max-width: 768px) {
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+  }
+  
+  input[type="date"]::-webkit-inner-spin-button,
+  input[type="time"]::-webkit-inner-spin-button {
+    display: none;
+    -webkit-appearance: none;
+  }
+  
+  input[type="date"]::-webkit-clear-button,
+  input[type="time"]::-webkit-clear-button {
+    display: none;
+    -webkit-appearance: none;
   }
 }
 

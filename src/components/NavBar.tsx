@@ -75,7 +75,17 @@ export default function NavBar() {
             </div>
           </div>
           <a className="btn" href="/order">
-            {isOpen ? 'ПОРЪЧАЙ СЕГА' : 'ПОРЪЧАЙ ЗА \r\n ПО-КЪСНО'}
+            {isOpen ? (
+              <>
+                <span className="desktop-text">ПОРЪЧАЙ СЕГА</span>
+                <span className="mobile-text">ПОРЪЧАЙ</span>
+              </>
+            ) : (
+              <>
+                <span className="desktop-text">ПОРЪЧАЙ ЗА ПО-КЪСНО</span>
+                <span className="mobile-text">ПОРЪЧАЙ</span>
+              </>
+            )}
           </a>
           {user ? (
             <div className="user-menu">
