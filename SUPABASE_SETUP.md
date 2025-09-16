@@ -84,6 +84,8 @@ CREATE TABLE public.Order (
   OrderStatusID smallint NOT NULL,
   RfPaymentMethodID smallint NOT NULL,
   IsPaid boolean NOT NULL DEFAULT false,
+  ExpectedDT timestamp with time zone, -- Expected delivery/pickup time
+  OrderType smallint NOT NULL, -- 1 = Restaurant collection, 2 = Delivery
   CONSTRAINT Order_pkey PRIMARY KEY (OrderID),
   CONSTRAINT fk_order_login FOREIGN KEY (LoginID) REFERENCES public.Login(LoginID),
   CONSTRAINT fk_order_orderstatus FOREIGN KEY (OrderStatusID) REFERENCES public.RfOrderStatus(OrderStatusID)
@@ -140,6 +142,10 @@ INSERT INTO public.RfOrderStatus (OrderStatusID, OrderStatus) VALUES
 (6, 'Доставена'),
 (7, 'Завършена'),
 (8, 'Отказана');
+
+-- OrderType Values Reference:
+-- 1 = Restaurant collection (customer picks up from restaurant)
+-- 2 = Delivery (restaurant delivers to customer address)
 ```
 
 ## 🔐 Password Security

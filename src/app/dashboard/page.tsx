@@ -36,6 +36,7 @@ interface Order {
   PaymentMethod: string
   IsPaid: boolean
   DeliveryAddress: string
+  OrderType?: number // 1 = collection, 2 = delivery
   Products: Array<{
     ProductName: string
     ProductSize: string
@@ -120,7 +121,10 @@ export default function DashboardPage() {
       const ordersResponse = await fetch(`/api/user/orders?userId=${user.id}`)
       if (ordersResponse.ok) {
         const ordersData = await ordersResponse.json()
-        setOrders(ordersData.orders || [])
+        const sortedOrders = (ordersData.orders || []).sort((a: Order, b: Order) => 
+          new Date(b.OrderDate).getTime() - new Date(a.OrderDate).getTime()
+        )
+        setOrders(sortedOrders)
         
         // Find favourite order (most ordered)
         if (ordersData.orders && ordersData.orders.length > 0) {
@@ -249,10 +253,73 @@ export default function DashboardPage() {
     }
   }
 
-  const handleOrderAgain = (order: Order) => {
-    // Add order items to cart (you'll need to implement this)
-    console.log('Ordering again:', order)
-    router.push('/order')
+  const handleOrderAgain = async (order: Order) => {
+    try {
+      startLoading()
+      
+      // Get current menu to check product availability
+      const { fetchMenuData } = await import('../../lib/menuData')
+      const menuData = await fetchMenuData()
+      
+      // Flatten all products from all categories
+      const availableProducts = [
+        ...menuData.pizza,
+        ...menuData.burgers,
+        ...menuData.doners,
+        ...menuData.drinks
+      ]
+      
+      // Map order products to cart items, checking availability
+      const cartItems: any[] = []
+      const unavailableItems: string[] = []
+      
+      for (const orderProduct of order.Products) {
+        // Find matching product in current menu
+        const availableProduct = availableProducts.find((p: any) => 
+          p.name === orderProduct.ProductName
+        )
+        
+        if (availableProduct) {
+          // Product is available - add to cart
+          const cartItem = {
+            id: availableProduct.id,
+            name: orderProduct.ProductName,
+            price: orderProduct.UnitPrice,
+            image: availableProduct.image || '/images/placeholder-pizza.jpg',
+            category: availableProduct.category || 'pizza',
+            size: orderProduct.ProductSize || 'Medium',
+            addons: orderProduct.Addons || [],
+            comment: orderProduct.Comment || '',
+            quantity: orderProduct.Quantity
+          }
+          cartItems.push(cartItem)
+        } else {
+          // Product is unavailable
+          unavailableItems.push(orderProduct.ProductName)
+        }
+      }
+      
+      // Clear current cart and add items
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pizza-stop-cart', JSON.stringify(cartItems))
+        
+        // Store order type and unavailable items info for checkout
+        const orderInfo = {
+          isCollection: order.OrderType === 1, // 1 = collection, 2 = delivery
+          unavailableItems
+        }
+        localStorage.setItem('pizza-stop-order-again', JSON.stringify(orderInfo))
+      }
+      
+      // Navigate to checkout
+      router.push('/checkout')
+      
+    } catch (error) {
+      console.error('Error setting up order again:', error)
+      setError('Грешка при зареждане на поръчката. Моля, опитайте отново.')
+    } finally {
+      stopLoading()
+    }
   }
 
   if (authLoading) {

@@ -8,7 +8,7 @@ declare global {
     inputType?: string
   }
 }
-import { ArrowLeft, MapPin, User, Phone, CreditCard, Banknote, Clock, Calendar, LogIn, UserCheck, MessageSquare, RotateCcw, Database, Navigation, FileText, Map, CheckCircle, XCircle, Info, AlertTriangle, Lightbulb, Home, ShoppingCart, Pizza, Search, ClipboardList, Edit, Target, AlertCircle, HelpCircle, Truck, Store } from 'lucide-react'
+import { ArrowLeft, MapPin, User, Phone, CreditCard, Banknote, Clock, Calendar, LogIn, UserCheck, MessageSquare, RotateCcw, Database, Navigation, FileText, Map, CheckCircle, XCircle, Info, AlertTriangle, Lightbulb, Home, ShoppingCart, Pizza, Search, ClipboardList, Edit, Target, AlertCircle, HelpCircle, Truck, Store, Mail } from 'lucide-react'
 import { useCart } from '../../components/CartContext'
 import AddressSelectionModal from '../../components/AddressSelectionModal'
 import { isRestaurantOpen } from '../../utils/openingHours'
@@ -18,6 +18,7 @@ import { encryptOrderId } from '../../utils/orderEncryption'
 interface CustomerInfo {
   name: string
   phone: string
+  email?: string
   address: string
   coordinates: { lat: number; lng: number } | null
   exactLocation: { lat: number; lng: number } | null
@@ -34,12 +35,13 @@ type PaymentMethod = 'online' | 'card' | 'cash'
 type OrderType = 'guest' | 'user'
 
 export default function CheckoutPage() {
-  const { items, totalPrice, clearCart, getItemTotalPrice } = useCart()
+  const { items, totalPrice, clearCart, getItemTotalPrice, refreshFromStorage } = useCart()
   const { user, isAuthenticated, updateUser } = useLoginID()
   
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: '',
     phone: '',
+    email: '',
     address: '',
     coordinates: null,
     exactLocation: null
@@ -57,6 +59,7 @@ export default function CheckoutPage() {
   const [addressConfirmed, setAddressConfirmed] = useState(false)
   const [isCollection, setIsCollection] = useState(false)
   const [paymentMethodId, setPaymentMethodId] = useState<number | null>(null)
+  const [unavailableItems, setUnavailableItems] = useState<string[]>([])
   const addressInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -77,6 +80,28 @@ export default function CheckoutPage() {
 
     loadGoogleMaps()
   }, [])
+
+  // Check for "order again" data on component mount and refresh cart
+  useEffect(() => {
+    // Refresh cart from localStorage first (for "order again" functionality)
+    refreshFromStorage()
+    
+    if (typeof window !== 'undefined') {
+      const orderAgainData = localStorage.getItem('pizza-stop-order-again')
+      if (orderAgainData) {
+        try {
+          const orderInfo = JSON.parse(orderAgainData)
+          setIsCollection(orderInfo.isCollection || false)
+          setUnavailableItems(orderInfo.unavailableItems || [])
+          
+          // Clear the data after using it
+          localStorage.removeItem('pizza-stop-order-again')
+        } catch (error) {
+          console.error('Error parsing order again data:', error)
+        }
+      }
+    }
+  }, [refreshFromStorage])
 
 
 
@@ -491,6 +516,7 @@ export default function CheckoutPage() {
     setCustomerInfo({
       name: '',
       phone: '',
+      email: '',
       address: '',
       coordinates: null,
       exactLocation: null
@@ -507,6 +533,9 @@ export default function CheckoutPage() {
       }
       if (user.phone) {
         updates.phone = user.phone
+      }
+      if (user.email) {
+        updates.email = user.email
       }
       if (user.LocationText) {
         updates.address = user.LocationText
@@ -551,6 +580,7 @@ export default function CheckoutPage() {
 
   // Form validation logic
   const isFormValid = customerInfo.name && customerInfo.phone && 
+    (orderType === 'user' || (orderType === 'guest' && customerInfo.email)) && // Email required for guest orders
     orderTime.type !== null &&
     (orderTime.type === 'immediate' || (orderTime.type === 'scheduled' && orderTime.scheduledTime)) &&
     orderType &&
@@ -653,7 +683,7 @@ export default function CheckoutPage() {
      const orderData = {
        customerInfo: {
          ...customerInfo,
-         email: (customerInfo as any).email || `guest_${Date.now()}@pizza-stop.bg`
+         email: orderType === 'guest' ? customerInfo.email : (user?.email || `guest_${Date.now()}@pizza-stop.bg`)
        },
        orderItems: items,
        orderTime,
@@ -720,12 +750,12 @@ export default function CheckoutPage() {
       </div>
 
              <div className="container py-8">
-         <div className="max-w-2xl mx-auto space-y-8">
+         <div className="max-w-6xl mx-auto space-y-8">
            
            
-           {/* Order Summary */}
+           {/* Cart Items Summary */}
            <div className="bg-card border border-white/12 rounded-2xl p-6">
-             <h2 className="text-xl font-bold text-text mb-4">Обобщение на поръчката</h2>
+             <h2 className="text-xl font-bold text-text mb-4">Артикули в количката</h2>
              
              {isCartLoading ? (
                <div className="text-center py-8">
@@ -1238,7 +1268,7 @@ export default function CheckoutPage() {
                <Truck size={20} className="inline mr-2" />
                Начин на получаване *
              </h2>
-             <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <button
                  type="button"
                  onClick={() => setIsCollection(false)}
@@ -1281,7 +1311,7 @@ export default function CheckoutPage() {
                <CreditCard size={20} className="inline mr-2" />
                Начин на плащане *
              </h2>
-             <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                {isCollection ? (
                  // Collection payment methods (1: Card at Restaurant, 2: Cash at Restaurant)
                  <>
@@ -1378,8 +1408,10 @@ export default function CheckoutPage() {
            </div>
 
            {/* Customer Information Form */}
-           <form onSubmit={handleSubmit} className="bg-card border border-white/12 rounded-2xl p-6 space-y-6">
-             <h2 className="text-xl font-bold text-text">Данни за доставка</h2>
+           <form onSubmit={handleSubmit} className="bg-card border border-white/12 rounded-2xl p-6">
+             <h2 className="text-xl font-bold text-text mb-6">Данни за доставка</h2>
+             
+             <div className="space-y-6">
             
             {/* Name */}
             <div>
@@ -1413,29 +1445,52 @@ export default function CheckoutPage() {
               />
             </div>
 
-            {/* Address */}
-            <div>
-              <label className="block text-sm font-medium text-text mb-2">
-                <MapPin size={16} className="inline mr-2" />
-                Адрес *
-              </label>
-              
-              {/* Address Input */}
-                    <input
-                      ref={addressInputRef}
-                      type="text"
-                      value={customerInfo.address}
-                      onChange={(e) => handleAddressChange(e.target.value)}
-                className="w-full p-3 bg-white/6 border border-white/12 rounded-xl text-text placeholder-muted focus:border-orange focus:outline-none transition-colors mb-3"
-                      placeholder="Въведете адреса за доставка (ще се появят предложения)"
-                      required
-                    />
-                    
-                    {/* Autocomplete Info */}
-              <div className="text-xs text-muted bg-blue/10 border border-blue/20 rounded-lg p-2 flex items-center gap-2 mb-3">
-                      <Lightbulb size={14} className="text-blue" />
-                      <span>Въведете адреса и ще се появят предложения за автоматично попълване</span>
-                    </div>
+            {/* Email - Only show for guest orders */}
+            {orderType === 'guest' && (
+              <div>
+                <label className="block text-sm font-medium text-text mb-2">
+                  <Mail size={16} className="inline mr-2" />
+                  Имейл *
+                </label>
+                <input
+                  type="email"
+                  value={customerInfo.email}
+                  onChange={(e) => setCustomerInfo(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full p-3 bg-white/6 border border-white/12 rounded-xl text-text placeholder-muted focus:border-orange focus:outline-none transition-colors"
+                  placeholder="example@email.com"
+                  required
+                />
+                <div className="text-xs text-muted mt-1 flex items-center gap-2">
+                  <Info size={14} className="text-blue" />
+                  <span>Ще изпратим потвърждение за поръчката на този имейл</span>
+                </div>
+              </div>
+            )}
+
+            {/* Address - Only show for delivery */}
+            {!isCollection && (
+              <div>
+                <label className="block text-sm font-medium text-text mb-2">
+                  <MapPin size={16} className="inline mr-2" />
+                  Адрес *
+                </label>
+                
+                {/* Address Input */}
+                      <input
+                        ref={addressInputRef}
+                        type="text"
+                        value={customerInfo.address}
+                        onChange={(e) => handleAddressChange(e.target.value)}
+                  className="w-full p-3 bg-white/6 border border-white/12 rounded-xl text-text placeholder-muted focus:border-orange focus:outline-none transition-colors mb-3"
+                        placeholder="Въведете адреса за доставка (ще се появят предложения)"
+                        required
+                      />
+                      
+                      {/* Autocomplete Info */}
+                <div className="text-xs text-muted bg-blue/10 border border-blue/20 rounded-lg p-2 flex items-center gap-2 mb-3">
+                        <Lightbulb size={14} className="text-blue" />
+                        <span>Въведете адреса и ще се появят предложения за автоматично попълване</span>
+                      </div>
 
               {/* Action Buttons */}
               <div className="flex space-x-3">
@@ -1458,9 +1513,11 @@ export default function CheckoutPage() {
                   Избери точна локация
                   </button>
                </div>
-             </div>
+              </div>
+            )}
 
-             {/* Delivery Instructions */}
+             {/* Delivery Instructions - Only show for delivery */}
+             {!isCollection && (
              <div>
                <label className="block text-sm font-medium text-text mb-2">
                  <MessageSquare size={16} className="inline mr-2" />
@@ -1478,7 +1535,28 @@ export default function CheckoutPage() {
                 <span>Оставете празно ако нямате допълнителни инструкции</span>
               </div>
              </div>
+             )}
  
+
+            {/* Unavailable Items Alert */}
+            {unavailableItems.length > 0 && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
+                <h3 className="text-red-400 font-medium mb-2">
+                  ⚠️ Някои продукти не са налични
+                </h3>
+                <p className="text-sm text-muted mb-2">
+                  Следните продукти от предишната ви поръчка в момента не са налични:
+                </p>
+                <ul className="text-sm text-red-300 space-y-1">
+                  {unavailableItems.map((item, index) => (
+                    <li key={index}>• {item}</li>
+                  ))}
+                </ul>
+                <p className="text-xs text-muted mt-2">
+                  Можете да продължите с наличните продукти или да добавите нови от менюто.
+                </p>
+              </div>
+            )}
 
             {/* Order Summary */}
             <div className="bg-white/6 border border-white/12 rounded-xl p-4 space-y-3">
@@ -1528,8 +1606,8 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Address Zone Status */}
-              {customerInfo.coordinates && (
+              {/* Address Zone Status - Only show for delivery */}
+              {!isCollection && customerInfo.coordinates && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">Зона за доставка:</span>
                   <span className="text-white font-medium">
@@ -1591,28 +1669,29 @@ export default function CheckoutPage() {
                 </div>
               )}
               
-              {!addressConfirmed && customerInfo.address && (
+              {!isCollection && !addressConfirmed && customerInfo.address && (
                 <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-2">
                   Адресът не е потвърден. Моля, кликнете "Потвърди адрес" или "Избери точна локация".
                 </div>
               )}
               
-              {addressZone === 'outside' && (
+              {!isCollection && addressZone === 'outside' && (
                 <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-2">
                   Доставката не е възможна на този адрес. Моля, изберете адрес в зоната за доставка.
                 </div>
               )}
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={!isFormValid}
-              className="w-full bg-gradient-to-r from-red to-orange text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              Потвърди поръчката
-            </button>
-          </form>
+                 {/* Submit Button */}
+                 <button
+                   type="submit"
+                   disabled={!isFormValid}
+                   className="w-full bg-gradient-to-r from-red to-orange text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                 >
+                   Потвърди поръчката
+                 </button>
+             </div>
+           </form>
         </div>
       </div>
 

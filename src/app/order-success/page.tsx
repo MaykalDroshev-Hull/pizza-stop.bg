@@ -5,6 +5,17 @@ import { useSearchParams } from 'next/navigation'
 import { CheckCircle, Clock, MapPin, Phone, CreditCard, Home, ArrowLeft, RefreshCw } from 'lucide-react'
 import { decryptOrderId } from '../../utils/orderEncryption'
 
+interface OrderItem {
+  ProductID: number
+  ProductName: string
+  ProductSize?: string
+  Quantity: number
+  UnitPrice: number
+  TotalPrice: number
+  Addons?: Array<{ name: string; price?: number }> | null
+  Comment?: string | null
+}
+
 interface OrderDetails {
   orderId: string
   customerName: string
@@ -16,6 +27,9 @@ interface OrderDetails {
   isCollection: boolean
   estimatedTime?: string
   status: string
+  items: OrderItem[]
+  expectedDT?: string
+  orderType?: number
 }
 
 function OrderSuccessContent() {
@@ -29,36 +43,93 @@ function OrderSuccessContent() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (encryptedOrderId) {
-      // Decrypt the order ID
+    async function fetchOrder() {
+      if (!encryptedOrderId) {
+        setError('Липсва номер на поръчката.')
+        setIsLoading(false)
+        return
+      }
+
       const decryptedOrderId = decryptOrderId(encryptedOrderId)
-      
       if (!decryptedOrderId) {
         setError('Невалиден или изтекъл линк за поръчката.')
         setIsLoading(false)
         return
       }
-      
-      // In a real app, you would fetch order details from the API using decryptedOrderId
-      // For now, we'll simulate the order details
-      setTimeout(() => {
+
+      try {
+        const res = await fetch(`/api/order/details?orderId=${decryptedOrderId}`, { cache: 'no-store' })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err?.error || 'Грешка при зареждане на поръчката')
+        }
+        const data = await res.json()
+        const order = data?.order
+
+        if (!order) throw new Error('Поръчката не е намерена')
+
+        const items: OrderItem[] = (order.items || []).map((it: any) => ({
+          ProductID: it.ProductID,
+          ProductName: it.ProductName,
+          ProductSize: it.ProductSize,
+          Quantity: it.Quantity,
+          UnitPrice: it.UnitPrice,
+          TotalPrice: it.TotalPrice,
+          Addons: Array.isArray(it.Addons) ? it.Addons : null,
+          Comment: it.Comment || null
+        }))
+
+        const total = items.reduce((sum, it) => sum + (Number(it.TotalPrice) || 0), 0)
+
+        const orderTime = order.OrderDT
+          ? new Date(order.OrderDT).toLocaleString('bg-BG')
+          : new Date().toLocaleString('bg-BG')
+
         setOrderDetails({
-          orderId: decryptedOrderId,
-          customerName: 'Георги Петров', // This would come from the API
-          customerPhone: '+359 88 123 4567',
-          orderLocation: 'ул. Витоша 15, Ловеч',
-          orderTime: new Date().toLocaleString('bg-BG'),
-          paymentMethod: 'В брой на адрес',
-          totalAmount: 24.50,
-          isCollection: false,
-          status: 'Потвърдена'
+          orderId: String(order.OrderID),
+          customerName: order.Login?.Name || '',
+          customerPhone: order.Login?.phone || '',
+          orderLocation: order.OrderLocation || order.Login?.LocationText || '',
+          orderTime,
+          paymentMethod: order.PaymentMethod?.PaymentMethodName || '—',
+          totalAmount: Number(total) || 0,
+          isCollection: Boolean(order.IsCollection) || false,
+          status: order.OrderStatus?.StatusName || '—',
+          items,
+          expectedDT: order.ExpectedDT,
+          orderType: order.OrderType
         })
+
+        // Calculate initial estimated time display
+        if (order.ExpectedDT) {
+          const expectedDateTime = new Date(order.ExpectedDT)
+          const now = new Date()
+          const diffInMinutes = Math.max(0, Math.floor((expectedDateTime.getTime() - now.getTime()) / (1000 * 60)))
+          
+          if (diffInMinutes <= 0) {
+            setEstimatedTime('Готово за доставка') // This will be handled by the display logic
+          } else if (diffInMinutes < 60) {
+            // Less than 1 hour: show minutes
+            setEstimatedTime(`${diffInMinutes} минути`)
+          } else {
+            // 1 hour or more: show date and time
+            setEstimatedTime(expectedDateTime.toLocaleString('bg-BG', {
+              day: '2-digit',
+              month: '2-digit', 
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }))
+          }
+        }
+      } catch (e: any) {
+        setError(e?.message || 'Нещо се обърка при зареждане на поръчката')
+      } finally {
         setIsLoading(false)
-      }, 1000)
-    } else {
-      setError('Липсва номер на поръчката.')
-      setIsLoading(false)
+      }
     }
+
+    fetchOrder()
   }, [encryptedOrderId])
 
   const handleGoHome = () => {
@@ -70,23 +141,38 @@ function OrderSuccessContent() {
   }
 
   const handleRefreshTime = async () => {
+    if (!orderDetails?.expectedDT) return
+    
     // Start spinning animation
     setIsRefreshing(true)
     
-    // Simulate API call to refresh estimated time
-    setEstimatedTime('')
-    
-    // Simulate loading for 2 seconds
+    // Calculate time remaining until expected delivery
     setTimeout(() => {
-      // In a real app, this would fetch from the API
-      const randomMinutes = Math.floor(Math.random() * 30) + 15 // 15-45 minutes
-      setEstimatedTime(`${randomMinutes} минути`)
+      const expectedDateTime = new Date(orderDetails.expectedDT!)
+      const now = new Date()
+      const diffInMinutes = Math.max(0, Math.floor((expectedDateTime.getTime() - now.getTime()) / (1000 * 60)))
+      
+      if (diffInMinutes <= 0) {
+        setEstimatedTime('Готово за доставка') // This will be handled by the display logic
+      } else if (diffInMinutes < 60) {
+        // Less than 1 hour: show minutes
+        setEstimatedTime(`${diffInMinutes} минути`)
+      } else {
+        // 1 hour or more: show date and time
+        setEstimatedTime(expectedDateTime.toLocaleString('bg-BG', {
+          day: '2-digit',
+          month: '2-digit', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }))
+      }
       
       // Stop spinning animation after a short delay
       setTimeout(() => {
         setIsRefreshing(false)
       }, 100)
-    }, 2000)
+    }, 500)
   }
 
   if (isLoading) {
@@ -219,7 +305,7 @@ function OrderSuccessContent() {
                 </div>
                 <div>
                   <p className="text-sm text-muted">
-                    {orderDetails.isCollection ? 'Вземане от' : 'Доставка до'}
+                    {orderDetails.orderType === 1 ? 'Вземане от' : 'Доставка до'}
                   </p>
                   <p className="font-medium text-text">{orderDetails.orderLocation}</p>
                 </div>
@@ -261,6 +347,43 @@ function OrderSuccessContent() {
           </div>
         </div>
 
+        {/* Order Items */}
+        <div className="bg-card border border-white/12 rounded-2xl p-6 mb-6 max-md:p-4">
+          <h2 className="text-xl font-bold text-text mb-4">Артикули</h2>
+          {orderDetails.items && orderDetails.items.length > 0 ? (
+            <div className="space-y-4">
+              {orderDetails.items.map((item, idx) => (
+                <div key={`${item.ProductID}-${idx}`} className="flex items-start justify-between gap-4 p-4 rounded-xl bg-white/4 border border-white/10">
+                  <div className="flex-1">
+                    <p className="text-text font-medium">
+                      {item.ProductName}
+                      {item.ProductSize ? <span className="text-muted ml-2">({item.ProductSize})</span> : null}
+                    </p>
+                    {item.Addons && item.Addons.length > 0 ? (
+                      <p className="text-sm text-muted mt-1">
+                        Добавки: {item.Addons.map((a: any) => a?.name).filter(Boolean).join(', ')}
+                      </p>
+                    ) : null}
+                    {item.Comment ? (
+                      <p className="text-sm text-muted mt-1">Бележка: {item.Comment}</p>
+                    ) : null}
+                  </div>
+                  <div className="text-right min-w-[140px]">
+                    <p className="text-text font-medium">{item.Quantity} × {Number(item.UnitPrice).toFixed(2)} лв.</p>
+                    <p className="text-muted text-sm">Общо: {Number(item.TotalPrice).toFixed(2)} лв.</p>
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                <p className="text-text font-semibold">Крайна сума</p>
+                <p className="text-text font-semibold">{orderDetails.totalAmount.toFixed(2)} лв.</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted">Няма артикули за показване.</p>
+          )}
+        </div>
+
         {/* Estimated Time Section */}
         <div className="bg-card border border-white/12 rounded-2xl p-6 mb-6 max-md:p-4">
           <div className="flex items-center justify-between mb-4">
@@ -279,9 +402,18 @@ function OrderSuccessContent() {
             <div className="flex items-center gap-3 p-4 bg-green/10 border border-green/20 rounded-xl">
               <Clock size={24} className="text-green" />
               <div>
-                <p className="font-medium text-text">Готово след около {estimatedTime}</p>
+                <p className="font-medium text-text">
+                  {estimatedTime === 'Готово за доставка' 
+                    ? (orderDetails.orderType === 1 ? 'Готово за вземане' : 'Готово за доставка')
+                    : estimatedTime.includes(':')
+                      ? `Очаквайте на ${estimatedTime}`
+                      : orderDetails.orderType === 1 
+                        ? `Готово за вземане след около ${estimatedTime}`
+                        : `Готово за доставка след около ${estimatedTime}`
+                  }
+                </p>
                 <p className="text-sm text-muted">
-                  {orderDetails.isCollection 
+                  {orderDetails.orderType === 1 
                     ? 'Можете да вземете поръчката от ресторанта' 
                     : 'Ще доставим поръчката до вашия адрес'
                   }

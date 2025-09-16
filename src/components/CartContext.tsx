@@ -21,6 +21,7 @@ interface CartContextType {
   removeItem: (id: number) => void
   updateQuantity: (id: number, quantity: number) => void
   clearCart: () => void
+  refreshFromStorage: () => void
   totalItems: number
   totalPrice: number
   getItemTotalPrice: (item: CartItem) => number
@@ -100,6 +101,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const refreshFromStorage = () => {
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('pizza-stop-cart')
+      if (savedCart) {
+        try {
+          const parsedCart = JSON.parse(savedCart)
+          setItems(parsedCart)
+        } catch (error) {
+          console.error('Error parsing saved cart:', error)
+          localStorage.removeItem('pizza-stop-cart')
+          setItems([])
+        }
+      } else {
+        setItems([])
+      }
+    }
+  }
+
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
   const totalPrice = items.reduce((sum, item) => sum + getItemTotalPrice(item), 0)
 
@@ -117,6 +136,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeItem,
       updateQuantity,
       clearCart,
+      refreshFromStorage,
       totalItems,
       totalPrice,
       getItemTotalPrice
