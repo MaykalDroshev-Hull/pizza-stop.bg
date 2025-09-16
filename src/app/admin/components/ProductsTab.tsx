@@ -67,6 +67,7 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isAddingProduct, setIsAddingProduct] = useState<boolean>(false);
   const [newProduct, setNewProduct] = useState<AddProductForm>({
     name: "",
     description: "",
@@ -236,55 +237,86 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
     }
   };
 
-  const handleAddProduct = async (): Promise<void> => {
-    if (newProduct.name && newProduct.smallPrice && newProduct.productTypeId) {
-      try {
-        const productData = {
-          Product: newProduct.name,
-          Description: newProduct.description || null,
-          ImageURL: newProduct.imageUrl || null,
-          IsDisabled: 0,
-          SmallPrice: parseFloat(newProduct.smallPrice),
-          MediumPrice: newProduct.mediumPrice ? parseFloat(newProduct.mediumPrice) : null,
-          LargePrice: newProduct.largePrice ? parseFloat(newProduct.largePrice) : null,
-          ProductTypeID: parseInt(newProduct.productTypeId)
-        };
-        
-        const savedProduct = await upsertProductClient(productData);
-        
-        // Map database response back to UI format and add productType
-        const productWithType = {
-          id: savedProduct.ProductID,
-          name: savedProduct.Product,
-          description: savedProduct.Description,
-          imageUrl: savedProduct.ImageURL,
-          isDisabled: savedProduct.IsDisabled === 1,
-          smallPrice: savedProduct.SmallPrice,
-          mediumPrice: savedProduct.MediumPrice,
-          largePrice: savedProduct.LargePrice,
-          productTypeId: savedProduct.ProductTypeID,
-          productType: getProductTypeName(savedProduct.ProductTypeID || 0)
-        };
-        
-        setProducts([...products, productWithType]);
-        setNewProduct({ 
-          name: "", 
-          description: "", 
-          smallPrice: "", 
-          mediumPrice: "", 
-          largePrice: "", 
-          productTypeId: "", 
-          imageUrl: "" 
-        });
-        setIsModalOpen(false);
-      } catch (error) {
-        console.error('Error adding product:', error);
-      }
-    }
-  };
 
   const handleInputChange = (field: keyof AddProductForm, value: string): void => {
     setNewProduct((prev: AddProductForm) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddProduct = async (): Promise<void> => {
+    // Basic validation
+    if (!newProduct.name.trim()) {
+      alert('Моля, въведете име на продукта');
+      return;
+    }
+    if (!newProduct.smallPrice || parseFloat(newProduct.smallPrice) <= 0) {
+      alert('Моля, въведете валидна цена за малката порция');
+      return;
+    }
+    if (!newProduct.productTypeId) {
+      alert('Моля, изберете тип продукт');
+      return;
+    }
+
+    setIsAddingProduct(true);
+    try {
+      const productData = {
+        Product: newProduct.name.trim(),
+        Description: newProduct.description?.trim() || null,
+        ImageURL: newProduct.imageUrl?.trim() || null,
+        IsDisabled: 0,
+        SmallPrice: parseFloat(newProduct.smallPrice),
+        MediumPrice: newProduct.mediumPrice ? parseFloat(newProduct.mediumPrice) : null,
+        LargePrice: newProduct.largePrice ? parseFloat(newProduct.largePrice) : null,
+        ProductTypeID: parseInt(newProduct.productTypeId)
+      };
+      
+      const savedProduct = await upsertProductClient(productData);
+      
+      // Map database response back to UI format and add productType
+      const productWithType = {
+        id: savedProduct.ProductID,
+        name: savedProduct.Product,
+        description: savedProduct.Description,
+        imageUrl: savedProduct.ImageURL,
+        isDisabled: savedProduct.IsDisabled === 1,
+        smallPrice: savedProduct.SmallPrice,
+        mediumPrice: savedProduct.MediumPrice,
+        largePrice: savedProduct.LargePrice,
+        productTypeId: savedProduct.ProductTypeID,
+        productType: getProductTypeName(savedProduct.ProductTypeID || 0)
+      };
+      
+      setProducts([...products, productWithType]);
+      setNewProduct({ 
+        name: "", 
+        description: "", 
+        smallPrice: "", 
+        mediumPrice: "", 
+        largePrice: "", 
+        productTypeId: "", 
+        imageUrl: "" 
+      });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error adding product:', error);
+      alert('Грешка при добавяне на продукта. Моля, опитайте отново.');
+    } finally {
+      setIsAddingProduct(false);
+    }
+  };
+
+  const handleCloseModal = (): void => {
+    setIsModalOpen(false);
+    setNewProduct({ 
+      name: "", 
+      description: "", 
+      smallPrice: "", 
+      mediumPrice: "", 
+      largePrice: "", 
+      productTypeId: "", 
+      imageUrl: "" 
+    });
+    setIsAddingProduct(false);
   };
 
   const getProductTypeName = (productTypeId: number): string => {
@@ -614,8 +646,20 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         </div>
       </div>
 
+      {/* Add Product Button */}
+      <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mb-6">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 hover:bg-orange-700 px-4 py-3 sm:px-6 text-white font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 w-full sm:w-auto text-sm sm:text-base"
+        >
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="hidden xs:inline">Добави продукт</span>
+          <span className="xs:hidden">Добави продукт</span>
+        </button>
+      </div>
+
       {/* Products Grid */}
-<div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         {currentProducts.map((product: Product) => (
           <div 
             key={product.id} 
@@ -947,12 +991,159 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
                   type="submit"
                   className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 text-sm sm:text-base"
                 >
-                  Добави продукт
+                  Добави
                 </button>
                 <button
                   type="button"
                   onClick={(): void => setIsModalOpen(false)}
                   className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm sm:text-base"
+                >
+                  Прекратяване
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Product Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 sm:p-6 w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-white">Добавяне на нов продукт</h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); await handleAddProduct(); }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Име на продукта
+                </label>
+                <input
+                  type="text"
+                  value={newProduct.name}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('name', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder="Име на продукта"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Описание (опционално)
+                </label>
+                <textarea
+                  value={newProduct.description}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('description', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder="Описание на продукта"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Тип продукт
+                </label>
+                <select
+                  value={newProduct.productTypeId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange('productTypeId', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                  required
+                >
+                  <option value="">Изберете тип</option>
+                  <option value="1">Пица</option>
+                  <option value="2">Бургер</option>
+                  <option value="3">Дюнер</option>
+                  <option value="7">Десерт</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Малка цена
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newProduct.smallPrice}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('smallPrice', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Средна цена (опционално)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newProduct.mediumPrice}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('mediumPrice', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Голяма цена (опционално)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newProduct.largePrice}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('largePrice', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  URL на изображение (опционално)
+                </label>
+                <input
+                  type="url"
+                  value={newProduct.imageUrl}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('imageUrl', e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={isAddingProduct}
+                  className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-orange-800 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 text-sm sm:text-base flex items-center justify-center gap-2"
+                >
+                  {isAddingProduct ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Добавяне...
+                    </>
+                  ) : (
+                    'Добави'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  disabled={isAddingProduct}
+                  className="w-full bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm sm:text-base"
                 >
                   Прекратяване
                 </button>
