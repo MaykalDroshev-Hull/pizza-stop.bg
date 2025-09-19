@@ -28,7 +28,14 @@ export default function MenuPage() {
   const [isMobile, setIsMobile] = useState(false)
   
   // 50/50 Pizza state
-  const [fiftyFiftySelection, setFiftyFiftySelection] = useState({
+  const [fiftyFiftySelection, setFiftyFiftySelection] = useState<{
+    size: string | null;
+    leftHalf: any | null;
+    rightHalf: any | null;
+    finalPrice: number;
+    selectedAddons: any[];
+    step: number;
+  }>({
     size: null,
     leftHalf: null,
     rightHalf: null,
@@ -66,8 +73,8 @@ export default function MenuPage() {
   }
 
   // 50/50 Pizza helper functions
-  const getPriceForSize = (pizza: any, sizeName: string) => {
-    if (!pizza) return 0
+  const getPriceForSize = (pizza: any, sizeName: string | null) => {
+    if (!pizza || !sizeName) return 0
     
     switch (sizeName) {
       case 'Малка':
@@ -81,7 +88,7 @@ export default function MenuPage() {
     }
   }
 
-  const calculateFiftyFiftyPrice = (leftPizza: any, rightPizza: any, sizeName: string) => {
+  const calculateFiftyFiftyPrice = (leftPizza: any, rightPizza: any, sizeName: string | null) => {
     if (!leftPizza || !rightPizza || !sizeName) return 0
     
     const leftPrice = getPriceForSize(leftPizza, sizeName)
@@ -112,9 +119,12 @@ export default function MenuPage() {
       .reduce((sum: number, price: number) => sum + price, 0)
 
     // Create unique cart item for 50/50 pizza
+    const leftHalfName = fiftyFiftySelection.leftHalf?.name || 'Unknown'
+    const rightHalfName = fiftyFiftySelection.rightHalf?.name || 'Unknown'
+    
     const cartItem = {
       id: Date.now(), // Unique ID based on timestamp
-      name: `${fiftyFiftySelection.leftHalf.name} / ${fiftyFiftySelection.rightHalf.name}`,
+      name: `${leftHalfName} / ${rightHalfName}`,
       price: fiftyFiftySelection.finalPrice + addonCost,
       image: '🍕',
       category: 'pizza-5050',
@@ -461,7 +471,7 @@ export default function MenuPage() {
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = 'none';
-                                target.nextElementSibling!.style.display = 'block';
+                                (target.nextElementSibling as HTMLElement)!.style.display = 'block';
                               }}
                             />
                           ) : (
@@ -607,7 +617,7 @@ export default function MenuPage() {
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = 'none';
-                                target.nextElementSibling!.style.display = 'block';
+                                (target.nextElementSibling as HTMLElement)!.style.display = 'block';
                               }}
                             />
                           ) : (
@@ -909,7 +919,7 @@ export default function MenuPage() {
                         // Fallback to emoji if image fails to load
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
-                        target.nextElementSibling!.style.display = 'block';
+                        (target.nextElementSibling as HTMLElement)!.style.display = 'block';
                       }}
                     />
                     ) : (
