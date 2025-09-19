@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import CartIcon from './CartIcon'
 import { User, Phone, Clock, MapPin, LogOut } from 'lucide-react'
 import { isRestaurantOpen } from '../utils/openingHours'
-import { useLoginID } from './LoginIDContext'
 
 // Door Sign Component
 function DoorSign() {
@@ -27,7 +26,7 @@ function DoorSign() {
 
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(isRestaurantOpen())
-  const { user, logout } = useLoginID()
+  const [user, setUser] = useState(null)
   
   // Update open/closed status every minute
   useEffect(() => {
@@ -44,8 +43,22 @@ export default function NavBar() {
     return () => clearInterval(interval)
   }, [])
   
+  // Check if user is logged in
+  useEffect(() => {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData))
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+        localStorage.removeItem('user')
+      }
+    }
+  }, [])
+  
   const handleLogout = () => {
-    logout()
+    localStorage.removeItem('user')
+    setUser(null)
     window.location.href = '/user'
   }
   
@@ -75,17 +88,7 @@ export default function NavBar() {
             </div>
           </div>
           <a className="btn" href="/order">
-            {isOpen ? (
-              <>
-                <span className="desktop-text">ПОРЪЧАЙ СЕГА</span>
-                <span className="mobile-text">ПОРЪЧАЙ</span>
-              </>
-            ) : (
-              <>
-                <span className="desktop-text">ПОРЪЧАЙ ЗА ПО-КЪСНО</span>
-                <span className="mobile-text">ПОРЪЧАЙ</span>
-              </>
-            )}
+            {isOpen ? 'ПОРЪЧАЙ СЕГА' : 'ПОРЪЧАЙ ЗА \r\n ПО-КЪСНО'}
           </a>
           {user ? (
             <div className="user-menu">

@@ -248,7 +248,7 @@ img:hover{transform:scale(1.1);box-shadow:0 20px 40px rgba(0,0,0,.4)}
 .min-w-0 { min-width: 0px; }
 
 /* Header */
-header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--border);transition:background-color 0.3s ease,border-color 0.3s ease}
+header{position:static;top:0;z-index:50;background:var(--card);backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--border);transition:background-color 0.3s ease,border-color 0.3s ease}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
 .brand{display:flex;gap:12px;align-items:center}
 .logo{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;overflow:hidden;box-shadow:0 6px 16px rgba(225,29,72,.35)}
@@ -622,12 +622,16 @@ footer{padding:24px 16px;border-top:1px solid var(--border);background:var(--car
 .max-h-\[90vh\] { max-height: 90vh !important; }
 .overflow-y-auto { overflow-y: auto !important; }
 .z-50 { z-index: 50 !important; }
+.z-\[60\] { z-index: 60 !important; }
+.z-\[70\] { z-index: 70 !important; }
+
 
 /* Ensure modal backdrop works */
 .bg-black\/50 {
   background-color: rgba(0, 0, 0, 0.5) !important;
   backdrop-filter: blur(4px) !important;
 }
+
 
 /* Modal content styling */
 .bg-card {
@@ -1035,4 +1039,39 @@ button {
     margin-bottom: 24px;
   }
 }
+
+/* Tab Gap CSS Variables - Configurable from Dev Console */
+.tab-gap-container {
+  --tab-gap-mobile: 0.25rem; /* 4px - Default mobile gap */
+  --tab-gap-desktop: 0.5rem; /* 8px - Default desktop gap */
+}
+
+/* Mobile tab gap */
+.tab-gap-container .tab-gap-flex {
+  gap: var(--tab-gap-mobile);
+}
+
+/* Desktop tab gap */
+@media (min-width: 640px) {
+  .tab-gap-container .tab-gap-flex {
+    gap: var(--tab-gap-desktop);
+  }
+}
+
+/* Dev Console Instructions:
+   To test different gaps in dev console:
+   
+   Mobile gap:
+   document.querySelector('.tab-gap-container').style.setProperty('--tab-gap-mobile', '0.5rem');
+   
+   Desktop gap:
+   document.querySelector('.tab-gap-container').style.setProperty('--tab-gap-desktop', '1rem');
+   
+   Common values:
+   - 0.25rem = 4px
+   - 0.5rem = 8px
+   - 0.75rem = 12px
+   - 1rem = 16px
+   - 1.25rem = 20px
+*/
 

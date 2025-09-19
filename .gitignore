@@ -137,3 +137,6 @@ dist
 # Temporary folders
 tmp/
 temp/
+
+# Development documentation
+common-issues.md
