@@ -603,6 +603,37 @@ const KitchenCommandCenter = () => {
         console.error('Error sending order to driver:', error);
         addNotification(`Error sending order #${order.id} to delivery page`, 'urgent');
       }
+    } else if (action === 'completed') {
+      try {
+        // Update database to READY status (OrderStatusID = 3)
+        const statusId = getStatusIdFromStatus('completed');
+        const success = await updateOrderStatusInDB(order.id, statusId);
+        
+        if (success) {
+          // Update local state
+          setOrders(prevOrders => 
+            prevOrders.map(o => {
+              if (o.id === order.id) {
+                return { 
+                  ...o, 
+                  status: 'completed',
+                  completedTime: new Date()
+                };
+              }
+              return o;
+            })
+          );
+          console.log(`Successfully marked order ${order.id} as completed in database`);
+          addNotification(`Order #${order.id} completed!`, 'info');
+          playNotificationSound('complete');
+        } else {
+          console.error(`Failed to mark order ${order.id} as completed in database`);
+          addNotification(`Failed to complete order #${order.id}`, 'warning');
+        }
+      } catch (error) {
+        console.error('Error marking order as completed:', error);
+        addNotification(`Error completing order #${order.id}`, 'urgent');
+      }
     } else {
       updateOrderStatus(order.id, action, false);
     }

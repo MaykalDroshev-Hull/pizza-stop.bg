@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ShoppingCart, X, Trash2 } from 'lucide-react'
 import { useCart } from './CartContext'
 import { isRestaurantOpen } from '../utils/openingHours'
@@ -31,8 +32,8 @@ export default function CartIcon() {
       </button>
 
       {/* Cart Preview Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50">
+      {isOpen && createPortal(
+        <div className="fixed inset-0" style={{ zIndex: 9999 }}>
           {/* Backdrop - covers entire screen with blur */}
           <div 
             className="fixed inset-0 bg-black/50 backdrop-blur-md"
@@ -43,6 +44,7 @@ export default function CartIcon() {
           <div 
             className="absolute top-16 right-0 md:top-20 md:right-4 bg-card border border-white/12 rounded-2xl max-w-md w-full max-h-[calc(100vh-4rem)] max-md:max-h-[75vh] overflow-y-auto m-4 md:m-0 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
+            style={{ zIndex: 9999 }}
           >
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/12">
@@ -66,8 +68,7 @@ export default function CartIcon() {
               ) : (
                 <>
                   {items.map((item, index) => (
-                    <div key={index} className="flex items-start space-x-4 p-4 bg-white/6 rounded-xl border border-white/12">
-                      <div className="text-2xl flex-shrink-0">{item.image}</div>
+                    <div key={index} className="flex items-start justify-between p-4 bg-white/6 rounded-xl border border-white/12">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-text truncate">{item.name}</h4>
                         <p className="text-sm text-muted">
@@ -127,7 +128,8 @@ export default function CartIcon() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

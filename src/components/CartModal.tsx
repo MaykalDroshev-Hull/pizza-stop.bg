@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Plus, Minus } from 'lucide-react'
 import { useCart } from './CartContext'
 import { isRestaurantOpen } from '../utils/openingHours'
@@ -42,26 +43,38 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
 
   if (!isOpen) return null
 
+  // Ensure we're on the client side for portal
+  if (typeof window === 'undefined') return null
+
+  // Fallback for mobile if portal fails
+  const isMobile = window.innerWidth <= 768
+
+  // Debug: Log when modal opens
+  console.log('CartModal opened, z-index should be 9999')
+  console.log('Screen size:', window.innerWidth, 'x', window.innerHeight)
+  console.log('Is mobile:', window.innerWidth <= 768)
+  console.log('Modal classes:', `z-cart-modal ${isMobile ? 'mobile-modal' : ''}`)
+  console.log('Mobile positioning:', isMobile ? 'pt-24 flex-col justify-start' : 'items-center justify-center')
+  console.log('Mobile height calc:', isMobile ? 'calc(100vh-10rem)' : '95vh/90vh')
+
   const isDrink = item.category === 'drinks'
-  
+
+  // Use portal to render modal outside of normal DOM tree
+
   const getSizePrice = (selectedSize: string) => {
-    if (isDrink) {
-      return selectedSize === '1.5L' ? (item.price || item.basePrice || 0) * 2 : (item.price || item.basePrice || 0)
-    } else {
-      // If we have a selectedSize object with price, use that
-      if (selectedSize && typeof selectedSize === 'object' && 'price' in selectedSize) {
-        return (selectedSize as any).price
-      }
-      
-      // Use dynamic sizes from database instead of hardcoded multipliers
-      const sizeObj = item.sizes?.find((s: any) => s.name === selectedSize)
-      if (sizeObj) {
-        return sizeObj.price
-      }
-      
-      // Fallback to base price if no size found
-      return item.price || item.basePrice || 0
+    // If we have a selectedSize object with price, use that
+    if (selectedSize && typeof selectedSize === 'object' && 'price' in selectedSize) {
+      return (selectedSize as any).price
     }
+    
+    // Use dynamic sizes from database for all items (including drinks)
+    const sizeObj = item.sizes?.find((s: any) => s.name === selectedSize)
+    if (sizeObj) {
+      return sizeObj.price
+    }
+    
+    // Fallback to base price if no size found
+    return item.price || item.basePrice || 0
   }
 
   const handleAddToCart = () => {
@@ -99,9 +112,16 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
     )
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-card border border-white/12 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+  return createPortal(
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
+      onClick={onClose}
+      style={{ zIndex: 9999 }}
+    >
+      <div 
+        className="bg-card border border-white/12 rounded-2xl max-w-md w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/12">
           <h2 className="text-xl font-bold text-text">Персонализирай</h2>
@@ -137,14 +157,48 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
           {/* Size Selection */}
           <div>
             <h4 className="font-medium text-text mb-4">
-              {(selectedSize?.name && size) ? `Избран размер: ${selectedSize.name}` : 'Избери размер:'}
+              {(selectedSize?.name && size) ? `Избран размер: ${(() => {
+                // Special case for standard size pizzas - show custom text
+                const standardSizePizzas = [
+                  'калцоне', 'calzone', 'мортадела бурата', 'прошутто фреш', 
+                  'сладка пица', 'сладка праскова', 'смокини деликастес'
+                ];
+                const isStandardSizePizza = standardSizePizzas.some(pizza => 
+                  item.name.toLowerCase().includes(pizza)
+                );
+                if (isStandardSizePizza && selectedSize.name === 'Малка') {
+                  return 'Стандартен размер (30см | 450гр)';
+                }
+                // Special case for doners with only small size
+                if (item.category === 'doners' && selectedSize.name === 'Малка') {
+                  return 'Стандартен размер';
+                }
+                return selectedSize.name;
+              })()}` : 'Избери размер:'}
             </h4>
             
             {(selectedSize?.name && size) ? (
               // Show selected size info
               <div className="p-4 bg-orange/10 border border-orange/20 rounded-xl">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-orange">{selectedSize.name}</span>
+                  <span className="font-medium text-orange">{(() => {
+                    // Special case for standard size pizzas - show custom text
+                    const standardSizePizzas = [
+                      'калцоне', 'calzone', 'мортадела бурата', 'прошутто фреш', 
+                      'сладка пица', 'сладка праскова', 'смокини деликастес'
+                    ];
+                    const isStandardSizePizza = standardSizePizzas.some(pizza => 
+                      item.name.toLowerCase().includes(pizza)
+                    );
+                    if (isStandardSizePizza && selectedSize.name === 'Малка') {
+                      return 'Стандартен размер (30см | 450гр)';
+                    }
+                    // Special case for doners with only small size
+                    if (item.category === 'doners' && selectedSize.name === 'Малка') {
+                      return 'Стандартен размер';
+                    }
+                    return selectedSize.name;
+                  })()}</span>
                   <span className="text-orange font-bold text-lg">{selectedSize.price?.toFixed(2)} лв.</span>
                 </div>
                 <button
@@ -167,57 +221,125 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
               </div>
             ) : (
               // Show size selection options
-              <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-3 max-w-sm mx-auto">
                 {isDrink ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        const sizeOption = { name: '0.5L', price: item.price || item.basePrice || 0 }
-                        setSize('0.5L')
-                        if (onSizeChange) {
-                          onSizeChange(item.id, sizeOption)
-                        }
-                      }}
-                      className="w-full p-4 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-center text-muted hover:text-orange"
-                    >
-                      <div className="text-sm font-medium mb-1">0.5L</div>
-                      <div className="text-xs opacity-75">{(item.price || item.basePrice || 0).toFixed(2)} лв.</div>
-                    </button>
-                    <button
-                      onClick={() => {
-                        const sizeOption = { name: '1.5L', price: (item.price || item.basePrice || 0) * 2 }
-                        setSize('1.5L')
-                        if (onSizeChange) {
-                          onSizeChange(item.id, sizeOption)
-                        }
-                      }}
-                      className="w-full p-4 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-center text-muted hover:text-orange"
-                    >
-                      <div className="text-sm font-medium mb-1">1.5L</div>
-                      <div className="text-xs opacity-75">{((item.price || item.basePrice || 0) * 2).toFixed(2)} лв.</div>
-                    </button>
-                  </>
+                  // Use database sizes for drinks instead of hardcoded 0.5L/1.5L
+                  item.sizes && Array.isArray(item.sizes) ? (
+                    item.sizes.map((sizeOption: any) => (
+                      <button
+                        key={sizeOption.name}
+                        onClick={() => {
+                          console.log('Drink size selected in CartModal:', sizeOption.name, sizeOption)
+                          setSize(sizeOption.name)
+                          if (onSizeChange) {
+                            onSizeChange(item.id, sizeOption)
+                          }
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-muted hover:text-orange flex items-center justify-between"
+                      >
+                        <div className="text-left">
+                          <div className="text-sm font-medium">
+                            {sizeOption.name}
+                          </div>
+                          {sizeOption.weight && (
+                            <div className="text-xs text-muted mt-1">
+                              ({sizeOption.weight}г)
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-sm font-bold text-orange">
+                          {sizeOption.price.toFixed(2)} лв.
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    // Fallback to hardcoded sizes if no database sizes
+                    <>
+                      <button
+                        onClick={() => {
+                          const sizeOption = { name: '0.5L', price: item.price || item.basePrice || 0 }
+                          setSize('0.5L')
+                          if (onSizeChange) {
+                            onSizeChange(item.id, sizeOption)
+                          }
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-muted hover:text-orange flex items-center justify-between"
+                      >
+                        <div className="text-left">
+                          <div className="text-sm font-medium">0.5L</div>
+                        </div>
+                        <div className="text-sm font-bold text-orange">
+                          {(item.price || item.basePrice || 0).toFixed(2)} лв.
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const sizeOption = { name: '1.5L', price: (item.price || item.basePrice || 0) * 2 }
+                          setSize('1.5L')
+                          if (onSizeChange) {
+                            onSizeChange(item.id, sizeOption)
+                          }
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-muted hover:text-orange flex items-center justify-between"
+                      >
+                        <div className="text-left">
+                          <div className="text-sm font-medium">1.5L</div>
+                        </div>
+                        <div className="text-sm font-bold text-orange">
+                          {((item.price || item.basePrice || 0) * 2).toFixed(2)} лв.
+                        </div>
+                      </button>
+                    </>
+                  )
                 ) : item.sizes && Array.isArray(item.sizes) ? (
                   // New size structure with predefined sizes
-                  item.sizes.map((sizeOption: any) => (
-                    <button
-                      key={sizeOption.name}
-                      onClick={() => {
-                        console.log('Size selected in CartModal:', sizeOption.name, sizeOption)
-                        setSize(sizeOption.name)
-                        if (onSizeChange) {
-                          onSizeChange(item.id, sizeOption)
-                        }
-                      }}
-                      className="w-full p-4 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-center text-muted hover:text-orange"
-                    >
-                      <div className="text-sm font-medium mb-1">{sizeOption.name}</div>
-                      <div className="text-xs opacity-75">{sizeOption.price.toFixed(2)} лв.</div>
-                    </button>
-                  ))
+                  item.sizes.map((sizeOption: any) => {
+                    // Special case for standard size pizzas - show custom text
+                    const standardSizePizzas = [
+                      'калцоне', 'calzone', 'мортадела бурата', 'прошутто фреш', 
+                      'сладка пица', 'сладка праскова', 'смокини деликастес'
+                    ];
+                    const isStandardSizePizza = standardSizePizzas.some(pizza => 
+                      item.name.toLowerCase().includes(pizza)
+                    );
+                    let displayName = sizeOption.name;
+                    if (isStandardSizePizza && sizeOption.name === 'Малка') {
+                      displayName = 'Стандартен размер (30см | 450гр)';
+                    } else if (item.category === 'doners' && sizeOption.name === 'Малка') {
+                      displayName = 'Стандартен размер';
+                    }
+                    
+                    return (
+                      <button
+                        key={sizeOption.name}
+                        onClick={() => {
+                          console.log('Size selected in CartModal:', sizeOption.name, sizeOption)
+                          setSize(sizeOption.name)
+                          if (onSizeChange) {
+                            onSizeChange(item.id, sizeOption)
+                          }
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border border-white/12 hover:border-orange/50 transition-all text-muted hover:text-orange flex items-center justify-between"
+                      >
+                        <div className="text-left">
+                          <div className="text-sm font-medium">
+                            {displayName}
+                          </div>
+                          {sizeOption.weight && (
+                            <div className="text-xs text-muted mt-1">
+                              ({sizeOption.weight}г)
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-sm font-bold text-orange">
+                          {sizeOption.price.toFixed(2)} лв.
+                        </div>
+                      </button>
+                    );
+                  })
                 ) : (
                   // No sizes available - show message
-                  <div className="col-span-3 text-center text-muted py-4">
+                  <div className="text-center text-muted py-4">
                     Няма налични размери за този продукт
                   </div>
                 )}
@@ -376,6 +498,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
