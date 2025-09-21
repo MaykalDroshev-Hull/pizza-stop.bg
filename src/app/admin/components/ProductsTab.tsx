@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Trash2, X } from "lucide-react";
-import {  getProductsClient, getProductsForProductsTab, upsertProductClient, setProductDisabledClient, DatabaseProduct  } from "../services/productService.client";
+import { Package, Plus, Trash2, X, Undo2, Save, CheckCircle, AlertCircle } from "lucide-react";
+import {  getProductsClient, getProductsForProductsTab, upsertProductClient, setProductDisabledClient, deleteProductsClient, DatabaseProduct  } from "../services/productService.client";
 import EditProductModal from "../mixin/EditProductModal";
 
 interface Product {
@@ -16,6 +16,8 @@ interface Product {
   largePrice?: number | null;
   productTypeId?: number | null;
   productType?: string; // This will be derived from productTypeId
+  isMarkedForDeletion?: boolean;
+  isAnimating?: boolean;
 }
 
 interface AddProductForm {
@@ -57,12 +59,40 @@ interface AutocompleteState {
   selectedIndex: number;
 }
 
+interface FlashMessage {
+  id: string;
+  type: 'success' | 'error' | 'warning';
+  message: string;
+  duration?: number;
+}
+
 const ProductsTab: React.FC = (): React.JSX.Element => {
   // Pagination configuration - responsive and easy to change
   const PRODUCTS_PER_PAGE_DESKTOP: number = 9;
   const PRODUCTS_PER_PAGE_MOBILE: number = 6;
   
   const [products, setProducts] = useState<Product[]>([]);
+  const [deletedProductIds, setDeletedProductIds] = useState<Set<number>>(new Set());
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [isDeletingProducts, setIsDeletingProducts] = useState<boolean>(false);
+  const [flashMessages, setFlashMessages] = useState<FlashMessage[]>([]);
+
+  // Flash message functions
+  const addFlashMessage = (type: FlashMessage['type'], message: string, duration: number = 4000): void => {
+    const id = `flash-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const flashMessage: FlashMessage = { id, type, message, duration };
+    
+    setFlashMessages((prev: FlashMessage[]) => [...prev, flashMessage]);
+    
+    // Auto-remove after duration
+    setTimeout((): void => {
+      removeFlashMessage(id);
+    }, duration);
+  };
+
+  const removeFlashMessage = (id: string): void => {
+    setFlashMessages((prev: FlashMessage[]) => prev.filter((msg: FlashMessage) => msg.id !== id));
+  };
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
@@ -139,7 +169,9 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
           mediumPrice: product.MediumPrice,
           largePrice: product.LargePrice,
           productTypeId: product.ProductTypeID,
-          productType: getProductTypeName(product.ProductTypeID || 0)
+          productType: getProductTypeName(product.ProductTypeID || 0),
+          isMarkedForDeletion: false,
+          isAnimating: false
         }));
         
         console.table(productsWithType);
@@ -215,7 +247,101 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
   };
 
   const handleDeleteProduct = (productId: number): void => {
-    setProducts(products.filter((product: Product) => product.id !== productId));
+    // Start animation
+    setProducts(prevProducts => 
+      prevProducts.map((product: Product) => 
+        product.id === productId 
+          ? { ...product, isAnimating: true }
+          : product
+      )
+    );
+
+    // After animation, immediately mark for deletion and add to deleted set
+    setTimeout(() => {
+      setProducts(prevProducts => 
+        prevProducts.map((product: Product) => 
+          product.id === productId 
+            ? { ...product, isMarkedForDeletion: true, isAnimating: false }
+            : product
+        )
+      );
+      
+      // Add to deleted set and mark as having unsaved changes
+      setDeletedProductIds(prev => new Set([...prev, productId]));
+      setHasUnsavedChanges(true);
+    }, 300); // Animation duration
+  };
+
+  const handleUndoDelete = (productId: number): void => {
+    // Remove from deleted set and update unsaved changes state
+    setDeletedProductIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(productId);
+      setHasUnsavedChanges(newSet.size > 0);
+      return newSet;
+    });
+
+    // Unmark for deletion and return to main grid
+    setProducts(prevProducts => 
+      prevProducts.map((product: Product) => 
+        product.id === productId 
+          ? { ...product, isMarkedForDeletion: false, isAnimating: false }
+          : product
+      )
+    );
+  };
+
+  const handleSaveChanges = async (): Promise<void> => {
+    if (deletedProductIds.size === 0) return;
+
+    const productIdsToDelete = Array.from(deletedProductIds);
+    setIsDeletingProducts(true);
+    
+    try {
+      // Delete products from database
+      const result = await deleteProductsClient(productIdsToDelete);
+      console.log('Products deleted successfully:', result);
+      
+      // Remove deleted products from the UI
+      setProducts(prevProducts => 
+        prevProducts.filter((product: Product) => !deletedProductIds.has(product.id))
+      );
+      
+      // Reset state
+      setDeletedProductIds(new Set());
+      setHasUnsavedChanges(false);
+      
+      // Show success flash message
+      const message = result.success 
+        ? `Успешно изтрити ${result.deletedCount} продукт${result.deletedCount > 1 ? 'а' : ''}!`
+        : 'Продуктите бяха изтрити, но възможни проблеми с свързаните записи.';
+      
+      addFlashMessage(result.success ? 'success' : 'warning', message);
+      
+    } catch (error) {
+      console.error('Error deleting products:', error);
+      const errorMessage = error instanceof Error 
+        ? `Грешка при изтриване на продуктите: ${error.message}`
+        : 'Грешка при изтриване на продуктите. Моля, опитайте отново.';
+      addFlashMessage('error', errorMessage);
+    } finally {
+      setIsDeletingProducts(false);
+    }
+  };
+
+  const handleDiscardChanges = (): void => {
+    // Unmark all products for deletion and return them to main grid
+    setProducts(prevProducts => 
+      prevProducts.map((product: Product) => 
+        deletedProductIds.has(product.id)
+          ? { ...product, isMarkedForDeletion: false, isAnimating: false }
+          : product
+      )
+    );
+    
+    // Reset state
+    setDeletedProductIds(new Set());
+    setHasUnsavedChanges(false);
   };
 
   const handleToggleProductStatus = async (productId: number): Promise<void> => {
@@ -454,7 +580,10 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
       filters.selectedCategoryId === '' ||
       product.productTypeId === filters.selectedCategoryId;
   
-    return searchMatch && categoryMatch;
+    // Don't show products marked for deletion in the main grid
+    const notMarkedForDeletion: boolean = !product.isMarkedForDeletion;
+  
+    return searchMatch && categoryMatch && notMarkedForDeletion;
   });
 
   // Pagination logic - responsive (now using filtered products)
@@ -658,14 +787,196 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         </button>
       </div>
 
+      {/* Flash Messages - Positioned under Add Button */}
+      {flashMessages.length > 0 && (
+        <div className="mb-4 sm:mb-6 space-y-2">
+          {flashMessages.map((flash: FlashMessage) => (
+            <div
+              key={flash.id}
+              className={`relative flex items-center gap-3 p-3 sm:p-4 rounded-xl shadow-lg border transition-all duration-300 animate-in slide-in-from-top-2 ${
+                flash.type === 'success'
+                  ? 'bg-green-900/95 border-green-700 text-green-100'
+                  : flash.type === 'error'
+                  ? 'bg-red-900/95 border-red-700 text-red-100'
+                  : 'bg-orange-900/95 border-orange-700 text-orange-100'
+              }`}
+            >
+              <div className="flex-shrink-0">
+                {flash.type === 'success' ? (
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+                ) : flash.type === 'error' ? (
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium leading-tight">
+                  {flash.message}
+                </p>
+              </div>
+              <button
+                onClick={() => removeFlashMessage(flash.id)}
+                className="flex-shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors duration-200"
+                aria-label="Close message"
+              >
+                <X className="w-3 h-3 sm:w-4 sm:h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Save Changes Button - Only show when there are unsaved changes */}
+      {hasUnsavedChanges && (
+        <div className="flex flex-col gap-3 justify-center mb-4 sm:mb-6">
+          <div className="bg-red-900 border border-red-700 rounded-2xl p-3 sm:p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 text-red-200">
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="text-sm sm:text-base font-medium">
+                  {deletedProductIds.size} продукт{deletedProductIds.size > 1 ? 'а' : ''} маркирани за изтриване
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <button
+                  onClick={handleSaveChanges}
+                  disabled={isDeletingProducts}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed px-4 py-2.5 text-white text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 hover:scale-105 active:scale-95 w-full sm:w-auto"
+                >
+                  {isDeletingProducts ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Изтриване...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Запази промените
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleDiscardChanges}
+                  disabled={isDeletingProducts}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-4 py-2.5 text-white text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 hover:scale-105 active:scale-95 w-full sm:w-auto"
+                >
+                  <X className="w-4 h-4" />
+                  Отказ
+                </button>
+              </div>
+            </div>
+            <div className="mt-3 text-xs sm:text-sm text-red-300">
+              За да изтриете продуктите окончателно, натиснете "Запази промените"
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deleted Products Section - Responsive */}
+      {deletedProductIds.size > 0 && (
+        <div className="bg-red-900/20 border border-red-700/50 rounded-2xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h3 className="text-red-300 font-medium flex items-center gap-2 text-sm sm:text-base">
+              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              Продукти маркирани за изтриване ({deletedProductIds.size})
+            </h3>
+            <div className="text-xs sm:text-sm text-red-400">
+              Кликнете "Възстанови" за да върнете продукта в списъка
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
+            {products
+              .filter((product: Product) => deletedProductIds.has(product.id))
+              .map((product: Product) => (
+                <div 
+                  key={`deleted-${product.id}`}
+                  className="bg-red-900/30 border border-red-600/50 rounded-xl p-3 sm:p-4 lg:p-5 flex flex-col h-full transition-all duration-200 hover:bg-red-900/40 hover:border-red-500/70"
+                >
+                  {/* Product Info Section */}
+                  <div className="flex items-start gap-3 flex-1 mb-3 sm:mb-4">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-red-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                      {product.imageUrl ? (
+                        <img 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                          className="w-full h-full object-cover rounded-lg"
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.style.display = 'none';
+                            const nextElement = target.nextElementSibling as HTMLElement;
+                            if (nextElement) {
+                              nextElement.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <Package className={`w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-red-300 ${product.imageUrl ? 'hidden' : 'flex'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-red-200 font-medium text-sm sm:text-base lg:text-lg leading-tight mb-1 line-clamp-2">{product.name}</h4>
+                      <p className="text-red-400 text-xs sm:text-sm mb-2">{product.productType}</p>
+                      {product.smallPrice && (
+                        <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
+                          <div className="flex items-center gap-1 px-2 py-1 bg-red-800/50 rounded-md">
+                            <span className="text-red-400 text-xs font-medium">S:</span>
+                            <span className="text-red-200 text-xs sm:text-sm font-semibold">
+                              {formatPriceWithEuro(product.smallPrice)}
+                            </span>
+                          </div>
+                          {product.mediumPrice && (
+                            <div className="flex items-center gap-1 px-2 py-1 bg-red-800/50 rounded-md">
+                              <span className="text-red-400 text-xs font-medium">M:</span>
+                              <span className="text-red-200 text-xs sm:text-sm font-semibold">
+                                {formatPriceWithEuro(product.mediumPrice)}
+                              </span>
+                            </div>
+                          )}
+                          {product.largePrice && (
+                            <div className="flex items-center gap-1 px-2 py-1 bg-red-800/50 rounded-md">
+                              <span className="text-red-400 text-xs font-medium">L:</span>
+                              <span className="text-red-200 text-xs sm:text-sm font-semibold">
+                                {formatPriceWithEuro(product.largePrice)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Button Section - Always at bottom */}
+                  <div className="mt-auto">
+                    <button
+                      onClick={() => handleUndoDelete(product.id)}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-green-600 hover:bg-green-700 px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 hover:scale-105 active:scale-95"
+                    >
+                      <Undo2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span>Възстанови</span>
+        </button>
+      </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       {/* Products Grid */}
       <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
         {currentProducts.map((product: Product) => (
           <div 
             key={product.id} 
-            className={`bg-gray-900 border rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-colors duration-300 group flex flex-col ${
+            className={`bg-gray-900 border rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 group flex flex-col ${
                 product.isDisabled ? 'border-gray-600 opacity-60' : 'border-gray-700 hover:border-red-500'
+              } ${
+                product.isAnimating ? 'animate-pulse scale-95 opacity-50' : ''
               }`}
+            style={{
+              transform: product.isAnimating ? 'scale(0.95) translateX(-20px)' : 'scale(1) translateX(0)',
+              opacity: product.isAnimating ? 0.5 : 1,
+              transition: 'all 0.3s ease-in-out'
+            }}
           >
             {/* Product Image */}
             <div className="w-full h-32 sm:h-40 md:h-48 bg-gray-800 rounded-lg sm:rounded-xl mb-3 sm:mb-4 flex items-center justify-center overflow-hidden">
@@ -709,26 +1020,46 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
               )}
               
               {/* Price Fields - Responsive */}
-              <div className="space-y-1.5 sm:space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm text-gray-300">Малка:</span>
-                  <span className="text-sm sm:text-base md:text-lg font-bold text-green-400 break-words text-right">
+              <div className="space-y-2 sm:space-y-3">
+                {/* Small Price - Always shown */}
+                <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 bg-green-600 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs sm:text-sm font-bold">S</span>
+                    </div>
+                    <span className="text-xs sm:text-sm text-gray-300 font-medium">Малка</span>
+                  </div>
+                  <span className="text-sm sm:text-base lg:text-lg font-bold text-green-400">
                     {product.smallPrice ? formatPriceWithEuro(product.smallPrice) : 'N/A'}
                   </span>
                 </div>
+                
+                {/* Medium Price - If available */}
                 {product.mediumPrice && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-gray-300">Средна:</span>
-                    <span className="text-sm sm:text-base md:text-lg font-bold text-green-400 break-words text-right">
-                      {product.mediumPrice ? formatPriceWithEuro(product.mediumPrice) : 'N/A'}
+                  <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-orange-600 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs sm:text-sm font-bold">M</span>
+                      </div>
+                      <span className="text-xs sm:text-sm text-gray-300 font-medium">Средна</span>
+                    </div>
+                    <span className="text-sm sm:text-base lg:text-lg font-bold text-orange-400">
+                      {formatPriceWithEuro(product.mediumPrice)}
                     </span>
                   </div>
                 )}
+                
+                {/* Large Price - If available */}
                 {product.largePrice && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm text-gray-300">Голяма:</span>
-                    <span className="text-sm sm:text-base md:text-lg font-bold text-green-400 break-words text-right">
-                      {product.largePrice ? formatPriceWithEuro(product.largePrice) : 'N/A'}
+                  <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-red-600 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs sm:text-sm font-bold">L</span>
+                      </div>
+                      <span className="text-xs sm:text-sm text-gray-300 font-medium">Голяма</span>
+                    </div>
+                    <span className="text-sm sm:text-base lg:text-lg font-bold text-red-400">
+                      {formatPriceWithEuro(product.largePrice)}
                     </span>
                   </div>
                 )}
@@ -752,7 +1083,7 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
                   >
                     <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                     <span className="hidden xs:inline">Delete</span>
-                    <span className="xs:hidden">Dellete</span>
+                    <span className="xs:hidden">Delete</span>
                   </button>
                 </div>
 

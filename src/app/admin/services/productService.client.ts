@@ -62,3 +62,22 @@ export async function setProductDisabledClient(id: number, isDisabled: boolean) 
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json;
 }
+
+export interface DeleteProductsResponse {
+  success: boolean;
+  deleted: number[];
+  disabled: number[];
+  message: string;
+  deletedCount: number;
+}
+
+export async function deleteProductsClient(ids: number[]): Promise<DeleteProductsResponse> {
+  const res = await fetch('/api/admin/products', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Request failed');
+  return json as DeleteProductsResponse;
+}
