@@ -96,11 +96,11 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
   // Get customer details for each order
   const ordersWithCustomers = await Promise.all(
     orders.map(async (order) => {
-      let customer: { Name: string; phone: string; Email: string } | null = null;
+      let customer: { Name: string; phone: string; email: string } | null = null;
       if (order.LoginID) {
         const { data: customerData } = await supabase
           .from('Login')
-          .select('Name, phone, Email')
+          .select('Name, phone, email')
           .eq('LoginID', order.LoginID)
           .single();
         customer = customerData || null;
@@ -136,7 +136,7 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
         IsPaid: order.IsPaid,
         CustomerName: customer?.Name || 'Unknown',
         CustomerPhone: customer?.phone || '',
-        CustomerEmail: customer?.Email || '',
+        CustomerEmail: customer?.email || '',
         CustomerLocation: order.OrderLocation,
         Products: (products as LkOrderProducts[]) || [],
         TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
@@ -179,7 +179,7 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
     const loginIds = [...new Set(orders.map(order => order.LoginID))];
     const { data: customers, error: customersError } = await supabase
       .from('Login')
-      .select('LoginID, Name, phone, Email, LocationText, addressInstructions')
+      .select('LoginID, Name, phone, email, LocationText, addressInstructions')
       .in('LoginID', loginIds);
 
     if (customersError) {
@@ -214,7 +214,7 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
         IsPaid: order.IsPaid,
         CustomerName: customer?.Name || 'Unknown',
         CustomerPhone: customer?.phone || '',
-        CustomerEmail: customer?.Email || '',
+        CustomerEmail: customer?.email || '',
         CustomerLocation: order.OrderLocation || customer?.LocationText || '',
         Products: products,
         TotalOrderPrice: totalPrice,
@@ -299,7 +299,6 @@ export interface Login {
   email: string
   Password: string
   Name: string
-  Email: string
   phone: string
   LocationText: string | null
   LocationCoordinates: string | null
