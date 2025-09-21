@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Package, Plus, Trash2, X, Undo2, Save, CheckCircle, AlertCircle } from "lucide-react";
-import {  getProductsClient, getProductsForProductsTab, upsertProductClient, setProductDisabledClient, deleteProductsClient, DatabaseProduct  } from "../services/productService.client";
+import {  getProductsClient, getProductsForProductsTab, upsertProductClient, setProductDisabledClient, deleteProductsClient, softDeleteProductsClient, restoreProductsClient, DatabaseProduct  } from "../services/productService.client";
 import EditProductModal from "../mixin/EditProductModal";
 
 interface Product {
@@ -18,6 +18,18 @@ interface Product {
   productType?: string; // This will be derived from productTypeId
   isMarkedForDeletion?: boolean;
   isAnimating?: boolean;
+  isDeleted?: boolean; // New property for soft delete
+}
+
+interface TrackedChange {
+  id: string;
+  productId: number;
+  productName: string;
+  productType: string;
+  changeType: 'update' | 'delete' | 'restore';
+  originalData?: Product;
+  newData?: Product;
+  timestamp: Date;
 }
 
 interface AddProductForm {
@@ -76,6 +88,33 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [isDeletingProducts, setIsDeletingProducts] = useState<boolean>(false);
   const [flashMessages, setFlashMessages] = useState<FlashMessage[]>([]);
+  
+  // Tracking changes state
+  const [trackedChanges, setTrackedChanges] = useState<TrackedChange[]>([]);
+  
+  // Deleted products filter state
+  const [showDeletedProducts, setShowDeletedProducts] = useState<boolean>(false);
+  
+  // Toggle deleted products filter
+  const toggleDeletedProducts = (): void => {
+    setShowDeletedProducts(!showDeletedProducts);
+    setCurrentPage(1); // Reset to first page when toggling
+  };
+
+  // Track restore action (add to tracking system)
+  const handleRestoreProduct = (productId: number): void => {
+    const productToRestore = products.find(p => p.id === productId);
+    if (productToRestore) {
+      addTrackedChange({
+        productId: productId,
+        productName: productToRestore.name,
+        productType: productToRestore.productType || 'Unknown',
+        changeType: 'restore',
+        originalData: productToRestore,
+        newData: { ...productToRestore, isDeleted: false }
+      });
+    }
+  };
 
   // Flash message functions
   const addFlashMessage = (type: FlashMessage['type'], message: string, duration: number = 4000): void => {
@@ -92,6 +131,166 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
 
   const removeFlashMessage = (id: string): void => {
     setFlashMessages((prev: FlashMessage[]) => prev.filter((msg: FlashMessage) => msg.id !== id));
+  };
+
+  // Tracking functions
+  const addTrackedChange = (change: Omit<TrackedChange, 'id' | 'timestamp'>): void => {
+    const newChange: TrackedChange = {
+      ...change,
+      id: `change-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date()
+    };
+    setTrackedChanges(prev => [...prev, newChange]);
+  };
+
+  const removeTrackedChange = (changeId: string): void => {
+    setTrackedChanges(prev => prev.filter(change => change.id !== changeId));
+  };
+
+  const clearAllTrackedChanges = (): void => {
+    setTrackedChanges([]);
+  };
+
+  // Helper function to check if a product has actually changed
+  const hasProductChanged = (original: Product, updated: Product): boolean => {
+    return (
+      original.name !== updated.name ||
+      original.description !== updated.description ||
+      original.imageUrl !== updated.imageUrl ||
+      original.isDisabled !== updated.isDisabled ||
+      original.smallPrice !== updated.smallPrice ||
+      original.mediumPrice !== updated.mediumPrice ||
+      original.largePrice !== updated.largePrice ||
+      original.productTypeId !== updated.productTypeId ||
+      original.isDeleted !== updated.isDeleted
+    );
+  };
+
+  // Save all changes
+  const handleSaveAllChanges = async (): Promise<void> => {
+    try {
+      // Save all tracked changes
+      for (const change of trackedChanges) {
+        if (change.changeType === 'delete') {
+          // Soft delete products by updating isDeleted to true
+          await softDeleteProductsClient([change.productId]);
+        } else if (change.changeType === 'restore') {
+          // Restore products by updating isDeleted to false
+          await restoreProductsClient([change.productId]);
+        }
+        // Updates are already saved when they happen
+      }
+      
+      // Clear tracked changes
+      clearAllTrackedChanges();
+      setHasUnsavedChanges(false);
+      setDeletedProductIds(new Set());
+      
+      // Update products in UI based on change types
+      setProducts(prevProducts => 
+        prevProducts.map((product: Product) => {
+          const deleteChange = trackedChanges.find(c => c.productId === product.id && c.changeType === 'delete');
+          const restoreChange = trackedChanges.find(c => c.productId === product.id && c.changeType === 'restore');
+          
+          if (deleteChange) {
+            return { ...product, isDeleted: true, isMarkedForDeletion: false, isAnimating: false };
+          } else if (restoreChange) {
+            return { ...product, isDeleted: false };
+          }
+          return product;
+        })
+      );
+      
+      addFlashMessage('success', 'Всички промени бяха запазени успешно!');
+    } catch (error) {
+      console.error('Error saving all changes:', error);
+      addFlashMessage('error', 'Грешка при запазване на промените.');
+    }
+  };
+
+  // Undo all changes
+  const handleUndoAllChanges = (): void => {
+    // Clear all tracked changes
+    clearAllTrackedChanges();
+    setHasUnsavedChanges(false);
+    setDeletedProductIds(new Set());
+    
+    // Reset products to not marked for deletion
+    setProducts(prevProducts => 
+      prevProducts.map(product => 
+        product.isMarkedForDeletion 
+          ? { ...product, isMarkedForDeletion: false, isAnimating: false }
+          : product
+      )
+    );
+    
+    addFlashMessage('success', 'Всички промени бяха отменени!');
+  };
+
+  // Undo individual change
+  const handleUndoChange = (changeId: string): void => {
+    const change = trackedChanges.find(c => c.id === changeId);
+    if (!change) return;
+
+    if (change.changeType === 'delete') {
+      // Remove from deleted set
+      setDeletedProductIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(change.productId);
+        setHasUnsavedChanges(newSet.size > 0);
+        return newSet;
+      });
+
+      // Unmark for deletion
+      setProducts(prevProducts => 
+        prevProducts.map(product => 
+          product.id === change.productId 
+            ? { ...product, isMarkedForDeletion: false, isAnimating: false }
+            : product
+        )
+      );
+    } else if (change.changeType === 'restore') {
+      // Revert restore action - mark as deleted again
+      setProducts(prevProducts => 
+        prevProducts.map(product => 
+          product.id === change.productId 
+            ? { ...product, isDeleted: true }
+            : product
+        )
+      );
+    } else if (change.changeType === 'update' && change.originalData) {
+      // Revert the update - for edit changes, we need to revert all fields
+      if (change.originalData.isDisabled !== undefined) {
+        // This is a status toggle change
+        const originalDisabledStatus = change.originalData.isDisabled || false;
+        
+        // Update database
+        setProductDisabledClient(change.productId, originalDisabledStatus).catch(error => {
+          console.error('Error reverting product status:', error);
+        });
+        
+        // Update local state
+        setProducts(prevProducts => 
+          prevProducts.map(product => 
+            product.id === change.productId 
+              ? { ...product, isDisabled: originalDisabledStatus }
+              : product
+          )
+        );
+      } else {
+        // This is an edit change - revert to original product data
+        setProducts(prevProducts => 
+          prevProducts.map(product => 
+            product.id === change.productId 
+              ? { ...product, ...change.originalData }
+              : product
+          )
+        );
+      }
+    }
+    
+    // Remove from tracked changes
+    removeTrackedChange(changeId);
   };
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -171,10 +370,15 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
           productTypeId: product.ProductTypeID,
           productType: getProductTypeName(product.ProductTypeID || 0),
           isMarkedForDeletion: false,
-          isAnimating: false
+          isAnimating: false,
+          isDeleted: product.isDeleted === 1 || product.isDeleted === true
         }));
         
         console.table(productsWithType);
+        
+        // Log deleted products count
+        const deletedProductsCount = productsWithType.filter(p => p.isDeleted).length;
+        console.log(`📊 Products with isDeleted: true (IsDeleted: 1) = ${deletedProductsCount} out of ${productsWithType.length} total products`);
         
         // Set products from database
         setProducts(productsWithType);
@@ -200,6 +404,9 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
 
   const handleSaveProduct = async (productId: number, updatedProduct: Product): Promise<void> => {
     try {
+      // Find the original product for comparison
+      const originalProduct = products.find(p => p.id === productId);
+      
       // Prepare data for API (map UI names to database column names)
       const productData = {
         ProductID: updatedProduct.id,
@@ -226,8 +433,39 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         mediumPrice: savedProduct.MediumPrice,
         largePrice: savedProduct.LargePrice,
         productTypeId: savedProduct.ProductTypeID,
-        productType: getProductTypeName(savedProduct.ProductTypeID || 0)
+        productType: getProductTypeName(savedProduct.ProductTypeID || 0),
+        isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
+      
+      // Check if there are actual changes to track
+      if (originalProduct && hasProductChanged(originalProduct, productWithType)) {
+        // Check if there's already a tracked change for this product
+        const existingChangeIndex = trackedChanges.findIndex(change => 
+          change.productId === productId && change.changeType === 'update'
+        );
+        
+        if (existingChangeIndex !== -1) {
+          // Update existing change
+          setTrackedChanges(prev => prev.map((change, index) => 
+            index === existingChangeIndex 
+              ? { 
+                  ...change, 
+                  newData: productWithType
+                }
+              : change
+          ));
+        } else {
+          // Add new tracked change
+          addTrackedChange({
+            productId: productId,
+            productName: productWithType.name,
+            productType: productWithType.productType || 'Unknown',
+            changeType: 'update',
+            originalData: originalProduct,
+            newData: productWithType
+          });
+        }
+      }
       
       setProducts((prevProducts: Product[]) => 
         prevProducts.map((product: Product) => 
@@ -247,6 +485,19 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
   };
 
   const handleDeleteProduct = (productId: number): void => {
+    const productToDelete = products.find(p => p.id === productId);
+    
+    // Track the deletion
+    if (productToDelete) {
+      addTrackedChange({
+        productId: productId,
+        productName: productToDelete.name,
+        productType: productToDelete.productType || 'Unknown',
+        changeType: 'delete',
+        originalData: productToDelete
+      });
+    }
+    
     // Start animation
     setProducts(prevProducts => 
       prevProducts.map((product: Product) => 
@@ -350,6 +601,43 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
       if (!product) return;
       
       const newDisabledStatus = !(product.isDisabled || false);
+      
+      // Check if there's already a tracked change for this product
+      const existingChangeIndex = trackedChanges.findIndex(change => 
+        change.productId === productId && change.changeType === 'update'
+      );
+      
+      if (existingChangeIndex !== -1) {
+        const existingChange = trackedChanges[existingChangeIndex];
+        // Check if we're toggling back to the original state
+        if (existingChange.originalData?.isDisabled === newDisabledStatus) {
+          // Remove the change since we're back to original state
+          setTrackedChanges(prev => prev.filter((_, index) => index !== existingChangeIndex));
+        } else {
+          // Update existing change instead of creating a new one
+          setTrackedChanges(prev => prev.map((change, index) => 
+            index === existingChangeIndex 
+              ? { 
+                  ...change, 
+                  newData: { ...change.newData!, isDisabled: newDisabledStatus }
+                }
+              : change
+          ));
+        }
+      } else {
+        // Only track if we're actually changing from the original state
+        if (product.isDisabled !== newDisabledStatus) {
+          addTrackedChange({
+            productId: productId,
+            productName: product.name,
+            productType: product.productType || 'Unknown',
+            changeType: 'update',
+            originalData: product,
+            newData: { ...product, isDisabled: newDisabledStatus }
+          });
+        }
+      }
+      
       await setProductDisabledClient(productId, newDisabledStatus);
       
       // Update local state
@@ -409,7 +697,8 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         mediumPrice: savedProduct.MediumPrice,
         largePrice: savedProduct.LargePrice,
         productTypeId: savedProduct.ProductTypeID,
-        productType: getProductTypeName(savedProduct.ProductTypeID || 0)
+        productType: getProductTypeName(savedProduct.ProductTypeID || 0),
+        isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
       
       setProducts([...products, productWithType]);
@@ -472,7 +761,7 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
 
     const eurPrice = bgnPrice / BGN_PER_EUR; 
     
-    return `${bgnPrice.toFixed(2)} лв/${eurPrice.toFixed(2)} Є`;
+    return `${bgnPrice.toFixed(2)} лв`;
   };
 
   const generateSuggestions = (query: string): AutocompleteSuggestion[] => {
@@ -558,6 +847,7 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
     setFilters({ searchQuery: '', selectedCategoryId: '' });
     setAppliedQuery('');                            // нулираме приложеното търсене
     setAutocomplete({ suggestions: [], showSuggestions: false, selectedIndex: -1 });
+    setShowDeletedProducts(false);                  // нулираме филтъра за изтрити продукти
     setCurrentPage(1);
   };
 
@@ -582,8 +872,11 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
   
     // Don't show products marked for deletion in the main grid
     const notMarkedForDeletion: boolean = !product.isMarkedForDeletion;
+    
+    // Deleted products filter - show only non-deleted by default, or all if toggle is active
+    const deletedFilter: boolean = showDeletedProducts ? product.isDeleted === true : product.isDeleted !== true;
   
-    return searchMatch && categoryMatch && notMarkedForDeletion;
+    return searchMatch && categoryMatch && notMarkedForDeletion && deletedFilter;
   });
 
   // Pagination logic - responsive (now using filtered products)
@@ -728,36 +1021,52 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
               <button
                 onClick={applyFilters}
                 className="
-                  inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-orange-600 hover:bg-orange-700 px-4 text-white text-base 
+                  inline-flex h-10 sm:h-12 items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl bg-orange-600 hover:bg-orange-700 px-3 sm:px-4 text-white text-sm sm:text-base 
                   font-medium leading-none transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 
                   w-full sm:w-auto mt-7 sm:mt-0"
                 >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
                 </svg>
-                Филтрирай
+                <span className="hidden xs:inline">Филтрирай</span>
+                <span className="xs:hidden">Филтър</span>
               </button>
               <button
                 onClick={clearFilters}
                 className="
-                  inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-gray-600 hover:bg-gray-700 px-4 text-white text-base font-medium leading-none 
+                  inline-flex h-10 sm:h-12 items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl bg-gray-600 hover:bg-gray-700 px-3 sm:px-4 text-white text-sm sm:text-base font-medium leading-none 
                   transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 
                   focus:ring-offset-2 w-full sm:w-auto mt-7 sm:mt-0"
                 >
-                <X className="w-4 h-4" />
-                Изчисти
+                <X className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="hidden xs:inline">Изчисти</span>
+                <span className="xs:hidden">Изчисти</span>
+              </button>
+              <button
+                onClick={toggleDeletedProducts}
+                className={`
+                  inline-flex h-10 sm:h-12 items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl px-3 sm:px-4 text-white text-sm sm:text-base font-medium leading-none 
+                  transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 w-full sm:w-auto mt-7 sm:mt-0
+                  ${showDeletedProducts 
+                    ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
+                    : 'bg-gray-600 hover:bg-gray-700 focus:ring-gray-500'
+                  }`}
+              >
+                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="hidden xs:inline">{showDeletedProducts ? 'Покажи активни' : 'Изтрити'}</span>
+                <span className="xs:hidden">{showDeletedProducts ? 'Активни' : 'Изтрити'}</span>
               </button>
             </div>
           </div>
 
           {/* Filter Results Info */}
-          {(filters.searchQuery || filters.selectedCategoryId) && (
+          {(filters.searchQuery || filters.selectedCategoryId || showDeletedProducts) && (
             <div className="bg-gray-700 rounded-xl p-3 border border-gray-600">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-300">
                   Показани {filteredProducts.length} от {products.length} продукта
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {filters.searchQuery && (
                     <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-600 text-white text-xs rounded-lg">
                       Търсене: "{filters.searchQuery}"
@@ -766,6 +1075,12 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
                   {filters.selectedCategoryId && (
                     <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-600 text-white text-xs rounded-lg">
                       Категория: {categoryOptions.find(opt => opt.id === filters.selectedCategoryId)?.name || 'Неизвестно'}
+                    </span>
+                  )}
+                  {showDeletedProducts && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-600 text-white text-xs rounded-lg">
+                      <Trash2 className="w-3 h-3" />
+                      Изтрити продукти
                     </span>
                   )}
                 </div>
@@ -827,135 +1142,106 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         </div>
       )}
 
-      {/* Save Changes Button - Only show when there are unsaved changes */}
-      {hasUnsavedChanges && (
-        <div className="flex flex-col gap-3 justify-center mb-4 sm:mb-6">
-          <div className="bg-red-900 border border-red-700 rounded-2xl p-3 sm:p-4 lg:p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-              <div className="flex items-center gap-2 text-red-200">
-                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="text-sm sm:text-base font-medium">
-                  {deletedProductIds.size} продукт{deletedProductIds.size > 1 ? 'а' : ''} маркирани за изтриване
-                </span>
+      {/* Tracking Changes Section - Mobile Optimized */}
+      {trackedChanges.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-700/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6">
+          {/* Header - Mobile First */}
+          <div className="flex flex-col gap-3 mb-4">
+            {/* Title and Icon */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white leading-tight">
+                  Проследяване на промени
+                </h3>
+                <p className="text-xs sm:text-sm text-blue-200 mt-0.5">
+                  {trackedChanges.length} промен{trackedChanges.length > 1 ? 'и' : 'а'} в очакване
+                </p>
+              </div>
+            </div>
+            
+            {/* Action Buttons - Mobile Optimized */}
+            <div className="flex flex-col xs:flex-row gap-2 w-full">
         <button
-                  onClick={handleSaveChanges}
+                onClick={handleSaveAllChanges}
                   disabled={isDeletingProducts}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed px-4 py-2.5 text-white text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 hover:scale-105 active:scale-95 w-full sm:w-auto"
-                >
-                  {isDeletingProducts ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Изтриване...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Запази промените
-                    </>
-                  )}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-green-800 disabled:to-emerald-800 disabled:cursor-not-allowed px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-lg min-h-[44px]"
+              >
+                <Save className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Запази всички</span>
                 </button>
                 <button
-                  onClick={handleDiscardChanges}
+                onClick={handleUndoAllChanges}
                   disabled={isDeletingProducts}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-4 py-2.5 text-white text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 hover:scale-105 active:scale-95 w-full sm:w-auto"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-gray-600 to-slate-600 hover:from-gray-700 hover:to-slate-700 disabled:from-gray-800 disabled:to-slate-800 disabled:cursor-not-allowed px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 shadow-lg min-h-[44px]"
                 >
-                  <X className="w-4 h-4" />
-                  Отказ
+                <Undo2 className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Отмени всички</span>
                 </button>
               </div>
             </div>
-            <div className="mt-3 text-xs sm:text-sm text-red-300">
-              За да изтриете продуктите окончателно, натиснете "Запази промените"
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Deleted Products Section - Responsive */}
-      {deletedProductIds.size > 0 && (
-        <div className="bg-red-900/20 border border-red-700/50 rounded-2xl p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <h3 className="text-red-300 font-medium flex items-center gap-2 text-sm sm:text-base">
-              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-              Продукти маркирани за изтриване ({deletedProductIds.size})
-            </h3>
-            <div className="text-xs sm:text-sm text-red-400">
-              Кликнете "Възстанови" за да върнете продукта в списъка
-            </div>
-          </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
-            {products
-              .filter((product: Product) => deletedProductIds.has(product.id))
-              .map((product: Product) => (
-                <div 
-                  key={`deleted-${product.id}`}
-                  className="bg-red-900/30 border border-red-600/50 rounded-xl p-3 sm:p-4 lg:p-5 flex flex-col h-full transition-all duration-200 hover:bg-red-900/40 hover:border-red-500/70"
-                >
-                  {/* Product Info Section */}
-                  <div className="flex items-start gap-3 flex-1 mb-3 sm:mb-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-red-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {product.imageUrl ? (
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.name}
-                          className="w-full h-full object-cover rounded-lg"
-                          onError={(e) => {
-                            const target = e.currentTarget as HTMLImageElement;
-                            target.style.display = 'none';
-                            const nextElement = target.nextElementSibling as HTMLElement;
-                            if (nextElement) {
-                              nextElement.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null}
-                      <Package className={`w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-red-300 ${product.imageUrl ? 'hidden' : 'flex'}`} />
-                    </div>
+          {/* Changes Grid - Mobile Optimized */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+            {trackedChanges.map((change: TrackedChange) => (
+              <div 
+                key={change.id}
+                className={`rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all duration-200 overflow-hidden flex flex-col h-full ${
+                  change.changeType === 'delete' 
+                    ? 'bg-gradient-to-br from-red-900/30 to-rose-900/30 border-red-500/50 hover:from-red-900/40 hover:to-rose-900/40' 
+                    : change.changeType === 'restore'
+                    ? 'bg-gradient-to-br from-blue-900/30 to-indigo-900/30 border-blue-500/50 hover:from-blue-900/40 hover:to-indigo-900/40'
+                    : 'bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-500/50 hover:from-green-900/40 hover:to-emerald-900/40'
+                }`}
+              >
+                {/* Product Info - Mobile Optimized */}
+                <div className="flex items-start gap-2 sm:gap-3 mb-3">
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-red-200 font-medium text-sm sm:text-base lg:text-lg leading-tight mb-1 line-clamp-2">{product.name}</h4>
-                      <p className="text-red-400 text-xs sm:text-sm mb-2">{product.productType}</p>
-                      {product.smallPrice && (
-                        <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
-                          <div className="flex items-center gap-1 px-2 py-1 bg-red-800/50 rounded-md">
-                            <span className="text-red-400 text-xs font-medium">S:</span>
-                            <span className="text-red-200 text-xs sm:text-sm font-semibold">
-                              {formatPriceWithEuro(product.smallPrice)}
-                            </span>
-                          </div>
-                          {product.mediumPrice && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-red-800/50 rounded-md">
-                              <span className="text-red-400 text-xs font-medium">M:</span>
-                              <span className="text-red-200 text-xs sm:text-sm font-semibold">
-                                {formatPriceWithEuro(product.mediumPrice)}
-                              </span>
-                            </div>
-                          )}
-                          {product.largePrice && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-red-800/50 rounded-md">
-                              <span className="text-red-400 text-xs font-medium">L:</span>
-                              <span className="text-red-200 text-xs sm:text-sm font-semibold">
-                                {formatPriceWithEuro(product.largePrice)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                    <h4 className={`font-medium text-sm sm:text-base leading-tight mb-1 line-clamp-2 ${
+                      change.changeType === 'delete' ? 'text-red-100' : change.changeType === 'restore' ? 'text-blue-100' : 'text-green-100'
+                    }`}>
+                      {change.productName}
+                    </h4>
+                    <p className={`text-xs sm:text-sm ${
+                      change.changeType === 'delete' ? 'text-red-300' : change.changeType === 'restore' ? 'text-blue-300' : 'text-green-300'
+                    }`}>
+                      {change.productType}
+                    </p>
                     </div>
+                  <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0 mt-1 ${
+                    change.changeType === 'delete' ? 'bg-red-400' : change.changeType === 'restore' ? 'bg-blue-400' : 'bg-green-400'
+                  }`} />
                   </div>
                   
-                  {/* Button Section - Always at bottom */}
-                  <div className="mt-auto">
-                    <button
-                      onClick={() => handleUndoDelete(product.id)}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-green-600 hover:bg-green-700 px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm sm:text-base font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 hover:scale-105 active:scale-95"
-                    >
-                      <Undo2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span>Възстанови</span>
-        </button>
-      </div>
+                {/* Status Badge */}
+                <div className="mb-3">
+                  <span className={`inline-block text-xs font-medium px-2 py-1 rounded-md ${
+                    change.changeType === 'delete' 
+                      ? 'bg-red-800/60 text-red-100' 
+                      : change.changeType === 'restore'
+                      ? 'bg-blue-800/60 text-blue-100'
+                      : 'bg-green-800/60 text-green-100'
+                  }`}>
+                    {change.changeType === 'delete' ? 'Изтриване' : change.changeType === 'restore' ? 'Възстановяване' : 'Обновяване'}
+                  </span>
+                </div>
+                
+                {/* Undo Button - Full Width at Bottom */}
+                <button
+                  onClick={() => handleUndoChange(change.id)}
+                  className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 mt-auto ${
+                    change.changeType === 'delete'
+                      ? 'bg-red-600 hover:bg-red-700 text-red-100 focus:ring-red-500'
+                      : change.changeType === 'restore'
+                      ? 'bg-blue-600 hover:bg-blue-700 text-blue-100 focus:ring-blue-500'
+                      : 'bg-green-600 hover:bg-green-700 text-green-100 focus:ring-green-500'
+                  }`}
+                >
+                  <Undo2 className="w-4 h-4 flex-shrink-0" />
+                  <span>Отмяна</span>
+                </button>
                 </div>
               ))}
           </div>
@@ -1077,14 +1363,25 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
                   >
                     Edit
                   </button>
-                  <button 
-                    className="flex-1 inline-flex h-8 sm:h-10 items-center justify-center gap-1 sm:gap-2 rounded-xl sm:rounded-2xl bg-red-800 px-3 sm:px-4 text-xs sm:text-sm font-medium text-white transition-colors duration-200 hover:bg-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
-                    onClick={(): void => handleDeleteProduct(product.id)}
-                  >
-                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden xs:inline">Delete</span>
-                    <span className="xs:hidden">Delete</span>
-                  </button>
+                  {product.isDeleted ? (
+                    <button 
+                      className="flex-1 inline-flex h-8 sm:h-10 items-center justify-center gap-1 sm:gap-2 rounded-xl sm:rounded-2xl bg-blue-600 px-3 sm:px-4 text-xs sm:text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                      onClick={(): void => { handleRestoreProduct(product.id); }}
+                    >
+                      <Undo2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden xs:inline">Undo Delete</span>
+                      <span className="xs:hidden">Undo</span>
+                    </button>
+                  ) : (
+                    <button 
+                      className="flex-1 inline-flex h-8 sm:h-10 items-center justify-center gap-1 sm:gap-2 rounded-xl sm:rounded-2xl bg-red-800 px-3 sm:px-4 text-xs sm:text-sm font-medium text-white transition-colors duration-200 hover:bg-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
+                      onClick={(): void => handleDeleteProduct(product.id)}
+                    >
+                      <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden xs:inline">Delete</span>
+                      <span className="xs:hidden">Delete</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Disable Checkbox */}

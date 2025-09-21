@@ -11,6 +11,7 @@ export type Product = {
   MediumPrice?: number | null;
   LargePrice?: number | null;
   ProductTypeID?: number | null;
+  isDeleted?: number | boolean;
 };
 
 export async function listProducts() {
@@ -66,5 +67,37 @@ export async function deleteProducts(ids: number[]) {
     return { success: true, deletedCount: ids.length };
   } catch (error) {
     throw new Error(`Failed to delete products: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+export async function softDeleteProducts(ids: number[]) {
+  try {
+    // Update isDeleted column to true for the specified products
+    const { error } = await supabaseAdmin
+      .from('Product')
+      .update({ isDeleted: true })
+      .in('ProductID', ids);
+    
+    if (error) throw new Error(error.message);
+    
+    return { success: true, deletedCount: ids.length };
+  } catch (error) {
+    throw new Error(`Failed to soft delete products: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+export async function restoreProducts(ids: number[]) {
+  try {
+    // Update isDeleted column to false for the specified products
+    const { error } = await supabaseAdmin
+      .from('Product')
+      .update({ isDeleted: false })
+      .in('ProductID', ids);
+    
+    if (error) throw new Error(error.message);
+    
+    return { success: true, restoredCount: ids.length };
+  } catch (error) {
+    throw new Error(`Failed to restore products: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

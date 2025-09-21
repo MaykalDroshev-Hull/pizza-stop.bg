@@ -9,6 +9,7 @@ export interface DatabaseProduct {
   MediumPrice?: number | null;
   LargePrice?: number | null;
   ProductTypeID?: number | null;
+  isDeleted?: number | boolean;
 }
 
 export async function getProductsClient(): Promise<DatabaseProduct[]> {
@@ -80,4 +81,26 @@ export async function deleteProductsClient(ids: number[]): Promise<DeleteProduct
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json as DeleteProductsResponse;
+}
+
+export async function softDeleteProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
+  const res = await fetch('/api/admin/products/soft-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Request failed');
+  return json;
+}
+
+export async function restoreProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
+  const res = await fetch('/api/admin/products/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? 'Request failed');
+  return json;
 }
