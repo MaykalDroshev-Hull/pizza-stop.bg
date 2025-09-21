@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { updateOrderStatusInDB, testDatabaseConnection, ORDER_STATUS, KitchenOrder, LkOrderProducts } from '../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
+// AdminLogin moved to separate page at /admin-delivery-login
 
 interface DeliveryOrder {
   id: number;
@@ -103,6 +104,7 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
 };
 
 const DeliveryDashboard = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   const [currentView, setCurrentView] = useState<'dashboard' | 'history'>('dashboard');
@@ -252,36 +254,43 @@ const DeliveryDashboard = () => {
     }
   };
 
+  // Check authentication on component mount
   useEffect(() => {
-    // Initialize time on client side to prevent hydration mismatch
-    setCurrentTime(new Date());
-    
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    
-    // Test database connection first
-    testDatabaseConnection().then((isConnected) => {
-      if (!isConnected) {
-        console.error('Database connection failed - check environment variables');
-        alert('Грешка при свързване с базата данни. Моля проверете настройките.');
-      }
-    });
-    
-    // Get driver's current location
-    getCurrentLocation();
-    
-    // Fetch orders on component mount
-    fetchDeliveryOrders();
-    
-    // Refresh orders every 30 seconds
-    const refreshInterval = setInterval(fetchDeliveryOrders, 30000);
-    
-    return () => {
-      clearInterval(timer);
-      clearInterval(refreshInterval);
-    };
+    const isLoggedIn = sessionStorage.getItem('admin_delivery') === 'true';
+    if (!isLoggedIn) {
+      // Redirect to separate login page
+      window.location.href = '/admin-delivery-login';
+      return;
+    }
+    setIsAuthenticated(isLoggedIn);
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Initialize time on client side to prevent hydration mismatch
+      setCurrentTime(new Date());
+      
+      const timer = setInterval(() => {
+        setCurrentTime(new Date());
+      }, 1000);
+      
+      // Database connection will be tested when fetching data
+      
+      // Get driver's current location
+      getCurrentLocation();
+      
+      // Fetch orders on component mount
+      fetchDeliveryOrders();
+      
+      // Refresh orders every 30 seconds
+      const refreshInterval = setInterval(fetchDeliveryOrders, 30000);
+      
+      return () => {
+        clearInterval(timer);
+        clearInterval(refreshInterval);
+      };
+    }
+  }, [isAuthenticated, getCurrentLocation]);
 
   // Clean up duplicate orders in history
   useEffect(() => {
@@ -476,19 +485,19 @@ const DeliveryDashboard = () => {
     const isUrgent = timeSince > 20;
     
     return (
-      <div className={`rounded-lg p-4 mb-3 border-2 transition-all duration-300 hover:bg-opacity-80 ${getStatusColor(order.status, order.priority)} ${isUrgent ? 'animate-pulse' : ''}`}>
+      <div className={`rounded-lg p-3 sm:p-4 mb-3 border-2 transition-all duration-300 hover:bg-opacity-80 ${getStatusColor(order.status, order.priority)} ${isUrgent ? 'animate-pulse' : ''}`}>
         <div className="flex justify-between items-start mb-3">
-          <div className="flex items-center space-x-2">
-            <span className="text-xl font-bold text-white">#{order.id}</span>
-            <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-200">
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
+            <span className="text-lg sm:text-xl font-bold text-white">#{order.id}</span>
+            <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-200 truncate">
               {getStatusText(order.status)}
             </span>
             {order.priority !== 'normal' && (
-              <span className="text-lg">{getPriorityIcon(order.priority)}</span>
+              <span className="text-base sm:text-lg">{getPriorityIcon(order.priority)}</span>
             )}
           </div>
-          <div className="text-right">
-            <div className="text-green-400 font-bold">
+          <div className="text-right flex-shrink-0 ml-2">
+            <div className="text-green-400 font-bold text-sm sm:text-base">
               {(order.totalPrice + order.deliveryFee).toFixed(2)} лв
             </div>
             <div className="text-xs text-gray-400">
@@ -499,18 +508,18 @@ const DeliveryDashboard = () => {
 
         <div className="space-y-2 mb-3">
           <div className="flex items-center space-x-2">
-            <User size={16} className="text-blue-400" />
-            <span className="text-white font-medium">{order.customerName}</span>
+            <User size={14} className="text-blue-400 flex-shrink-0" />
+            <span className="text-white font-medium text-sm sm:text-base truncate">{order.customerName}</span>
           </div>
           
           <div className="flex items-start space-x-2">
-            <MapPin size={16} className="text-red-400 mt-0.5" />
-            <span className="text-gray-300 text-sm flex-1">{order.address}</span>
+            <MapPin size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
+            <span className="text-gray-300 text-xs sm:text-sm flex-1 leading-relaxed">{order.address}</span>
           </div>
           
           <div className="flex items-center space-x-2">
-            <Phone size={16} className="text-green-400" />
-            <a href={`tel:${order.phone}`} className="text-green-400 hover:text-green-300">
+            <Phone size={14} className="text-green-400 flex-shrink-0" />
+            <a href={`tel:${order.phone}`} className="text-green-400 hover:text-green-300 text-sm">
               {order.phone}
             </a>
           </div>
@@ -617,20 +626,32 @@ const DeliveryDashboard = () => {
     );
   };
 
+  // Redirect to login page if not authenticated (handled in useEffect above)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl mb-4">🔄 Redirecting to login...</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
   const readyOrders = orders.filter(o => o.status === 'ready').sort((a, b) => a.distance - b.distance);
   const activeOrders = orders.filter(o => o.status === 'en_route');
 
   return (
     <div className="h-screen bg-black text-white font-sans flex flex-col">
-      {/* Header */}
-      <div className="h-16 bg-gray-900 border-b-2 border-red-600 flex items-center justify-between px-4 flex-shrink-0">
-        <div className="flex items-center space-x-4">
-          <div className="text-2xl font-bold text-red-500">🍕 PIZZA STOP</div>
-          <div className="text-lg text-gray-400">Доставчик</div>
+      {/* Header - Mobile Optimized */}
+      <div className="h-16 bg-gray-900 border-b-2 border-red-600 flex items-center justify-between px-2 sm:px-4 flex-shrink-0">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="text-lg sm:text-2xl font-bold text-red-500">🍕 PIZZA STOP</div>
+          <div className="text-sm sm:text-lg text-gray-400 hidden sm:block">Доставчик</div>
         </div>
         
-        <div className="flex items-center space-x-4">
-          <div className="text-xl font-mono">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="text-sm sm:text-xl font-mono">
             {currentTime ? currentTime.toLocaleTimeString('bg-BG', { 
               hour: '2-digit', 
               minute: '2-digit', 
@@ -640,12 +661,12 @@ const DeliveryDashboard = () => {
           
           <button
             onClick={() => setIsOnline(!isOnline)}
-            className={`flex items-center space-x-2 px-3 py-1 rounded ${
+            className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm ${
               isOnline ? 'bg-green-600' : 'bg-red-600'
             }`}
           >
-            {isOnline ? <Wifi size={16} /> : <WifiOff size={16} />}
-            <span className="text-sm">{isOnline ? 'Онлайн' : 'Офлайн'}</span>
+            {isOnline ? <Wifi size={14} className="sm:w-4 sm:h-4" /> : <WifiOff size={14} className="sm:w-4 sm:h-4" />}
+            <span className="hidden sm:inline">{isOnline ? 'Онлайн' : 'Офлайн'}</span>
           </button>
         </div>
       </div>
@@ -670,38 +691,38 @@ const DeliveryDashboard = () => {
         </button>
       </div>
 
-      {/* Stats Bar */}
-      <div className="bg-gray-800 px-4 py-2 border-b border-gray-600">
-        <div className="flex justify-between items-center text-sm">
+      {/* Stats Bar - Mobile Optimized */}
+      <div className="bg-gray-800 px-2 sm:px-4 py-2 border-b border-gray-600">
+        <div className="grid grid-cols-3 sm:flex sm:justify-between items-center gap-2 sm:gap-0 text-xs sm:text-sm">
           <div className="flex items-center space-x-1">
-            <CheckCircle size={16} className="text-green-400" />
-            <span>Днес: <strong>{stats.todaysDeliveries}</strong></span>
+            <CheckCircle size={14} className="text-green-400" />
+            <span className="truncate">Днес: <strong>{stats.todaysDeliveries}</strong></span>
           </div>
           <div className="flex items-center space-x-1">
-            <DollarSign size={16} className="text-green-400" />
-            <span><strong>{stats.todaysEarnings.toFixed(2)} лв</strong></span>
+            <DollarSign size={14} className="text-green-400" />
+            <span className="truncate"><strong>{stats.todaysEarnings.toFixed(2)} лв</strong></span>
           </div>
           <div className="flex items-center space-x-1">
-            <Clock size={16} className="text-orange-400" />
-            <span>Средно: <strong>{stats.averageTime}мин</strong></span>
+            <Clock size={14} className="text-orange-400" />
+            <span className="truncate hidden sm:inline">Средно: </span><strong>{stats.averageTime}мин</strong>
           </div>
-          <div className="flex items-center space-x-1">
-            <Star size={16} className="text-yellow-400" />
+          <div className="flex items-center space-x-1 col-span-1 sm:col-span-auto">
+            <Star size={14} className="text-yellow-400" />
             <span><strong>{stats.rating}</strong></span>
           </div>
-          <div className="flex items-center space-x-1">
-            <TrendingUp size={16} className="text-purple-400" />
-            <span>Бакшиши: <strong>{stats.totalTips.toFixed(2)} лв</strong></span>
+          <div className="flex items-center space-x-1 col-span-2 sm:col-span-auto">
+            <TrendingUp size={14} className="text-purple-400" />
+            <span className="truncate">Бакшиши: <strong>{stats.totalTips.toFixed(2)} лв</strong></span>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Mobile Optimized */}
       <div className="flex-1 overflow-hidden">
         {currentView === 'dashboard' && (
-          <div className="h-full flex">
+          <div className="h-full flex flex-col lg:flex-row">
             {/* Orders List */}
-            <div className="w-full lg:w-1/2 p-4 overflow-y-auto">
+            <div className="w-full lg:w-1/2 p-2 sm:p-4 overflow-y-auto">
               {loading ? (
                 <div className="text-center text-gray-400 mt-20">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>

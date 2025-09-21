@@ -367,11 +367,11 @@ export default function MenuPage() {
             </div>
 
             {/* Step Labels */}
-            <div className="grid grid-cols-4 gap-4 text-center mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-8">
               <div className="text-sm text-muted">Размер</div>
               <div className="text-sm text-muted">Лява половина</div>
-              <div className="text-sm text-muted">Дясна половина</div>
-              <div className="text-sm text-muted">Добавки & Финализиране</div>
+              <div className="text-sm text-muted md:block hidden">Дясна половина</div>
+              <div className="text-sm text-muted md:block hidden">Добавки & Финализиране</div>
             </div>
 
             {/* 50/50 Content */}
@@ -438,7 +438,7 @@ export default function MenuPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {menuData.pizza?.map((pizza) => (
                       <div
                         key={pizza.id}
@@ -541,7 +541,7 @@ export default function MenuPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {/* Placeholder card for right half */}
                     <div className="card border-2 border-dashed border-orange/50 bg-orange/5 p-4 text-center animate-pulse">
                       <div className="text-3xl mb-3">❓</div>
@@ -1224,7 +1224,7 @@ export default function MenuPage() {
                             </div>
                           </div>
                         );
-                      } else if (item.sizes && item.sizes.length > 0) {
+                      } else if (item.sizes && item.sizes.length > 1) {
                         /* Show size selection for pizzas with multiple sizes */
                         return (
                     <div className="mb-4">
@@ -1315,8 +1315,16 @@ export default function MenuPage() {
                       const hasMultipleSizesSauce = item.category === 'sauces' && 
                         item.sizes && item.sizes.length > 1;
                       
+                      // Auto-select size if there's only one size available
+                      if (item.sizes && item.sizes.length === 1 && !selectedSizes[item.id]) {
+                        setSelectedSizes(prev => ({
+                          ...prev,
+                          [item.id]: item.sizes[0]
+                        }))
+                      }
+                      
                       // Only require size selection if there are multiple sizes available and not only small size
-                      if (item.sizes && item.sizes.length > 0 && !hasOnlySmallSize && (hasMultipleSizesDoner || hasMultipleSizesSauce) && !selectedSizes[item.id]) {
+                      if (item.sizes && item.sizes.length > 1 && !hasOnlySmallSize && (hasMultipleSizesDoner || hasMultipleSizesSauce) && !selectedSizes[item.id]) {
                         // Auto-select first size if none selected
                         setSelectedSizes(prev => ({
                           ...prev,
