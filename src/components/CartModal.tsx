@@ -147,7 +147,17 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
         <div className="p-6 space-y-8">
           {/* Item Info */}
           <div className="flex items-center space-x-4">
-            <div className="text-4xl flex-shrink-0">{item.image}</div>
+            <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-white/10">
+              <img 
+                src={item.image} 
+                alt={item.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/images/placeholder-pizza.jpg';
+                }}
+              />
+            </div>
             <div className="min-w-0">
               <h3 className="font-bold text-lg text-text truncate">{item.name}</h3>
               <p className="text-muted text-sm">{item.category}</p>

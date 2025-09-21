@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, Wifi, Users, TrendingUp, X, RotateCcw } from 'lucide-react';
 import { getKitchenOrders, updateOrderStatusInDB, ORDER_STATUS, KitchenOrder } from '../../lib/supabase';
+// AdminLogin moved to separate page at /admin-kitchen-login
 
 interface Order {
   id: number;
@@ -27,6 +28,7 @@ interface Order {
 }
 
 const KitchenCommandCenter = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,13 +170,26 @@ const KitchenCommandCenter = () => {
     }
   };
 
+  // Check authentication on component mount
   useEffect(() => {
-    fetchOrders();
-    
-    // Refresh orders every 60 seconds
-    const interval = setInterval(fetchOrders, 60000);
-    return () => clearInterval(interval);
+    const isLoggedIn = sessionStorage.getItem('admin_kitchen') === 'true';
+    if (!isLoggedIn) {
+      // Redirect to separate login page
+      window.location.href = '/admin-kitchen-login';
+      return;
+    }
+    setIsAuthenticated(isLoggedIn);
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchOrders();
+      
+      // Refresh orders every 60 seconds
+      const interval = setInterval(fetchOrders, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -731,9 +746,9 @@ const KitchenCommandCenter = () => {
     const isUrgent = totalTime > 10;
     
     const cardSizeClasses = {
-      small: 'p-1 text-xs',        // Minimal padding
-      medium: 'p-3 text-sm',       // Real medium: more padding and larger text
-      large: 'p-5 text-base'       // Large: even more padding and text
+      small: 'p-2 sm:p-1 text-xs',        // Mobile responsive minimal padding
+      medium: 'p-3 sm:p-3 text-sm',       // Mobile responsive medium padding
+      large: 'p-4 sm:p-5 text-sm sm:text-base'       // Mobile responsive large padding
     };
     
     return (
@@ -743,26 +758,26 @@ const KitchenCommandCenter = () => {
         onTouchEnd={handleTouchEnd}
       >
         <div className="flex justify-between items-start mb-3">
-          <div>
-            <div className="text-xl font-bold text-white flex items-center space-x-2">
+          <div className="flex-1 min-w-0">
+            <div className="text-lg sm:text-xl font-bold text-white flex items-center space-x-2">
               <span>#{order.id}</span>
-              <span className="text-sm text-blue-400 bg-blue-900 px-2 py-1 rounded">
+              <span className="text-xs sm:text-sm text-blue-400 bg-blue-900 px-1 sm:px-2 py-1 rounded truncate">
                 НОВА
               </span>
             </div>
-            <div className="text-sm text-gray-400">
+            <div className="text-xs sm:text-sm text-gray-400">
               Получена преди: {totalTime}мин
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-gray-500 hidden sm:block">
               Време: {formatTimeForDisplay(order.orderTime)}
             </div>
           </div>
         </div>
 
         <div className="space-y-1 mb-3">
-          <div className="text-blue-400 font-semibold">👤 {order.customerName}</div>
-          <div className="text-gray-400 text-sm">📞 {order.phone}</div>
-          <div className="text-gray-400 text-sm">📍 {order.address}</div>
+          <div className="text-blue-400 font-semibold text-sm sm:text-base truncate">👤 {order.customerName}</div>
+          <div className="text-gray-400 text-xs sm:text-sm">📞 {order.phone}</div>
+          <div className="text-gray-400 text-xs sm:text-sm truncate">📍 {order.address}</div>
         </div>
 
         <div className="space-y-1 mb-3">
@@ -957,6 +972,18 @@ const KitchenCommandCenter = () => {
     );
   };
 
+  // Redirect to login page if not authenticated (handled in useEffect above)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl mb-4">🔄 Redirecting to login...</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
   const newOrders = getFilteredOrders('new');
   const workingOrders = getFilteredOrders('working');
   const completedOrders = getFilteredOrders('completed');
@@ -975,20 +1002,20 @@ const KitchenCommandCenter = () => {
 
   return (
     <div className="h-screen bg-black text-white font-sans flex flex-col">
-      {/* Main Header Bar */}
-      <div className="h-16 bg-gray-900 border-b-2 border-red-600 flex items-center justify-between px-8 flex-shrink-0">
-        <div className="flex items-center space-x-4">
-          <div className="text-3xl font-bold text-red-500">🍕 PIZZA STOP</div>
+      {/* Main Header Bar - Mobile Optimized */}
+      <div className="h-16 bg-gray-900 border-b-2 border-red-600 flex items-center justify-between px-2 sm:px-8 flex-shrink-0">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="text-xl sm:text-3xl font-bold text-red-500">🍕 PIZZA STOP</div>
         </div>
         
-        <div className="flex items-center space-x-8">
-          <div className="text-2xl font-mono">
+        <div className="flex items-center space-x-2 sm:space-x-8">
+          <div className="text-sm sm:text-2xl font-mono">
             {formatTimeForDisplay(currentTime)}
           </div>
           
-          <div className="flex items-center space-x-2">
-            <Wifi className="text-green-500" />
-            <span className="text-green-500">Online</span>
+          <div className="flex items-center space-x-1 sm:space-x-2">
+            <Wifi className="text-green-500 w-4 h-4 sm:w-6 sm:h-6" />
+            <span className="text-green-500 text-sm sm:text-base hidden sm:inline">Online</span>
           </div>
           
           {/* Customization Controls */}
@@ -1065,8 +1092,8 @@ const KitchenCommandCenter = () => {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden main-content-area">
+      {/* Main Content Area - Mobile Optimized */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden main-content-area">
         {/* Left Work Area - Resizable */}
         <div 
           className="flex flex-col main-work-area"
@@ -1082,7 +1109,7 @@ const KitchenCommandCenter = () => {
                 📋 НОВИ ПОРЪЧКИ ({newOrders.length})
               </h2>
               <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-4">
                   {newOrders.map(order => (
                     <NewOrderCard key={order.id} order={order} />
                   ))}

@@ -69,11 +69,23 @@ export default function CartIcon() {
                 <>
                   {items.map((item, index) => (
                     <div key={index} className="flex items-start justify-between p-4 bg-white/6 rounded-xl border border-white/12">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-text truncate">{item.name}</h4>
-                        <p className="text-sm text-muted">
-                          {item.size} • {item.quantity}x
-                        </p>
+                      <div className="flex items-start space-x-3 flex-1 min-w-0">
+                        <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-white/10">
+                          <img 
+                            src={item.image} 
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/images/placeholder-pizza.jpg';
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-text truncate">{item.name}</h4>
+                          <p className="text-sm text-muted">
+                            {item.size} • {item.quantity}x
+                          </p>
                         {item.addons && item.addons.length > 0 && (
                           <p className="text-xs text-muted">
                             Добавки: {item.addons.map(addon => addon.Name).join(', ')}
@@ -84,6 +96,7 @@ export default function CartIcon() {
                             Коментар: {item.comment}
                           </p>
                         )}
+                        </div>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="font-bold text-orange">{item.price.toFixed(2)} лв.</p>
