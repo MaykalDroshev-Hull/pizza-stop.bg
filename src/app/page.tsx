@@ -220,9 +220,42 @@ export default function HomePage() {
         <section id="gallery" className={styles.gallerySection}>
           <div className={styles.galleryContainer}>
             
-            {/* First Row - Same images as second row but shuffled */}
+            {/* First Row - Infinite scroll */}
             <div className={styles.galleryRow}>
               <div className={styles.galleryScroll} aria-label="Първи ред - Галерия изображения">
+                {/* First set of images */}
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-samerdaboul-2233729.jpg" alt="Салата Цезар" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Дюнер с месо" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-muffin-1653877.jpg" alt="Пица Хавайска" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-valeriya-1639557.jpg" alt="Бургер класически" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-guto-macedo-72150916-8444548.jpg" alt="Дюнер с пилешко" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-rdne-8523507.jpg" alt="Пържени картофки" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-viniciusbenedit-1082343.jpg" alt="Бургер с сирене" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-andrebeltrame-1878346.jpg" alt="Пица Кватро Формаджи" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-polina-tankilevitch-4109111.jpg" alt="Дюнер вегетариански" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Бургер с бекон" loading="lazy" />
+                </div>
+                
+                {/* Duplicate set for seamless loop */}
                 <div className={styles.galleryItem}>
                   <img src="/images/home/toDelete/pexels-samerdaboul-2233729.jpg" alt="Салата Цезар" loading="lazy" />
                 </div>
@@ -256,9 +289,10 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Second Row - 10 images */}
+            {/* Second Row - Infinite scroll */}
             <div className={styles.galleryRow}>
               <div className={styles.galleryScroll} aria-label="Втори ред - Галерия изображения">
+                {/* First set of images */}
                 <div className={styles.galleryItem}>
                   <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Дюнер с месо" loading="lazy" />
                 </div>
@@ -268,7 +302,39 @@ export default function HomePage() {
                 <div className={styles.galleryItem}>
                   <img src="/images/home/toDelete/pexels-rdne-8523507.jpg" alt="Пържени картофки" loading="lazy" />
                 </div>
-                                <div className={styles.galleryItem}>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-samerdaboul-2233729.jpg" alt="Салата Цезар" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-andrebeltrame-1878346.jpg" alt="Пица Кватро Формаджи" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-polina-tankilevitch-4109111.jpg" alt="Дюнер вегетариански" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-viniciusbenedit-1082343.jpg" alt="Бургер с сирене" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-muffin-1653877.jpg" alt="Пица Хавайска" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-guto-macedo-72150916-8444548.jpg" alt="Дюнер с пилешко" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Бургер с бекон" loading="lazy" />
+                </div>
+                
+                {/* Duplicate set for seamless loop */}
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Дюнер с месо" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-valeriya-1639557.jpg" alt="Бургер класически" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
+                  <img src="/images/home/toDelete/pexels-rdne-8523507.jpg" alt="Пържени картофки" loading="lazy" />
+                </div>
+                <div className={styles.galleryItem}>
                   <img src="/images/home/toDelete/pexels-samerdaboul-2233729.jpg" alt="Салата Цезар" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>

@@ -55,8 +55,17 @@ export async function POST(request: NextRequest) {
         Password: 'guest_password', // Placeholder for guests
         Name: customerInfo.name,
         phone: customerInfo.phone,
-        LocationText: customerInfo.address,
-        LocationCoordinates: customerInfo.coordinates ? JSON.stringify(customerInfo.coordinates) : null,
+        LocationText: customerInfo.LocationText || customerInfo.address,
+        LocationCoordinates: (customerInfo.LocationCoordinates || customerInfo.coordinates) ? 
+          (typeof (customerInfo.LocationCoordinates || customerInfo.coordinates) === 'string' ? 
+            (() => {
+              try {
+                const parsed = JSON.parse(customerInfo.LocationCoordinates || customerInfo.coordinates)
+                return JSON.stringify(parsed)
+              } catch (error) {
+                return customerInfo.LocationCoordinates || customerInfo.coordinates
+              }
+            })() : JSON.stringify(customerInfo.LocationCoordinates || customerInfo.coordinates)) : null,
         NumberOfOrders: 0,
         PreferedPaymentMethodID: paymentMethodId,
         isGuest: true,
@@ -89,8 +98,17 @@ export async function POST(request: NextRequest) {
       
       // Only update address-related fields for delivery orders
       if (!isCollection) {
-        updateData.LocationText = customerInfo.address
-        updateData.LocationCoordinates = customerInfo.coordinates ? JSON.stringify(customerInfo.coordinates) : null
+        updateData.LocationText = customerInfo.LocationText || customerInfo.address
+        updateData.LocationCoordinates = (customerInfo.LocationCoordinates || customerInfo.coordinates) ? 
+          (typeof (customerInfo.LocationCoordinates || customerInfo.coordinates) === 'string' ? 
+            (() => {
+              try {
+                const parsed = JSON.parse(customerInfo.LocationCoordinates || customerInfo.coordinates)
+                return JSON.stringify(parsed)
+              } catch (error) {
+                return customerInfo.LocationCoordinates || customerInfo.coordinates
+              }
+            })() : JSON.stringify(customerInfo.LocationCoordinates || customerInfo.coordinates)) : null
         updateData.addressInstructions = customerInfo.deliveryInstructions || null
       }
 
@@ -133,10 +151,19 @@ export async function POST(request: NextRequest) {
       OrderDT: orderTime.type === 'immediate' 
         ? new Date().toISOString() 
         : new Date(orderTime.scheduledTime).toISOString(),
-      OrderLocation: isCollection ? restaurantLocation.address : customerInfo.address,
+      OrderLocation: isCollection ? restaurantLocation.address : (customerInfo.LocationText || customerInfo.address),
       OrderLocationCoordinates: isCollection 
         ? JSON.stringify(restaurantLocation.coordinates)
-        : (customerInfo.coordinates ? JSON.stringify(customerInfo.coordinates) : null),
+        : ((customerInfo.LocationCoordinates || customerInfo.coordinates) ? 
+            (typeof (customerInfo.LocationCoordinates || customerInfo.coordinates) === 'string' ? 
+              (() => {
+                try {
+                  const parsed = JSON.parse(customerInfo.LocationCoordinates || customerInfo.coordinates)
+                  return JSON.stringify(parsed)
+                } catch (error) {
+                  return customerInfo.LocationCoordinates || customerInfo.coordinates
+                }
+              })() : JSON.stringify(customerInfo.LocationCoordinates || customerInfo.coordinates)) : null),
       OrderStatusID: 1, // Assuming 1 = "New Order" status
       RfPaymentMethodID: paymentMethodId,
       IsPaid: false, // Orders start as unpaid
@@ -213,7 +240,7 @@ export async function POST(request: NextRequest) {
           orderTime: new Date().toLocaleString('bg-BG'),
           orderType: isCollection ? 'Вземане от ресторанта' : 'Доставка',
           paymentMethod: getPaymentMethodName(paymentMethodId),
-          location: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : customerInfo.address,
+          location: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : (customerInfo.LocationText || customerInfo.address),
           estimatedTime: expectedDT.toLocaleString('bg-BG', {
             day: '2-digit',
             month: '2-digit',

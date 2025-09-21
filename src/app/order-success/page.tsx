@@ -182,8 +182,8 @@ function OrderSuccessContent() {
           {/* Logo container */}
           <div className="flex flex-col items-center justify-center">
             <img 
-              src="https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU2Mzk1NzY5LCJleHAiOjI3MDI0NzU3Njl9.BzjSV5QdUHUyFM8_cf5k1SFWfKqqeRQnCZ09sRjtLvg"
-              alt="PIZZA STOP Logo"
+              src="/images/home/logo.png"
+              alt="Pizza Stop Logo"
               className="w-32 h-32 object-contain"
               style={{
                 animation: 'logoSpin 1s linear forwards'
@@ -265,10 +265,19 @@ function OrderSuccessContent() {
       <div className="max-w-4xl mx-auto px-4 py-8 max-md:px-6">
         {/* Success Message */}
         <div className="text-center mb-8">
+          {/* Logo */}
+          <div className="mb-6">
+            <img 
+              src="/images/home/logo.png"
+              alt="Pizza Stop Logo"
+              className="w-24 h-24 object-contain mx-auto"
+            />
+          </div>
+          
           <div className="text-green-400 text-6xl mb-4">
             <CheckCircle size={64} className="mx-auto" />
           </div>
-          <h1 className="text-3xl font-bold text-text mb-2">Поръчката е потвърдена!</h1>
+          <h1 className="text-3xl font-bold text-text mb-2">Поръчката е потвърдена! 🍕</h1>
           <p className="text-muted text-lg">Благодарим ви за поръчката. Ще се свържем с вас скоро.</p>
         </div>
 
@@ -474,8 +483,8 @@ export default function OrderSuccessPage() {
           {/* Logo container */}
           <div className="flex flex-col items-center justify-center">
             <img 
-              src="https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU2Mzk1NzY5LCJleHAiOjI3MDI0NzU3Njl9.BzjSV5QdUHUyFM8_cf5k1SFWfKqqeRQnCZ09sRjtLvg"
-              alt="PIZZA STOP Logo"
+              src="/images/home/logo.png"
+              alt="Pizza Stop Logo"
               className="w-32 h-32 object-contain"
               style={{
                 animation: 'logoSpin 1s linear forwards'

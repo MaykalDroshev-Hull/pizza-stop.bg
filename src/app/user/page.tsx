@@ -237,22 +237,27 @@ export default function UserPage() {
       
       // Fetch complete profile data including coordinates
       try {
+        console.log('🔄 Fetching profile data for user ID:', data.user.id)
         const profileResponse = await fetch(`/api/user/profile?userId=${data.user.id}`)
         if (profileResponse.ok) {
           const profileData = await profileResponse.json()
+          console.log('📋 Profile data received:', profileData)
           if (profileData.user) {
+            console.log('✅ Using complete profile data for login:', profileData.user)
             // Use the complete profile data for login
             login(profileData.user)
           } else {
+            console.log('⚠️ No user data in profile response, using basic login data')
             // Fallback to basic login data
             login(data.user)
           }
         } else {
+          console.log('❌ Profile response not ok, using basic login data')
           // Fallback to basic login data
           login(data.user)
         }
       } catch (profileError) {
-        console.error('Error fetching profile data:', profileError)
+        console.error('❌ Error fetching profile data:', profileError)
         // Fallback to basic login data
         login(data.user)
       }
@@ -307,7 +312,13 @@ export default function UserPage() {
       setSuccess('Успешна регистрация!')
       console.log('Registration successful:', data.user)
       
-      // Clear form and switch to login
+      // Auto-fill login form with registration data
+      setLoginData({
+        email: registerData.email,
+        password: registerData.password
+      })
+      
+      // Clear registration form
       setRegisterData({ name: '', email: '', phone: '', password: '' })
       
       // If there's a return URL, show message about logging in to continue
@@ -327,7 +338,7 @@ export default function UserPage() {
 
   return (
     <main className={styles.userPage}>
-      <div className={`${styles.wrapper} ${!isLogin ? styles.active : ''}`}>
+      <div className={`${styles.wrapper} ${!isLogin ? styles.active : ''} ${(error || success) ? styles.hasMessage : ''}`}>
         {/* Rotating background elements */}
         <span className={styles.rotateBg}></span>
         <span className={styles.rotateBg2}></span>
@@ -339,7 +350,6 @@ export default function UserPage() {
           </h2>
 
           {error && <div className={styles.errorMessage}>{error}</div>}
-          {success && <div className={styles.successMessage}>{success}</div>}
           
           <form onSubmit={handleLogin}>
             <div className={`${styles.inputBox} ${styles.animation}`} style={{ '--i': 1, '--j': 22 } as React.CSSProperties}>
@@ -450,7 +460,7 @@ export default function UserPage() {
           </h2>
 
           {error && <div className={styles.errorMessage}>{error}</div>}
-          {success && <div className={styles.successMessage}>{success}</div>}
+          {success && !isLogin && <div className={styles.successMessage}>{success}</div>}
           
           <form onSubmit={handleRegister}>
             <div className={`${styles.inputBox} ${styles.animation}`} style={{ '--i': 18, '--j': 1 } as React.CSSProperties}>

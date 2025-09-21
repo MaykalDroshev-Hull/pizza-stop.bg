@@ -7,6 +7,7 @@ import NavBar from '../components/NavBar'
 import Footer from '../components/Footer'
 import { CartProvider } from '../components/CartContext'
 import { LoginIDProvider } from '../components/LoginIDContext'
+import LayoutContent from '../components/LayoutContent'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -53,6 +54,7 @@ export const metadata: Metadata = {
   manifest: '/site.webmanifest',
 }
 
+
 export default function RootLayout({
   children,
 }: {
@@ -86,14 +88,9 @@ export default function RootLayout({
           <LoadingProvider>
             <LoginIDProvider>
               <CartProvider>
-                <div className="min-h-screen bg-bg text-text">
-                  <NavBar />
-                  <main className="flex-1">
-                    {children}
-                  </main>
-                  <Footer />
-                  <LoadingOverlay />
-                </div>
+                <LayoutContent>
+                  {children}
+                </LayoutContent>
               </CartProvider>
             </LoginIDProvider>
           </LoadingProvider>

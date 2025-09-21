@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { ProductAddon } from '../lib/menuData'
 
 interface CartItem {
@@ -54,12 +54,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   // Get total price for an item including addons
-  const getItemTotalPrice = (item: CartItem) => {
+  const getItemTotalPrice = useCallback((item: CartItem) => {
     const addonCost = calculateAddonCost(item.addons)
     return (item.price + addonCost) * item.quantity
-  }
+  }, [])
 
-  const addItem = (newItem: CartItem) => {
+  const addItem = useCallback((newItem: CartItem) => {
     setItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(item => 
         item.id === newItem.id && 
@@ -76,13 +76,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return [...prevItems, newItem]
       }
     })
-  }
+  }, [])
 
-  const removeItem = (id: number) => {
+  const removeItem = useCallback((id: number) => {
     setItems(prevItems => prevItems.filter(item => item.id !== id))
-  }
+  }, [])
 
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = useCallback((id: number, quantity: number) => {
     if (quantity <= 0) {
       removeItem(id)
       return
@@ -92,16 +92,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
         item.id === id ? { ...item, quantity } : item
       )
     )
-  }
+  }, [removeItem])
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setItems([])
     if (typeof window !== 'undefined') {
       localStorage.removeItem('pizza-stop-cart')
     }
-  }
+  }, [])
 
-  const refreshFromStorage = () => {
+  const refreshFromStorage = useCallback(() => {
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem('pizza-stop-cart')
       if (savedCart) {
@@ -117,7 +117,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems([])
       }
     }
-  }
+  }, []) // Empty dependency array since this function doesn't depend on any props or state
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
   const totalPrice = items.reduce((sum, item) => sum + getItemTotalPrice(item), 0)
