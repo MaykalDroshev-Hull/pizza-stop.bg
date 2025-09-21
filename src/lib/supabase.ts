@@ -24,10 +24,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Server-side Supabase client (for API routes - bypasses RLS)
 export function createServerClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   
-  if (!supabaseServiceKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required for server operations')
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing required Supabase environment variables for server operations')
   }
   
   return createClient(supabaseUrl, supabaseServiceKey, {
