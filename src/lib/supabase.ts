@@ -1,7 +1,23 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder_key'
+// Debug environment variables
+console.log('Environment check:', {
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'FOUND' : 'NOT FOUND',
+  urlLength: process.env.NEXT_PUBLIC_SUPABASE_URL?.length,
+  keyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length
+});
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables:', {
+    url: supabaseUrl ? 'FOUND' : 'MISSING',
+    key: supabaseAnonKey ? 'FOUND' : 'MISSING'
+  });
+  throw new Error('Missing required Supabase environment variables. Please check your .env file.');
+}
 
 // Client-side Supabase client (for browser use)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -22,7 +38,7 @@ export function createServerClient() {
   })
 }
 
-// Test database connection
+// Test database connection (client-side version)
 export async function testDatabaseConnection() {
   try {
     console.log('Testing database connection...');
@@ -30,17 +46,16 @@ export async function testDatabaseConnection() {
     console.log('Using placeholder URL:', supabaseUrl === 'https://placeholder.supabase.co');
     console.log('Using placeholder key:', supabaseAnonKey === 'placeholder_key');
     
-    const { data, error } = await supabase
-      .from('Order')
-      .select('OrderID')
-      .limit(1);
+    // Use API endpoint for testing from client-side
+    const response = await fetch('/api/test-db');
+    const result = await response.json();
     
-    if (error) {
-      console.error('Database connection test failed:', error);
+    if (!response.ok) {
+      console.error('Database connection test failed:', result);
       return false;
     }
     
-    console.log('Database connection test successful');
+    console.log('Database connection test successful:', result);
     return true;
   } catch (error) {
     console.error('Database connection test exception:', error);

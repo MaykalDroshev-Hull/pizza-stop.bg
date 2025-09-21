@@ -87,11 +87,11 @@ export default function Footer() {
                   <Settings className={styles.adminIcon} />
                   <span>Управление</span>
                 </Link>
-                <Link href="/delivery" className={styles.adminLink}>
+                <Link href="/admin-delivery-login" className={styles.adminLink}>
                   <Car className={styles.adminIcon} />
                   <span>Доставка</span>
                 </Link>
-                <Link href="/kitchen" className={styles.adminLink}>
+                <Link href="/admin-kitchen-login" className={styles.adminLink}>
                   <Pizza className={styles.adminIcon} />
                   <span>Кухня</span>
                 </Link>
