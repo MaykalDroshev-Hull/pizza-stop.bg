@@ -115,8 +115,17 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('Supabase insert error:', insertError)
+      
+      // Check for duplicate email error
+      if (insertError.code === '23505' && insertError.details?.includes('email')) {
+        return NextResponse.json(
+          { error: 'Този имейл вече съществува' },
+          { status: 400 }
+        )
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to create user' },
+        { error: 'Грешка при създаване на потребител' },
         { status: 500 }
       )
     }

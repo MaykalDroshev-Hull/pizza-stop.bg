@@ -63,7 +63,16 @@ export async function POST(request: NextRequest) {
     let coordinates = null
     if (user.LocationCoordinates) {
       try {
-        coordinates = JSON.parse(user.LocationCoordinates)
+        let parsedCoords = JSON.parse(user.LocationCoordinates)
+        
+        // Fix typo in database: "Ing" should be "lng"
+        if (parsedCoords && parsedCoords.Ing !== undefined) {
+          parsedCoords.lng = parsedCoords.Ing
+          delete parsedCoords.Ing
+          console.log('Fixed coordinate typo: Ing -> lng')
+        }
+        
+        coordinates = parsedCoords
       } catch (error) {
         console.warn('Failed to parse coordinates:', user.LocationCoordinates)
       }

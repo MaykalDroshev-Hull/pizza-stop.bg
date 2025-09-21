@@ -21,6 +21,16 @@
   box-shadow: var(--shadow);
   overflow: hidden;
   margin-top: 20px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dynamic sizing when messages are displayed */
+.wrapper.hasMessage {
+  min-height: 580px;
+}
+
+.wrapper.active.hasMessage {
+  min-height: 640px;
 }
 
 /* Mobile-optimized background elements */
@@ -440,6 +450,15 @@
     min-height: 520px;
   }
 
+  /* Mobile dynamic sizing when messages are displayed */
+  .wrapper.hasMessage {
+    min-height: 420px;
+  }
+
+  .wrapper.active.hasMessage {
+    min-height: 560px;
+  }
+
   /* Mobile-optimized form layout */
   .formBox {
     width: 100%;
@@ -613,6 +632,15 @@
   /* Small mobile wrapper height transitions */
   .wrapper.active {
     min-height: 480px;
+  }
+
+  /* Small mobile dynamic sizing when messages are displayed */
+  .wrapper.hasMessage {
+    min-height: 390px;
+  }
+
+  .wrapper.active.hasMessage {
+    min-height: 520px;
   }
 
   .formBox {

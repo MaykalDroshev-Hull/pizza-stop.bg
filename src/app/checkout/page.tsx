@@ -11,6 +11,8 @@ declare global {
 import { ArrowLeft, MapPin, User, Phone, CreditCard, Banknote, Clock, Calendar, LogIn, UserCheck, MessageSquare, RotateCcw, Database, Navigation, FileText, Map, CheckCircle, XCircle, Info, AlertTriangle, Lightbulb, Home, ShoppingCart, Pizza, Search, ClipboardList, Edit, Target, AlertCircle, HelpCircle, Truck, Store, Mail } from 'lucide-react'
 import { useCart } from '../../components/CartContext'
 import AddressSelectionModal from '../../components/AddressSelectionModal'
+import CartSummaryDisplay from '../../components/CartSummaryDisplay'
+import DrinksSuggestionModal from '../../components/DrinksSuggestionModal'
 import { isRestaurantOpen } from '../../utils/openingHours'
 import { useLoginID } from '../../components/LoginIDContext'
 import { encryptOrderId } from '../../utils/orderEncryption'
@@ -19,9 +21,8 @@ interface CustomerInfo {
   name: string
   phone: string
   email?: string
-  address: string
-  coordinates: { lat: number; lng: number } | null
-  exactLocation: { lat: number; lng: number } | null
+  LocationText: string
+  LocationCoordinates: string
 }
 
 interface OrderTime {
@@ -42,14 +43,14 @@ export default function CheckoutPage() {
     name: '',
     phone: '',
     email: '',
-    address: '',
-    coordinates: null,
-    exactLocation: null
+    LocationText: '',
+    LocationCoordinates:  '',
   })
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('online')
   const [orderTime, setOrderTime] = useState<OrderTime>({ type: null })
   const [orderType, setOrderType] = useState<OrderType>('guest')
   const [showAddressModal, setShowAddressModal] = useState(false)
+  const [showDrinksModal, setShowDrinksModal] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isCartLoading, setIsCartLoading] = useState(true)
   const [deliveryInstructions, setDeliveryInstructions] = useState('')
@@ -60,18 +61,55 @@ export default function CheckoutPage() {
   const [isCollection, setIsCollection] = useState(false)
   const [paymentMethodId, setPaymentMethodId] = useState<number | null>(null)
   const [unavailableItems, setUnavailableItems] = useState<string[]>([])
+  const [cachedProfileData, setCachedProfileData] = useState<any>(null)
+  const [dateTimeError, setDateTimeError] = useState<string>('')
   const addressInputRef = useRef<HTMLInputElement>(null)
+
+  // Function to get working hours for a specific day
+  const getWorkingHoursForDay = (date: Date) => {
+    const dayOfWeek = date.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      // Monday to Friday: 09:00 - 22:30
+      return {
+        start: '09:00',
+        end: '22:30',
+        message: 'Понеделник – Петък: 09:00 - 22:30'
+      }
+    } else {
+      // Saturday and Sunday: 11:00 - 20:30
+      return {
+        start: '11:00',
+        end: '20:30',
+        message: 'Събота и Неделя: 11:00 - 20:30'
+      }
+    }
+  }
+
+  // Function to get day name in Bulgarian
+  const getDayNameInBulgarian = (date: Date) => {
+    const dayNames = ['Неделя', 'Понеделник', 'Вторник', 'Сряда', 'Четвъртък', 'Петък', 'Събота']
+    return dayNames[date.getDay()]
+  }
 
   useEffect(() => {
     // Load Google Maps script for autocomplete
     const loadGoogleMaps = async () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
+      if (window.google && window.google.maps && window.google.maps.places && window.google.maps.geometry) {
         initializeAutocomplete()
         return
       }
 
+      // Check if script already exists to prevent duplicate loading
+      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
+      if (existingScript) {
+        // Wait for existing script to load
+        existingScript.addEventListener('load', initializeAutocomplete)
+        return
+      }
+
       const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places,geometry`
       script.async = true
       script.defer = true
       script.onload = initializeAutocomplete
@@ -103,7 +141,18 @@ export default function CheckoutPage() {
     }
   }, [refreshFromStorage])
 
-
+  // Check for drinks in cart and show suggestion modal
+  useEffect(() => {
+    if (items.length > 0) {
+      const hasDrinks = items.some(item => item.category === 'drinks')
+      if (!hasDrinks) {
+        // Show drinks suggestion modal after a short delay
+        setTimeout(() => {
+          setShowDrinksModal(true)
+        }, 1000)
+      }
+    }
+  }, [items])
 
   // Initialize scheduled time when switching to scheduled order
   useEffect(() => {
@@ -140,6 +189,10 @@ export default function CheckoutPage() {
         console.log('✅ Set default order type to: user (profile available)')
         // Fill form with profile data when order type defaults to user
         fillFormWithProfileData()
+      } else {
+        // If user is authenticated but no profile data, fetch fresh data from database
+        console.log('🔄 User authenticated but no profile data, fetching fresh data from database')
+        fetchUserProfileFromDatabase()
       }
     } else {
       console.log('❌ User not authenticated or user data not available:', { user, isAuthenticated })
@@ -151,7 +204,25 @@ export default function CheckoutPage() {
   // Also check auth when user changes (for debugging)
   useEffect(() => {
     console.log('🔄 user changed:', user)
-  }, [user])
+    // Clear cached profile data when user changes
+    if (cachedProfileData && cachedProfileData.userId !== user?.id) {
+      console.log('🔄 User changed, clearing cached profile data')
+      setCachedProfileData(null)
+    }
+  }, [user, cachedProfileData])
+
+  // Handle order type changes - fetch profile data when switching to "user"
+  useEffect(() => {
+    if (orderType === 'user' && user && isAuthenticated) {
+      console.log('🔄 Order type changed to "user", fetching profile data')
+      fetchUserProfileFromDatabase()
+    }
+  }, [orderType, user, isAuthenticated])
+
+  // Clear date/time error when order time type changes
+  useEffect(() => {
+    setDateTimeError('')
+  }, [orderTime.type])
 
   // Also check auth when customerInfo changes (for debugging)
   useEffect(() => {
@@ -159,8 +230,8 @@ export default function CheckoutPage() {
     console.log('📋 Final form values after database data load:')
     console.log('  - Name:', customerInfo.name || 'EMPTY')
     console.log('  - Phone:', customerInfo.phone || 'EMPTY')
-    console.log('  - Address:', customerInfo.address || 'EMPTY')
-    console.log('  - Coordinates:', customerInfo.coordinates || 'EMPTY')
+    console.log('  - Address:', customerInfo.LocationText || 'EMPTY')
+    console.log('  - Coordinates:', customerInfo.LocationCoordinates || 'EMPTY')
     console.log('  - Delivery Instructions:', deliveryInstructions || 'EMPTY')
   }, [customerInfo, deliveryInstructions])
 
@@ -187,9 +258,18 @@ export default function CheckoutPage() {
 
   // Validate address zone when coordinates change
   useEffect(() => {
-    console.log('🔄 Coordinates changed, validating zone:', customerInfo.coordinates)
-    validateAddressZone(customerInfo.coordinates)
-  }, [customerInfo.coordinates])
+    console.log('🔄 Coordinates changed, validating zone:', customerInfo.LocationCoordinates)
+    if (customerInfo.LocationCoordinates) {
+      try {
+        const coords = typeof customerInfo.LocationCoordinates === 'string' 
+          ? JSON.parse(customerInfo.LocationCoordinates)
+          : customerInfo.LocationCoordinates
+        validateAddressZone(coords)
+      } catch (error) {
+        console.warn('Failed to parse coordinates for validation:', error)
+      }
+    }
+  }, [customerInfo.LocationCoordinates])
 
   // Recalculate delivery cost when total price changes
   useEffect(() => {
@@ -260,30 +340,34 @@ export default function CheckoutPage() {
   }
 
 
-  const handleAddressChange = (address: string) => {
-    setCustomerInfo(prev => ({ ...prev, address }))
+  const handleAddressChange = (LocationText: string) => {
+    setCustomerInfo(prev => ({ ...prev, LocationText }))
     // Clear coordinates and reset confirmation when address is manually changed
-    if (customerInfo.coordinates) {
-      setCustomerInfo(prev => ({ ...prev, coordinates: null, exactLocation: null }))
+    if (customerInfo.LocationCoordinates) {
+      setCustomerInfo(prev => ({ ...prev, LocationCoordinates: '' }))
     }
     setAddressConfirmed(false)
   }
 
 
   const handleCoordinatesSelect = (coordinates: { lat: number; lng: number }) => {
-    setCustomerInfo(prev => ({ ...prev, coordinates }))
-    // Auto-confirm address when coordinates are selected
+    const coordinatesString = JSON.stringify(coordinates)
+    setCustomerInfo(prev => ({ ...prev, LocationCoordinates: coordinatesString }))
+    // Validate zone and set confirmation status based on zone
     validateAddressZone(coordinates)
-    setAddressConfirmed(true)
   }
 
-  const handleExactLocationSelect = (exactLocation: { lat: number; lng: number }) => {
-    setCustomerInfo(prev => ({ ...prev, exactLocation }))
-    // Auto-confirm address when exact location is selected
-    if (exactLocation) {
-      validateAddressZone(exactLocation)
-      setAddressConfirmed(true)
+  const handleExactLocationSelect = (coordinates: { lat: number; lng: number }) => {
+    const coordinatesString = JSON.stringify(coordinates)
+    setCustomerInfo(prev => ({ ...prev, LocationCoordinates: coordinatesString }))
+    // Validate zone and set confirmation status based on zone
+    if (coordinates) {
+      validateAddressZone(coordinates)
     }
+  }
+
+  const handleAddressUpdate = (LocationText: string) => {
+    setCustomerInfo(prev => ({ ...prev, LocationText }))
   }
 
 
@@ -298,16 +382,17 @@ export default function CheckoutPage() {
       return null // No delivery outside blue zone
     }
     
-    // Minimum order of 15 BGN
-    if (orderTotal < 15) {
-      return null // Order too small
-    }
-    
-    // Delivery cost by zone (always charge delivery cost regardless of order total)
+    // Different minimum orders by zone
     switch (zone) {
       case 'yellow':
+        if (orderTotal < 15) {
+          return null // Order too small for yellow zone
+        }
         return 3
       case 'blue':
+        if (orderTotal < 30) {
+          return null // Order too small for blue zone
+        }
         return 7
       default:
         return null
@@ -340,7 +425,7 @@ export default function CheckoutPage() {
     return inside
   }
 
-  const validateAddressZone = (coordinates: { lat: number; lng: number } | null) => {
+  const validateAddressZone = (coordinates: { lat: number; lng: number } | null): 'blue' | 'yellow' | 'outside' | null => {
     console.log('🔍 validateAddressZone called with coordinates:', coordinates)
     
     if (!coordinates) {
@@ -348,7 +433,7 @@ export default function CheckoutPage() {
       setAddressZone(null)
       setDeliveryCost(0)
       setAddressConfirmed(false)
-      return
+      return null
     }
 
     if (!coordinates.lat || !coordinates.lng) {
@@ -356,23 +441,34 @@ export default function CheckoutPage() {
       setAddressZone(null)
       setDeliveryCost(0)
       setAddressConfirmed(false)
-      return
+      return null
     }
 
     // Define Lovech city area (3 BGN delivery) - Yellow zone
     const lovechArea = [
-      { lat: 43.1500, lng: 24.6800 }, // North
-      { lat: 43.1550, lng: 24.7200 }, // Northeast
-      { lat: 43.1450, lng: 24.7500 }, // East
-      { lat: 43.1300, lng: 24.7500 }, // Southeast
-      { lat: 43.1200, lng: 24.7200 }, // South
-      { lat: 43.1250, lng: 24.6800 }, // Southwest
-      { lat: 43.1350, lng: 24.6500 }, // West
-      { lat: 43.1500, lng: 24.6800 }  // Back to start
+      { lat: 43.12525, lng: 24.71518 },
+      { lat: 43.12970, lng: 24.70579 },
+      { lat: 43.13005, lng: 24.69994 },
+      { lat: 43.12483, lng: 24.68928 },
+      { lat: 43.12299, lng: 24.67855 },
+      { lat: 43.13595, lng: 24.67501 },
+      { lat: 43.14063, lng: 24.67991 },
+      { lat: 43.14337, lng: 24.67877 },
+      { lat: 43.14687, lng: 24.67553 },
+      { lat: 43.15432, lng: 24.68221 },
+      { lat: 43.15486, lng: 24.68312 },
+      { lat: 43.15629, lng: 24.69245 },
+      { lat: 43.15968, lng: 24.70306 },
+      { lat: 43.16907, lng: 24.72538 },
+      { lat: 43.15901, lng: 24.74022 },
+      { lat: 43.15548, lng: 24.73935 },
+      { lat: 43.14960, lng: 24.73785 },
+      { lat: 43.13553, lng: 24.73599 },
+      { lat: 43.13952, lng: 24.72210 },
+      { lat: 43.12939, lng: 24.72549 }
     ]
     
     // Define extended area (7 BGN delivery) - Blue zone
-    // Updated polygon coordinates for blue zone
     const extendedArea = [
       { lat: 43.19740, lng: 24.67377 },
       { lat: 43.19530, lng: 24.68420 },
@@ -435,29 +531,47 @@ export default function CheckoutPage() {
       zone = 'outside'
       console.log('🔴 Zone: OUTSIDE (No delivery available)')
     }
-
-    console.log('✅ Setting zone to:', zone)
+    
+    console.log(`🎯 Determined zone: ${zone}`)
     setAddressZone(zone)
+    
+    // Only confirm address if it's within delivery zone
+    if (zone === 'outside') {
+      setAddressConfirmed(false)
+      console.log('❌ Address not confirmed - outside delivery zone')
+    } else {
+      setAddressConfirmed(true)
+      console.log('✅ Address confirmed - within delivery zone')
+    }
     
     // Calculate delivery cost
     const cost = calculateDeliveryCost(totalPrice, zone, isCollection)
     console.log('💰 Delivery cost calculated:', cost)
     setDeliveryCost(cost || 0)
+    
+    return zone
   }
 
   const confirmAddress = async () => {
-    console.log('🔍 Confirming address:', customerInfo.address)
+    console.log('🔍 Confirming address:', customerInfo.LocationText)
     
-    if (!customerInfo.address) {
+    if (!customerInfo.LocationText) {
       alert('❌ Моля, въведете адрес преди да го потвърдите')
           return
         }
         
     // If we already have coordinates, validate them
-    if (customerInfo.coordinates) {
+    if (customerInfo.LocationCoordinates) {
       console.log('✅ Address already has coordinates, validating zone')
-      validateAddressZone(customerInfo.coordinates)
-      setAddressConfirmed(true)
+      try {
+        const coords = typeof customerInfo.LocationCoordinates === 'string' 
+          ? JSON.parse(customerInfo.LocationCoordinates)
+          : customerInfo.LocationCoordinates
+        validateAddressZone(coords)
+        setAddressConfirmed(true)
+      } catch (error) {
+        console.warn('Failed to parse coordinates:', error)
+      }
       return
     }
 
@@ -465,7 +579,7 @@ export default function CheckoutPage() {
     if (window.google && window.google.maps) {
       const geocoder = new window.google.maps.Geocoder()
       
-      geocoder.geocode({ address: customerInfo.address }, (results, status) => {
+      geocoder.geocode({ address: customerInfo.LocationText }, (results, status) => {
         if (status === 'OK' && results && results[0]) {
           const location = results[0].geometry.location
           const coordinates = {
@@ -478,14 +592,17 @@ export default function CheckoutPage() {
           // Update customer info with coordinates
           setCustomerInfo(prev => ({
             ...prev,
-            coordinates
+            LocationCoordinates: JSON.stringify(coordinates)
           }))
           
-          // Validate the zone
-          validateAddressZone(coordinates)
-          setAddressConfirmed(true)
+          // Validate the zone (confirmation status will be set based on zone)
+          const zone = validateAddressZone(coordinates)
           
-          alert('✅ Адресът е потвърден успешно!')
+          // Show appropriate message based on zone
+          if (zone === 'outside') {
+            alert('❌ Адресът е извън зоната за доставка. Доставката не е възможна.')
+          }
+          // Success case - no alert needed, user can see the confirmation in the UI
         } else {
           console.log('❌ Failed to geocode address:', status)
           setAddressConfirmed(false)
@@ -517,35 +634,170 @@ export default function CheckoutPage() {
       name: '',
       phone: '',
       email: '',
-      address: '',
-      coordinates: null,
-      exactLocation: null
+      LocationText: '',
+      LocationCoordinates: ''
     })
     setDeliveryInstructions('')
   }
 
+  const fetchUserProfileFromDatabase = async () => {
+    if (!user?.id) {
+      console.log('❌ No user ID available for fetching profile')
+      return
+    }
+
+    // Check if we already have cached data for this user
+    if (cachedProfileData && cachedProfileData.userId === user.id) {
+      console.log('📋 Using cached profile data for user:', user.id)
+      fillFormWithProfileDataFromData(cachedProfileData.user)
+      return
+    }
+
+    try {
+      console.log('🔄 Fetching fresh user profile from database for ID:', user.id)
+      const response = await fetch(`/api/user/profile?userId=${user.id}`)
+      
+      if (response.ok) {
+        const profileData = await response.json()
+        console.log('📋 Fresh profile data from database:', profileData)
+        
+        if (profileData.user) {
+          // Cache the profile data with user ID
+          setCachedProfileData({
+            userId: user.id,
+            user: profileData.user
+          })
+          
+          // Update the user context with fresh data
+          updateUser(profileData.user)
+          
+          // Fill form with the fresh data
+          fillFormWithProfileDataFromData(profileData.user)
+        }
+      } else {
+        console.error('❌ Failed to fetch profile data:', response.status)
+      }
+    } catch (error) {
+      console.error('❌ Error fetching profile data:', error)
+    }
+  }
+
+  const fillFormWithProfileDataFromData = (userData: any) => {
+    console.log('🔄 fillFormWithProfileDataFromData called with userData:', userData)
+    
+    const updates: Partial<CustomerInfo> = {}
+    
+    console.log('📝 User data breakdown:')
+    console.log('  - Name:', userData.name || 'NOT SET')
+    console.log('  - Phone:', userData.phone || 'NOT SET')
+    console.log('  - Email:', userData.email || 'NOT SET')
+    console.log('  - LocationText:', userData.LocationText || 'NOT SET')
+    console.log('  - LocationCoordinates:', userData.LocationCoordinates || 'NOT SET')
+    console.log('  - addressInstructions:', userData.addressInstructions || 'NOT SET')
+    
+    if (userData.name) {
+      updates.name = userData.name
+      console.log('✅ Setting name:', userData.name)
+    }
+    if (userData.phone) {
+      updates.phone = userData.phone
+      console.log('✅ Setting phone:', userData.phone)
+    }
+    if (userData.email) {
+      updates.email = userData.email
+      console.log('✅ Setting email:', userData.email)
+    }
+    if (userData.LocationText) {
+      updates.LocationText = userData.LocationText
+      console.log('✅ Setting address:', userData.LocationText)
+    }
+    
+    if (userData.LocationCoordinates) {
+      try {
+        let coordinates = typeof userData.LocationCoordinates === 'string' 
+          ? JSON.parse(userData.LocationCoordinates)
+          : userData.LocationCoordinates
+        
+        // Fix typo in database: "Ing" should be "lng"
+        if (coordinates && coordinates.Ing !== undefined) {
+          coordinates.lng = coordinates.Ing
+          delete coordinates.Ing
+          console.log('Fixed coordinate typo: Ing -> lng')
+        }
+        
+        updates.LocationCoordinates = JSON.stringify(coordinates)
+        console.log('✅ Setting coordinates:', coordinates)
+        
+        // Validate address zone immediately when coordinates are loaded
+        if (coordinates && coordinates.lat && coordinates.lng) {
+          console.log('Validating address zone for user profile coordinates:', coordinates)
+          validateAddressZone(coordinates)
+        }
+      } catch (error) {
+        console.warn('Failed to parse coordinates:', userData.LocationCoordinates)
+      }
+    }
+    
+    console.log('📋 Updates to apply:', updates)
+    
+    setCustomerInfo(prev => {
+      const newState = {
+        ...prev,
+        ...updates
+      }
+      console.log('🔄 CustomerInfo state updated:', newState)
+      return newState
+    })
+    
+    if (userData.addressInstructions) {
+      console.log('✅ Setting delivery instructions:', userData.addressInstructions)
+      setDeliveryInstructions(userData.addressInstructions)
+    }
+  }
+
   const fillFormWithProfileData = () => {
+    console.log('🔄 fillFormWithProfileData called with user:', user)
     if (user) {
       const updates: Partial<CustomerInfo> = {}
       
+      console.log('📝 User data breakdown:')
+      console.log('  - Name:', user.name || 'NOT SET')
+      console.log('  - Phone:', user.phone || 'NOT SET')
+      console.log('  - Email:', user.email || 'NOT SET')
+      console.log('  - LocationText:', user.LocationText || 'NOT SET')
+      console.log('  - LocationCoordinates:', user.LocationCoordinates || 'NOT SET')
+      console.log('  - addressInstructions:', user.addressInstructions || 'NOT SET')
+      
       if (user.name) {
         updates.name = user.name
+        console.log('✅ Setting name:', user.name)
       }
       if (user.phone) {
         updates.phone = user.phone
+        console.log('✅ Setting phone:', user.phone)
       }
       if (user.email) {
         updates.email = user.email
+        console.log('✅ Setting email:', user.email)
       }
       if (user.LocationText) {
-        updates.address = user.LocationText
+        updates.LocationText = user.LocationText
+        console.log('✅ Setting address:', user.LocationText)
       }
       if (user.LocationCoordinates) {
         try {
-          const coordinates = typeof user.LocationCoordinates === 'string' 
+          let coordinates = typeof user.LocationCoordinates === 'string' 
             ? JSON.parse(user.LocationCoordinates)
             : user.LocationCoordinates
-          updates.coordinates = coordinates
+          
+          // Fix typo in database: "Ing" should be "lng"
+          if (coordinates && coordinates.Ing !== undefined) {
+            coordinates.lng = coordinates.Ing
+            delete coordinates.Ing
+            console.log('Fixed coordinate typo: Ing -> lng')
+          }
+          
+          updates.LocationCoordinates = JSON.stringify(coordinates)
           
           // Validate address zone immediately when coordinates are loaded
           if (coordinates && coordinates.lat && coordinates.lng) {
@@ -557,12 +809,19 @@ export default function CheckoutPage() {
         }
       }
       
-      setCustomerInfo(prev => ({
-        ...prev,
-        ...updates
-      }))
+      console.log('📋 Updates to apply:', updates)
+      
+      setCustomerInfo(prev => {
+        const newState = {
+          ...prev,
+          ...updates
+        }
+        console.log('🔄 CustomerInfo state updated:', newState)
+        return newState
+      })
       
       if (user.addressInstructions) {
+        console.log('✅ Setting delivery instructions:', user.addressInstructions)
         setDeliveryInstructions(user.addressInstructions)
       }
     }
@@ -588,7 +847,7 @@ export default function CheckoutPage() {
     totalPrice >= 15 && // Minimum order amount
     (
       isCollection || // Collection orders don't need address validation
-      (customerInfo.address && customerInfo.coordinates && addressConfirmed && addressZone !== 'outside' && deliveryCost !== null)
+      (customerInfo.LocationText && customerInfo.LocationCoordinates && addressConfirmed && addressZone !== 'outside' && deliveryCost !== null)
     ) // Delivery orders need full address validation
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -654,8 +913,8 @@ export default function CheckoutPage() {
          updateUser({
            name: customerInfo.name,
            phone: customerInfo.phone,
-           LocationText: customerInfo.address,
-           LocationCoordinates: customerInfo.coordinates ? JSON.stringify(customerInfo.coordinates) : undefined
+           LocationText: customerInfo.LocationText,
+           LocationCoordinates: customerInfo.LocationCoordinates
          })
        } catch (error) {
          console.error('Error updating user profile:', error)
@@ -707,15 +966,6 @@ export default function CheckoutPage() {
      const result = await response.json()
      
      if (response.ok) {
-       // Show success message based on order type
-       if (orderTime.type === 'immediate') {
-         alert(`✅ Поръчката е приета успешно! Номер: ${result.orderId}. Ще започнем да я приготвяме веднага.`)
-       } else {
-         const scheduledDate = orderTime.scheduledTime?.toLocaleDateString('bg-BG')
-         const scheduledTime = orderTime.scheduledTime?.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })
-         alert(`✅ Поръчката е приета успешно за ${scheduledDate} в ${scheduledTime}! Номер: ${result.orderId}. Ще се свържем с вас за потвърждение.`)
-       }
-       
        // Clear the cart after successful order
        clearCart()
        
@@ -792,7 +1042,6 @@ export default function CheckoutPage() {
                     <div key={index} className="p-3 bg-white/6 rounded-xl">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="text-2xl">{item.image}</div>
                           <div>
                             <h4 className="font-medium text-text">{item.name}</h4>
                             <p className="text-sm text-muted">
@@ -927,7 +1176,7 @@ export default function CheckoutPage() {
                    
                    <div className="flex items-center justify-between text-lg font-bold">
                      <span>Обща сума:</span>
-                     <span className="text-white">{totalPrice.toFixed(2)} лв.</span>
+                     <CartSummaryDisplay />
                    </div>
                  </div>
               </>
@@ -1032,18 +1281,32 @@ export default function CheckoutPage() {
                           maxDate.setHours(23, 59, 59, 999) // End of day
                           
                           if (selectedDate < today) {
-                            alert('Не можете да изберете дата в миналото. Моля, изберете днешна дата или по-късна.')
+                            setDateTimeError('Не можете да изберете дата в миналото. Моля, изберете днешна дата или по-късна.')
                             return
                           }
                           
                           if (selectedDate > maxDate) {
-                            alert('Поръчките могат да се правят до 5 дни напред. Моля, изберете по-ранна дата.')
+                            setDateTimeError('Поръчките могат да се правят до 5 дни напред. Моля, изберете по-ранна дата.')
                             return
                           }
                           
+                          // Clear error if date is valid
+                          setDateTimeError('')
+                          
                           const currentTime = orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime : new Date()
-                          selectedDate.setHours(currentTime.getHours())
-                          selectedDate.setMinutes(currentTime.getMinutes())
+                          
+                          // Get working hours for the selected date
+                          const workingHours = getWorkingHoursForDay(selectedDate)
+                          const [startHour] = workingHours.start.split(':').map(Number)
+                          
+                          // If current time is outside working hours for the new day, reset to start of working hours
+                          if (currentTime.getHours() < startHour || currentTime.getHours() > 22) {
+                            selectedDate.setHours(startHour, 0, 0, 0)
+                          } else {
+                            selectedDate.setHours(currentTime.getHours())
+                            selectedDate.setMinutes(currentTime.getMinutes())
+                          }
+                          
                           setOrderTime(prev => ({ ...prev, scheduledTime: selectedDate }))
                         }}
                           className="w-full p-4 bg-white/8 border border-white/20 rounded-xl text-text focus:border-orange focus:ring-2 focus:ring-orange/20 focus:outline-none transition-all cursor-pointer"
@@ -1091,18 +1354,28 @@ export default function CheckoutPage() {
                       >
                       <input
                         type="time"
-                        min="11:00"
-                        max="23:00"
+                        min={orderTime.scheduledTime ? getWorkingHoursForDay(orderTime.scheduledTime).start : '09:00'}
+                        max={orderTime.scheduledTime ? getWorkingHoursForDay(orderTime.scheduledTime).end : '22:30'}
                         step="300"
                           value={orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime.toTimeString().slice(0, 5) : ''}
                         onChange={(e) => {
                           const [hours, minutes] = e.target.value.split(':').map(Number)
                           
-                          // Validate hours are within business hours (11-23)
-                          if (hours < 11 || hours >= 23) {
-                            alert('Моля, изберете време между 11:00 и 23:00')
+                          // Get working hours for the selected date
+                          const selectedDate = orderTime.scheduledTime || new Date()
+                          const workingHours = getWorkingHoursForDay(selectedDate)
+                          const [startHour] = workingHours.start.split(':').map(Number)
+                          const [endHour, endMinute] = workingHours.end.split(':').map(Number)
+                          
+                          // Validate hours are within business hours for the selected day
+                          if (hours < startHour || (hours > endHour || (hours === endHour && minutes > endMinute))) {
+                            const dayName = getDayNameInBulgarian(selectedDate)
+                            setDateTimeError(`Моля, изберете време между ${workingHours.start} и ${workingHours.end} за ${dayName}`)
                             return
                           }
+                          
+                          // Clear error if time is valid
+                          setDateTimeError('')
                           
                           const currentDate = orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime : new Date()
                           currentDate.setHours(hours, minutes, 0, 0)
@@ -1112,7 +1385,7 @@ export default function CheckoutPage() {
                           if (currentDate.toDateString() === today.toDateString()) {
                             const now = new Date()
                             if (currentDate < now) {
-                              alert('Не можете да изберете време в миналото. Моля, изберете по-късно време.')
+                              setDateTimeError('Не можете да изберете време в миналото. Моля, изберете по-късно време.')
                               return
                             }
                           }
@@ -1140,10 +1413,15 @@ export default function CheckoutPage() {
                             const [hours, minutes] = e.target.value.split(':').map(Number)
                             if (isNaN(hours) || isNaN(minutes)) return
                             
-                            if (hours < 11 || hours >= 23) {
+                            const selectedDate = orderTime.scheduledTime || new Date()
+                            const workingHours = getWorkingHoursForDay(selectedDate)
+                            const [startHour] = workingHours.start.split(':').map(Number)
+                            const [endHour, endMinute] = workingHours.end.split(':').map(Number)
+                            
+                            if (hours < startHour || (hours > endHour || (hours === endHour && minutes > endMinute))) {
                               // Reset to valid time if invalid
                               const currentDate = orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime : new Date()
-                              currentDate.setHours(11, 0, 0, 0)
+                              currentDate.setHours(startHour, 0, 0, 0)
                               setOrderTime(prev => ({ ...prev, scheduledTime: currentDate }))
                             }
                           }}
@@ -1155,9 +1433,30 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Error Message */}
+                  {dateTimeError && (
+                    <div className="mt-3 text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                        <span>{dateTimeError}</span>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="mt-3 text-xs text-muted flex items-center gap-2">
                     <Lightbulb size={14} className="text-blue" />
-                    <span>Работно време: 11:00 - 23:00. Поръчките могат да се правят до 5 дни напред.</span>
+                    <span>
+                      {orderTime.scheduledTime ? (
+                        <>
+                          <strong>{getDayNameInBulgarian(orderTime.scheduledTime)}:</strong> Поръчки се приемат между {getWorkingHoursForDay(orderTime.scheduledTime).start} - {getWorkingHoursForDay(orderTime.scheduledTime).end}
+                        </>
+                      ) : (
+                        <>
+                          <strong>Работно време:</strong> Понеделник – Петък: 09:00 - 22:30, Събота и Неделя: 11:00 - 20:30. Поръчките могат да се правят до 5 дни напред.
+                        </>
+                      )}
+                    </span>
                   </div>
                 </div>
               )}
@@ -1479,7 +1778,7 @@ export default function CheckoutPage() {
                       <input
                         ref={addressInputRef}
                         type="text"
-                        value={customerInfo.address}
+                        value={customerInfo.LocationText}
                         onChange={(e) => handleAddressChange(e.target.value)}
                   className="w-full p-3 bg-white/6 border border-white/12 rounded-xl text-text placeholder-muted focus:border-orange focus:outline-none transition-colors mb-3"
                         placeholder="Въведете адреса за доставка (ще се появят предложения)"
@@ -1497,16 +1796,26 @@ export default function CheckoutPage() {
                           <button
                             type="button"
                   onClick={confirmAddress}
-                  disabled={!customerInfo.address}
-                  className="flex-1 py-2 px-4 bg-gradient-to-r from-green to-emerald text-white rounded-lg font-medium transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+                  disabled={!customerInfo.LocationText}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 ${
+                    addressConfirmed 
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
+                      : (customerInfo.LocationText && addressZone && addressZone !== 'outside')
+                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
+                        : 'bg-gradient-to-r from-orange to-red text-white hover:from-orange-600 hover:to-red-600'
+                  }`}
                 >
                   <CheckCircle size={16} />
-                  Потвърди адрес
+                  {addressConfirmed ? 'Потвърден' : 'Потвърди адрес'}
                           </button>
                 
                   <button
                     type="button"
-                    onClick={() => setShowAddressModal(true)}
+                    onClick={() => {
+                      setShowAddressModal(true)
+                      // Reset confirmation state when opening modal
+                      setAddressConfirmed(false)
+                    }}
                   className="flex-1 py-2 px-4 bg-gradient-to-r from-orange to-red text-white rounded-lg font-medium transition-all transform hover:scale-105 flex items-center justify-center gap-2"
                   >
                   <MapPin size={16} />
@@ -1595,7 +1904,7 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">Адрес:</span>
                   <span className="text-white">
-                    {!customerInfo.address ? (
+                    {!customerInfo.LocationText ? (
                       <span className="text-white">Не е въведен</span>
                     ) : addressConfirmed ? (
                       <span className="text-white">Потвърден</span>
@@ -1607,7 +1916,7 @@ export default function CheckoutPage() {
               )}
 
               {/* Address Zone Status - Only show for delivery */}
-              {!isCollection && customerInfo.coordinates && (
+              {!isCollection && customerInfo.LocationCoordinates && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">Зона за доставка:</span>
                   <span className="text-white font-medium">
@@ -1619,10 +1928,11 @@ export default function CheckoutPage() {
                 </div>
               )}
 
+
               {/* Order Total */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted">Сума на продуктите:</span>
-                <span className="text-white">{totalPrice.toFixed(2)} лв.</span>
+                <CartSummaryDisplay />
               </div>
 
               {/* Delivery Cost */}
@@ -1650,13 +1960,62 @@ export default function CheckoutPage() {
               </div>
 
               {/* Validation Messages */}
-              {totalPrice < 15 && (
-                <div className="space-y-3">
-                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-2">
-                    Минималната сума за поръчка е 15 лв.
+              <div className="space-y-2">
+                {/* Minimum order amount errors by zone */}
+                {!isCollection && addressZone === 'yellow' && totalPrice < 15 && (
+                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                    <div className="font-medium mb-1">Минимална сума за жълта зона</div>
+                    <div>Минималната сума за доставка в жълта зона е 15 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
                   </div>
-                  
-                  {/* Action Buttons for Low Order */}
+                )}
+                
+                {!isCollection && addressZone === 'blue' && totalPrice < 30 && (
+                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                    <div className="font-medium mb-1">Минимална сума за синя зона</div>
+                    <div>Минималната сума за доставка в синя зона е 30 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
+                  </div>
+                )}
+                
+                {/* General minimum order for collection */}
+                {isCollection && totalPrice < 15 && (
+                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                    <div className="font-medium mb-1">Минимална сума за поръчка</div>
+                    <div>Минималната сума за поръчка е 15 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
+                  </div>
+                )}
+                
+                {/* Address validation errors */}
+                {!isCollection && !customerInfo.LocationText && (
+                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                    <div className="font-medium mb-1">Адрес не е въведен</div>
+                    <div>Моля, въведете адрес за доставка.</div>
+                  </div>
+                )}
+                
+                {!isCollection && customerInfo.LocationText && !addressConfirmed && (
+                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                    <div className="font-medium mb-1">Адрес не е потвърден</div>
+                    <div>Моля, кликнете "Потвърди адрес" или "Избери точна локация".</div>
+                  </div>
+                )}
+                
+                {!isCollection && addressZone === 'outside' && customerInfo.LocationText && (
+                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                    <div className="font-medium mb-1">Доставка не е възможна</div>
+                    <div>Доставката не е възможна на този адрес. Моля, изберете адрес в зоната за доставка.</div>
+                  </div>
+                )}
+                
+                {/* Order time validation */}
+                {orderTime.type === null && (
+                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                    <div className="font-medium mb-1">Време за поръчка не е избрано</div>
+                    <div>Моля, изберете кога искате да получите поръчката.</div>
+                  </div>
+                )}
+                
+                {/* Action Buttons for Low Order */}
+                {(totalPrice < 15 || (addressZone === 'blue' && totalPrice < 30)) && (
                   <div className="flex space-x-3">
                     <a
                       href="/order"
@@ -1666,20 +2025,8 @@ export default function CheckoutPage() {
                       Добави продукти
                     </a>
                   </div>
-                </div>
-              )}
-              
-              {!isCollection && !addressConfirmed && customerInfo.address && (
-                <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-2">
-                  Адресът не е потвърден. Моля, кликнете "Потвърди адрес" или "Избери точна локация".
-                </div>
-              )}
-              
-              {!isCollection && addressZone === 'outside' && (
-                <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-2">
-                  Доставката не е възможна на този адрес. Моля, изберете адрес в зоната за доставка.
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
                  {/* Submit Button */}
@@ -1700,11 +2047,19 @@ export default function CheckoutPage() {
         <AddressSelectionModal
           isOpen={showAddressModal}
           onClose={() => setShowAddressModal(false)}
-          address={customerInfo.address}
+          address={customerInfo.LocationText}
           onCoordinatesSelect={handleCoordinatesSelect}
           onExactLocationSelect={handleExactLocationSelect}
+          onAddressUpdate={handleAddressUpdate}
+          onAddressConfirm={confirmAddress}
         />
       )}
+
+      {/* Drinks Suggestion Modal */}
+      <DrinksSuggestionModal
+        isOpen={showDrinksModal}
+        onClose={() => setShowDrinksModal(false)}
+      />
     </div>
   )
 }

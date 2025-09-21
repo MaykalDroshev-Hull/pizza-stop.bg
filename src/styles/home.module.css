@@ -595,10 +595,12 @@
   padding: 0px 0;
   animation: scroll-left 120s linear infinite;
   width: max-content;
+  animation-play-state: running;
 }
 
-.galleryScroll {
-  animation-play-state: running;
+/* Second row scrolls in opposite direction */
+.galleryRow:nth-child(2) .galleryScroll {
+  animation: scroll-right 120s linear infinite;
 }
 
 @keyframes scroll-left {
@@ -607,6 +609,15 @@
   }
   100% {
     transform: translateX(-50%);
+  }
+}
+
+@keyframes scroll-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
   }
 }
 
