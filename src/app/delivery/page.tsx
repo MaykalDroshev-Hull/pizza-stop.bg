@@ -198,11 +198,11 @@ const DeliveryDashboard = () => {
       // Get customer details and products for each order
       const ordersWithDetails = await Promise.all(
         orders.map(async (order) => {
-          let customer: { Name: string; phone: string; Email: string } | null = null;
+          let customer: { Name: string; phone: string; email: string } | null = null;
           if (order.LoginID) {
             const { data: customerData } = await supabase
               .from('Login')
-              .select('Name, phone, Email')
+              .select('Name, phone, email')
               .eq('LoginID', order.LoginID)
               .single();
             customer = customerData || null;
@@ -234,7 +234,7 @@ const DeliveryDashboard = () => {
             IsPaid: order.IsPaid,
             CustomerName: customer?.Name || 'Unknown',
             CustomerPhone: customer?.phone || '',
-            CustomerEmail: customer?.Email || '',
+            CustomerEmail: customer?.email || '',
             CustomerLocation: order.OrderLocation,
             Products: (products as LkOrderProducts[]) || [],
             TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
