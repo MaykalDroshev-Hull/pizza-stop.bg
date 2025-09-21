@@ -28,7 +28,7 @@ export default function DrinksSuggestionModal({ isOpen, onClose }: DrinksSuggest
       setLoading(true)
       const menuData = await fetchMenuData()
       // Filter out drinks that don't have valid price data
-      const validDrinks = (menuData.drinks || []).filter(drink => 
+      const validDrinks = (menuData.drinks || []).filter((drink: MenuItem) => 
         drink && 
         drink.id && 
         drink.name && 

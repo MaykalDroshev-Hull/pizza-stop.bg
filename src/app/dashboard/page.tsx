@@ -332,7 +332,8 @@ export default function DashboardPage() {
       setTimeout(() => {
         if (addressInputRef.current && autocompleteRef.current) {
           console.log('🔄 Re-binding autocomplete for address tab')
-          autocompleteRef.current.bindTo('bounds', new google.maps.LatLngBounds())
+          // Set bounds using the setBounds method instead of bindTo
+          autocompleteRef.current.setBounds(new google.maps.LatLngBounds())
         }
       }, 100)
     }
