@@ -19,6 +19,7 @@ import {
   XCircle
 } from 'lucide-react'
 import { isRestaurantOpen } from '@/utils/openingHours'
+import { encryptOrderId } from '@/utils/orderEncryption'
 import styles from './dashboard.module.css'
 import { useLoginID } from '@/components/LoginIDContext'
 import { useLoading } from '@/components/LoadingContext'
@@ -1082,7 +1083,10 @@ export default function DashboardPage() {
                       </div>
                       <div className={styles.orderActions}>
                         <button 
-                          onClick={() => router.push(`/order-tracking?orderId=${order.OrderID}`)}
+                          onClick={() => {
+                            const encryptedOrderId = encryptOrderId(order.OrderID)
+                            router.push(`/order-tracking?orderId=${encryptedOrderId}`)
+                          }}
                           className={styles.followOrderBtn}
                         >
                           <Clock size={16} />

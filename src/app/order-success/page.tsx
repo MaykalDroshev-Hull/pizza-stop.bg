@@ -24,6 +24,8 @@ interface OrderDetails {
   orderTime: string
   paymentMethod: string
   totalAmount: number
+  deliveryCost: number
+  itemsTotal: number
   isCollection: boolean
   estimatedTime?: string
   status: string
@@ -79,7 +81,9 @@ function OrderSuccessContent() {
           Comment: it.Comment || null
         }))
 
-        const total = items.reduce((sum, it) => sum + (Number(it.TotalPrice) || 0), 0)
+        const itemsTotal = items.reduce((sum, it) => sum + (Number(it.TotalPrice) || 0), 0)
+        const deliveryCost = Number(order.DeliveryPrice) || 0
+        const totalAmount = Number(order.TotalAmount) || (itemsTotal + deliveryCost)
 
         const orderTime = order.OrderDT
           ? new Date(order.OrderDT).toLocaleString('bg-BG')
@@ -92,7 +96,9 @@ function OrderSuccessContent() {
           orderLocation: order.OrderLocation || order.Login?.LocationText || '',
           orderTime,
           paymentMethod: order.PaymentMethod?.PaymentMethodName || '—',
-          totalAmount: Number(total) || 0,
+          totalAmount,
+          deliveryCost,
+          itemsTotal,
           isCollection: Boolean(order.IsCollection) || false,
           status: order.OrderStatus?.StatusName || '—',
           items,
@@ -349,7 +355,7 @@ function OrderSuccessContent() {
                 </div>
                 <div>
                   <p className="text-sm text-muted">Обща сума</p>
-                  <p className="font-medium text-text">{orderDetails.totalAmount.toFixed(2)} лв.</p>
+                  <p className="font-medium text-text">{(orderDetails.itemsTotal + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} лв.</p>
                 </div>
               </div>
             </div>
@@ -383,9 +389,21 @@ function OrderSuccessContent() {
                   </div>
                 </div>
               ))}
-              <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                <p className="text-text font-semibold">Крайна сума</p>
-                <p className="text-text font-semibold">{orderDetails.totalAmount.toFixed(2)} лв.</p>
+              <div className="space-y-2 pt-2 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <p className="text-text">Сума на продуктите:</p>
+                  <p className="text-text">{orderDetails.itemsTotal.toFixed(2)} лв.</p>
+                </div>
+                {!orderDetails.isCollection && orderDetails.deliveryCost > 0 && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-text">Доставка:</p>
+                    <p className="text-text">{orderDetails.deliveryCost.toFixed(2)} лв.</p>
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                  <p className="text-text font-semibold">Крайна сума</p>
+                  <p className="text-text font-semibold">{(orderDetails.itemsTotal + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} лв.</p>
+                </div>
               </div>
             </div>
           ) : (
@@ -465,8 +483,8 @@ function OrderSuccessContent() {
         <div className="mt-8 text-center">
           <p className="text-muted text-sm">
             Имате въпроси? Свържете се с нас на{' '}
-            <a href="tel:+359888123456" className="text-orange hover:underline">
-              +359 888 123 456
+            <a href="tel:+35968 670 070" className="text-orange hover:underline">
+              068 670 070
             </a>
           </p>
         </div>

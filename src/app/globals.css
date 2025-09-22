@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Orange gradient button style */
+.btn-gradient-orange {
+  background: linear-gradient(135deg, #f97316, #dc2626);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  transition: all 0.3s ease;
+}
+
+.btn-gradient-orange:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.9), rgba(220, 38, 38, 0.9));
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(249, 115, 22, 0.25);
+}
+
 /* Custom fast spin animation for logo */
 @keyframes spin-fast {
   from {
@@ -113,6 +126,8 @@ body{
   /* Force dark theme colors */
   background-color: #0b1020;
   color: #f8fafc;
+  /* Add top padding to account for fixed header */
+  padding-top: 90px;
 }
 
 /* Force dark theme backgrounds */
@@ -248,7 +263,7 @@ img:hover{transform:scale(1.1);box-shadow:0 20px 40px rgba(0,0,0,.4)}
 .min-w-0 { min-width: 0px; }
 
 /* Header */
-header{position:static;top:0;z-index:50;background:var(--card);backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--border);transition:background-color 0.3s ease,border-color 0.3s ease}
+header{position:fixed;top:0;left:0;right:0;z-index:50;background:var(--card);backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--border);transition:background-color 0.3s ease,border-color 0.3s ease}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
 .brand{display:flex;gap:12px;align-items:center}
 .logo{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;overflow:hidden;box-shadow:0 6px 16px rgba(225,29,72,.35)}
@@ -397,6 +412,11 @@ header{position:static;top:0;z-index:50;background:var(--card);backdrop-filter:s
   .nav-contact{gap:8px}
   .nav-contact .btn{font-size:14px;padding:8px 12px}
   
+  /* Adjust body padding for mobile header */
+  body {
+    padding-top: 80px;
+  }
+  
   .account-icon {
     width: 36px;
     height: 36px;
@@ -435,7 +455,7 @@ header{position:static;top:0;z-index:50;background:var(--card);backdrop-filter:s
 }
 
 /* Hero - Basic styles only (detailed styles moved to home.module.css) */
-.hero-inner{padding:36px 16px 12px}
+.hero-inner{padding:36px 16px 12px;margin-top:20px}
 .hero-grid{display:grid;gap:16px;align-items:center}
 .hero h2{font-size:clamp(28px,4.5vw,48px);margin:0 0 10px;font-weight:800}
 .hero p{color:var(--muted);margin:0 0 16px}
@@ -453,7 +473,7 @@ header{position:static;top:0;z-index:50;background:var(--card);backdrop-filter:s
 /* Home-specific styles moved to home.module.css */
 
 /* Sections */
-section{padding:24px 0;position:relative;z-index:1}
+section{padding:24px 0;position:relative;z-index:1;margin-top:10px}
 .section-title{font-size:22px;margin:0 0 12px;font-weight:800}
 .grid{display:grid;gap:12px}
 @media (min-width:740px){
@@ -889,7 +909,13 @@ button {
 /* Extra small mobile devices */
 @media (max-width: 480px) {
   .nav-contact {
-    gap: 6px;
+    gap: 2px;
+    margin-left: 3px;
+  }
+  
+  /* Adjust body padding for extra small mobile header */
+  body {
+    padding-top: 75px;
   }
   
   .nav-contact .btn {

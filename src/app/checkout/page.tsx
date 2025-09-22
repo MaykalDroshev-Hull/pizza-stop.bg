@@ -12,7 +12,7 @@ import { ArrowLeft, MapPin, User, Phone, CreditCard, Banknote, Clock, Calendar, 
 import { useCart } from '../../components/CartContext'
 import AddressSelectionModal from '../../components/AddressSelectionModal'
 import CartSummaryDisplay from '../../components/CartSummaryDisplay'
-import DrinksSuggestionModal from '../../components/DrinksSuggestionModal'
+import DrinksSuggestionBox from '../../components/DrinksSuggestionBox'
 import { isRestaurantOpen } from '../../utils/openingHours'
 import { useLoginID } from '../../components/LoginIDContext'
 import { encryptOrderId } from '../../utils/orderEncryption'
@@ -50,7 +50,7 @@ export default function CheckoutPage() {
   const [orderTime, setOrderTime] = useState<OrderTime>({ type: null })
   const [orderType, setOrderType] = useState<OrderType>('guest')
   const [showAddressModal, setShowAddressModal] = useState(false)
-  const [showDrinksModal, setShowDrinksModal] = useState(false)
+  const [showDrinksSuggestion, setShowDrinksSuggestion] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isCartLoading, setIsCartLoading] = useState(true)
   const [deliveryInstructions, setDeliveryInstructions] = useState('')
@@ -141,14 +141,14 @@ export default function CheckoutPage() {
     }
   }, [refreshFromStorage])
 
-  // Check for drinks in cart and show suggestion modal
+  // Check for drinks in cart and show suggestion box
   useEffect(() => {
     if (items.length > 0) {
       const hasDrinks = items.some(item => item.category === 'drinks')
       if (!hasDrinks) {
-        // Show drinks suggestion modal after a short delay
+        // Show drinks suggestion box after a short delay
         setTimeout(() => {
-          setShowDrinksModal(true)
+          setShowDrinksSuggestion(true)
         }, 1000)
       }
     }
@@ -854,27 +854,34 @@ export default function CheckoutPage() {
     try{
     e.preventDefault()
     
+    // Set loading state immediately
+    setIsLoading(true)
+    
     // Validate minimum order amount
     if (totalPrice < 15) {
       alert('❌ Минималната сума за поръчка е 15 лв.')
+      setIsLoading(false)
       return
     }
      
      // Validate address zone (only for delivery orders)
      if (!isCollection && addressZone === 'outside') {
        alert('❌ Доставката не е възможна на този адрес. Моля, изберете адрес в зоната за доставка.')
+       setIsLoading(false)
        return
      }
      
      // Validate delivery cost (only for delivery orders)
      if (!isCollection && deliveryCost === null) {
        alert('❌ Не може да се изчисли цената за доставка. Моля, проверете адреса.')
+       setIsLoading(false)
        return
      }
      
      // Validate payment method
      if (paymentMethodId === null) {
        alert('❌ Моля, изберете начин на плащане.')
+       setIsLoading(false)
        return
      }
      
@@ -886,6 +893,7 @@ export default function CheckoutPage() {
        // Check if scheduled time is in the future
        if (scheduledTime <= now) {
          alert('❌ Моля, изберете бъдещо време за поръчката')
+         setIsLoading(false)
          return
        }
        
@@ -895,6 +903,7 @@ export default function CheckoutPage() {
        
       if (hoursDiff > 120) {
         alert('❌ Поръчките могат да се правят максимум 5 дни напред')
+        setIsLoading(false)
         return
       }
        
@@ -902,6 +911,7 @@ export default function CheckoutPage() {
        const hour = scheduledTime.getHours()
        if (hour < 11 || hour >= 23) {
          alert('❌ Моля, изберете време между 11:00 и 23:00')
+         setIsLoading(false)
          return
        }
      }
@@ -1003,6 +1013,13 @@ export default function CheckoutPage() {
          <div className="max-w-6xl mx-auto space-y-8">
            
            
+           {/* Drinks Suggestion Box */}
+           {showDrinksSuggestion && (
+             <DrinksSuggestionBox
+               onClose={() => setShowDrinksSuggestion(false)}
+             />
+           )}
+
            {/* Cart Items Summary */}
            <div className="bg-card border border-white/12 rounded-2xl p-6">
              <h2 className="text-xl font-bold text-text mb-4">Артикули в количката</h2>
@@ -2032,10 +2049,17 @@ export default function CheckoutPage() {
                  {/* Submit Button */}
                  <button
                    type="submit"
-                   disabled={!isFormValid}
+                   disabled={!isFormValid || isLoading}
                    className="w-full bg-gradient-to-r from-red to-orange text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                  >
-                   Потвърди поръчката
+                   {isLoading ? (
+                     <>
+                       <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin inline mr-3"></div>
+                       Обработване на поръчката...
+                     </>
+                   ) : (
+                     'Потвърди поръчката'
+                   )}
                  </button>
              </div>
            </form>
@@ -2055,11 +2079,6 @@ export default function CheckoutPage() {
         />
       )}
 
-      {/* Drinks Suggestion Modal */}
-      <DrinksSuggestionModal
-        isOpen={showDrinksModal}
-        onClose={() => setShowDrinksModal(false)}
-      />
     </div>
   )
 }
