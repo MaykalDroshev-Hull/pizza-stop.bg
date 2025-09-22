@@ -299,9 +299,6 @@ function OrderTrackingContent() {
                       {status.name}
                     </h3>
                     <p className="text-sm text-muted">{status.description}</p>
-                    {status.timestamp && (
-                      <p className="text-xs text-muted mt-1">{status.timestamp}</p>
-                    )}
                   </div>
                 </div>
               ))}
@@ -418,8 +415,8 @@ function OrderTrackingContent() {
                             key={addonIndex}
                             className="text-xs bg-orange/20 text-orange px-2 py-1 rounded-md"
                           >
-                            {addon.Name || addon.name || 'Добавка'}
-                            {(addon.Price || addon.price || 0) > 0 && ` (+${(addon.Price || addon.price || 0).toFixed(2)} лв.)`}
+                            {addon.name || 'Добавка'}
+                            {(addon.price || 0) > 0 && ` (+${(addon.price || 0).toFixed(2)} лв.)`}
                           </span>
                         ))}
                       </div>
@@ -451,7 +448,7 @@ function OrderTrackingContent() {
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted">Сума на продуктите:</span>
-                <span className="text-white">{calculateItemsTotal(orderDetails.items).toFixed(2)} лв.</span>
+                <span className="text-white">{calculateItemsTotal(orderDetails.items || []).toFixed(2)} лв.</span>
               </div>
               
               {!orderDetails.isCollection && (
@@ -467,7 +464,7 @@ function OrderTrackingContent() {
                 <div className="flex items-center justify-between text-lg font-bold">
                   <span>Обща сума:</span>
                   <span className="text-white">
-                    {(calculateItemsTotal(orderDetails.items) + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} лв.
+                    {(calculateItemsTotal(orderDetails.items || []) + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} лв.
                   </span>
                 </div>
               </div>
