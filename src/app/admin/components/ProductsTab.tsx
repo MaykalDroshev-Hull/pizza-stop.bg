@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Package, Plus, Trash2, X, Undo2, Save, CheckCircle, AlertCircle } from "lucide-react";
 import {  getProductsClient, getProductsForProductsTab, upsertProductClient, setProductDisabledClient, deleteProductsClient, softDeleteProductsClient, restoreProductsClient, DatabaseProduct  } from "../services/productService.client";
 import EditProductModal from "../mixin/EditProductModal";
+import ImageUpload from "@/components/ImageUpload";
 
 interface Product {
   id: number;
@@ -177,8 +178,10 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         } else if (change.changeType === 'restore') {
           // Restore products by updating isDeleted to false
           await restoreProductsClient([change.productId]);
+        } else if (change.changeType === 'update' && change.newData) {
+          // Handle checkbox status changes
+          await setProductDisabledClient(change.productId, change.newData.isDisabled || false);
         }
-        // Updates are already saved when they happen
       }
       
       // Clear tracked changes
@@ -259,34 +262,17 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         )
       );
     } else if (change.changeType === 'update' && change.originalData) {
-      // Revert the update - for edit changes, we need to revert all fields
-      if (change.originalData.isDisabled !== undefined) {
-        // This is a status toggle change
-        const originalDisabledStatus = change.originalData.isDisabled || false;
-        
-        // Update database
-        setProductDisabledClient(change.productId, originalDisabledStatus).catch(error => {
-          console.error('Error reverting product status:', error);
-        });
-        
-        // Update local state
-        setProducts(prevProducts => 
-          prevProducts.map(product => 
-            product.id === change.productId 
-              ? { ...product, isDisabled: originalDisabledStatus }
-              : product
-          )
-        );
-      } else {
-        // This is an edit change - revert to original product data
-        setProducts(prevProducts => 
-          prevProducts.map(product => 
-            product.id === change.productId 
-              ? { ...product, ...change.originalData }
-              : product
-          )
-        );
-      }
+      // Revert the checkbox status change - only update local state
+      const originalDisabledStatus = change.originalData.isDisabled || false;
+      
+      // Update local state only (don't save to database until batch save)
+      setProducts(prevProducts => 
+        prevProducts.map(product => 
+          product.id === change.productId 
+            ? { ...product, isDisabled: originalDisabledStatus }
+            : product
+        )
+      );
     }
     
     // Remove from tracked changes
@@ -306,6 +292,7 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
     productTypeId: "",
     imageUrl: ""
   });
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -404,9 +391,6 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
 
   const handleSaveProduct = async (productId: number, updatedProduct: Product): Promise<void> => {
     try {
-      // Find the original product for comparison
-      const originalProduct = products.find(p => p.id === productId);
-      
       // Prepare data for API (map UI names to database column names)
       const productData = {
         ProductID: updatedProduct.id,
@@ -423,11 +407,12 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
       const savedProduct = await upsertProductClient(productData);
       
       // Map database response back to UI format and add productType
+      // Use the updated product's imageUrl to ensure immediate UI update
       const productWithType = {
         id: savedProduct.ProductID,
         name: savedProduct.Product,
         description: savedProduct.Description,
-        imageUrl: savedProduct.ImageURL,
+        imageUrl: updatedProduct.imageUrl, // Use the imageUrl from the form, not from DB response
         isDisabled: savedProduct.IsDisabled === 1,
         smallPrice: savedProduct.SmallPrice,
         mediumPrice: savedProduct.MediumPrice,
@@ -437,36 +422,7 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
       
-      // Check if there are actual changes to track
-      if (originalProduct && hasProductChanged(originalProduct, productWithType)) {
-        // Check if there's already a tracked change for this product
-        const existingChangeIndex = trackedChanges.findIndex(change => 
-          change.productId === productId && change.changeType === 'update'
-        );
-        
-        if (existingChangeIndex !== -1) {
-          // Update existing change
-          setTrackedChanges(prev => prev.map((change, index) => 
-            index === existingChangeIndex 
-              ? { 
-                  ...change, 
-                  newData: productWithType
-                }
-              : change
-          ));
-        } else {
-          // Add new tracked change
-          addTrackedChange({
-            productId: productId,
-            productName: productWithType.name,
-            productType: productWithType.productType || 'Unknown',
-            changeType: 'update',
-            originalData: originalProduct,
-            newData: productWithType
-          });
-        }
-      }
-      
+      // Update local state immediately with the new image URL
       setProducts((prevProducts: Product[]) => 
         prevProducts.map((product: Product) => 
           product.id === productId ? productWithType : product
@@ -602,7 +558,7 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
       
       const newDisabledStatus = !(product.isDisabled || false);
       
-      // Check if there's already a tracked change for this product
+      // Check if there's already a tracked change for this product (checkbox change)
       const existingChangeIndex = trackedChanges.findIndex(change => 
         change.productId === productId && change.changeType === 'update'
       );
@@ -638,9 +594,8 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         }
       }
       
-      await setProductDisabledClient(productId, newDisabledStatus);
-      
-      // Update local state
+      // Don't save to database immediately - wait for batch save
+      // Update local state only
       setProducts(products.map((p: Product) => 
         p.id === productId 
           ? { ...p, isDisabled: newDisabledStatus }
@@ -654,6 +609,15 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
 
   const handleInputChange = (field: keyof AddProductForm, value: string): void => {
     setNewProduct((prev: AddProductForm) => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageUpload = (url: string | null): void => {
+    setNewProduct((prev: AddProductForm) => ({ ...prev, imageUrl: url || "" }));
+    setImageUploadError(null);
+  };
+
+  const handleImageUploadError = (error: string): void => {
+    setImageUploadError(error);
   };
 
   const handleAddProduct = async (): Promise<void> => {
@@ -731,6 +695,7 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
       productTypeId: "", 
       imageUrl: "" 
     });
+    setImageUploadError(null);
     setIsAddingProduct(false);
   };
 
@@ -1496,143 +1461,6 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
         </div>
       )}
 
-      {/* Add Product Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-white">Добавяне на нов продукт</h2>
-              <button
-                onClick={(): void => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); await handleAddProduct(); }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Име на продукта
-                </label>
-                <input
-                  type="text"
-                  value={newProduct.name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('name', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
-                  placeholder="Име на продукта"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Описание (опционално)
-                </label>
-                <textarea
-                  value={newProduct.description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('description', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
-                  placeholder="Описание на продукта"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Тип продукт
-                </label>
-                <select
-                  value={newProduct.productTypeId}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange('productTypeId', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
-                  required
-                >
-                  <option value="">Изберете тип</option>
-                  <option value="1">Пица</option>
-                  <option value="2">Бургер</option>
-                  <option value="3">Дюнер</option>
-                  <option value="7">Десерт</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Малка цена
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newProduct.smallPrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('smallPrice', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Средна цена (опционално)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newProduct.mediumPrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('mediumPrice', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Голяма цена (опционално)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newProduct.largePrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('largePrice', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  URL на изображение (опционално)
-                </label>
-                <input
-                  type="url"
-                  value={newProduct.imageUrl}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('imageUrl', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
-
-              <div className="flex flex-col gap-3 pt-4">
-                <button
-                  type="submit"
-                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 text-sm sm:text-base"
-                >
-                  Добави
-                </button>
-                <button
-                  type="button"
-                  onClick={(): void => setIsModalOpen(false)}
-                  className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm sm:text-base"
-                >
-                  Прекратяване
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Add Product Modal */}
       {isModalOpen && (
@@ -1741,15 +1569,22 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  URL на изображение (опционално)
+                  Изображение на продукта (опционално)
                 </label>
-                <input
-                  type="url"
+                <ImageUpload
                   value={newProduct.imageUrl}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('imageUrl', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
-                  placeholder="https://example.com/image.jpg"
+                  onChange={handleImageUpload}
+                  onError={handleImageUploadError}
+                  placeholder="Качете изображение на продукта"
+                  maxSize={5}
+                  className="w-full"
                 />
+                {imageUploadError && (
+                  <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
+                    <X className="w-4 h-4" />
+                    {imageUploadError}
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col gap-3 pt-4">

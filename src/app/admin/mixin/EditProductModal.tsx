@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Save, RotateCcw } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
 interface Product {
   id: number;
@@ -53,6 +54,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
 
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [originalData, setOriginalData] = useState<EditProductForm | null>(null);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   // Category options for product type dropdown
   const categoryOptions = [
@@ -92,6 +94,15 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
 
   const handleInputChange = (field: keyof EditProductForm, value: string | boolean): void => {
     setFormData((prev: EditProductForm) => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageUpload = (url: string | null): void => {
+    setFormData((prev: EditProductForm) => ({ ...prev, imageUrl: url || "" }));
+    setImageUploadError(null);
+  };
+
+  const handleImageUploadError = (error: string): void => {
+    setImageUploadError(error);
   };
 
   const handleSave = (): void => {
@@ -200,38 +211,43 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Тип продукт *
-                </label>
-                <select
-                  value={formData.productTypeId}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange('productTypeId', e.target.value)}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-600 rounded-lg sm:rounded-xl text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors duration-200"
-                  required
-                >
-                  <option value="">Изберете тип</option>
-                  {categoryOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Тип продукт *
+              </label>
+              <select
+                value={formData.productTypeId}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange('productTypeId', e.target.value)}
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-600 rounded-lg sm:rounded-xl text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors duration-200"
+                required
+              >
+                <option value="">Изберете тип</option>
+                {categoryOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  URL на изображение
-                </label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('imageUrl', e.target.value)}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-600 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors duration-200"
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Изображение на продукта
+              </label>
+              <ImageUpload
+                value={formData.imageUrl}
+                onChange={handleImageUpload}
+                onError={handleImageUploadError}
+                placeholder="Качете изображение на продукта"
+                maxSize={5}
+                className="w-full"
+              />
+              {imageUploadError && (
+                <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
+                  <X className="w-4 h-4" />
+                  {imageUploadError}
+                </p>
+              )}
             </div>
           </div>
 
