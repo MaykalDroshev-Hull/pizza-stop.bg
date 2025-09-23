@@ -85,10 +85,7 @@ export class EmailService {
             box-shadow: 0 6px 16px rgba(225, 29, 72, 0.35);
           }
           .welcome-title {
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff7f11;
             font-size: 28px;
             font-weight: 800;
             text-align: center;
@@ -102,7 +99,7 @@ export class EmailService {
           }
           .order-button {
             display: inline-block;
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
+            background-color: #ff7f11;
             color: white;
             padding: 18px 35px;
             text-decoration: none;
@@ -111,12 +108,7 @@ export class EmailService {
             font-size: 16px;
             text-align: center;
             margin: 20px auto;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 20px rgba(225, 29, 72, 0.45);
-          }
-          .order-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 12px 28px rgba(225, 29, 72, 0.6);
+            border: none;
           }
           .footer {
             text-align: center;
@@ -127,10 +119,7 @@ export class EmailService {
             font-size: 14px;
           }
           .highlight {
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff7f11;
             font-weight: 700;
           }
         </style>
@@ -220,10 +209,7 @@ export class EmailService {
             box-shadow: 0 6px 16px rgba(225, 29, 72, 0.35);
           }
           .reset-title {
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff7f11;
             font-size: 28px;
             font-weight: 800;
             text-align: center;
@@ -237,7 +223,7 @@ export class EmailService {
           }
           .reset-button {
             display: inline-block;
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
+            background-color: #ff7f11;
             color: white;
             padding: 18px 35px;
             text-decoration: none;
@@ -246,12 +232,7 @@ export class EmailService {
             font-size: 16px;
             text-align: center;
             margin: 20px auto;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 20px rgba(225, 29, 72, 0.45);
-          }
-          .reset-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 12px 28px rgba(225, 29, 72, 0.6);
+            border: none;
           }
           .footer {
             text-align: center;
@@ -262,10 +243,7 @@ export class EmailService {
             font-size: 14px;
           }
           .highlight {
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff7f11;
             font-weight: 700;
           }
           .warning {
@@ -303,7 +281,7 @@ export class EmailService {
           
           <p class="reset-text">
             Ако имате проблеми с бутона, копирайте този линк в браузъра:<br>
-            <a href="${resetUrl}" style="background: linear-gradient(90deg, #e11d48, #ff7f11); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; word-break: break-all; font-weight: 700;">${resetUrl}</a>
+            <a href="${resetUrl}" style="color: #ff7f11; word-break: break-all; font-weight: 700;">${resetUrl}</a>
           </p>
           
           <div class="footer">
@@ -353,7 +331,7 @@ export class EmailService {
             ` : ''}
           </div>
           <div style="text-align: right; min-width: 120px;">
-            <p style="margin: 0; font-weight: 800; background: linear-gradient(90deg, #e11d48, #ff7f11); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 16px;">
+            <p style="margin: 0; font-weight: 800; color: #ff7f11; font-size: 16px;">
               ${item.quantity} × ${item.price.toFixed(2)} лв.
             </p>
             <p style="margin: 5px 0 0 0; font-size: 14px; color: #cbd5e1;">
@@ -400,10 +378,7 @@ export class EmailService {
             box-shadow: 0 6px 16px rgba(225, 29, 72, 0.35);
           }
           .order-title {
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff7f11;
             font-size: 28px;
             font-weight: 800;
             text-align: center;
@@ -419,10 +394,7 @@ export class EmailService {
           }
           .order-id h3 {
             margin: 0;
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff7f11;
             font-size: 24px;
             font-weight: 800;
           }
@@ -444,10 +416,7 @@ export class EmailService {
             border-bottom: none;
             font-weight: bold;
             font-size: 18px;
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff7f11;
           }
           .detail-label {
             color: #cbd5e1;
@@ -479,10 +448,7 @@ export class EmailService {
           .total-amount {
             font-size: 24px;
             font-weight: 800;
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff7f11;
             margin: 0;
           }
           .action-buttons {
@@ -491,7 +457,7 @@ export class EmailService {
           }
           .order-button {
             display: inline-block;
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
+            background-color: #ff7f11;
             color: white;
             padding: 18px 35px;
             text-decoration: none;
@@ -499,25 +465,14 @@ export class EmailService {
             font-weight: 800;
             font-size: 18px;
             margin: 10px;
-            transition: all 0.3s ease;
             text-align: center;
             min-width: 200px;
-            box-shadow: 0 8px 20px rgba(225, 29, 72, 0.45);
-          }
-          .order-button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 12px 28px rgba(225, 29, 72, 0.6);
+            border: none;
           }
           .secondary-button {
-            background: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.15);
             color: #f8fafc;
-          }
-          .secondary-button:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-1px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
           }
           .footer {
             text-align: center;
@@ -528,10 +483,7 @@ export class EmailService {
             font-size: 14px;
           }
           .highlight {
-            background: linear-gradient(90deg, #e11d48, #ff7f11);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ff7f11;
             font-weight: 700;
           }
           .estimated-time {
@@ -615,7 +567,7 @@ export class EmailService {
           
           <p style="text-align: center; font-size: 14px; color: #cbd5e1;">
             Ако имате въпроси относно поръчката, моля свържете се с нас на 
-            <a href="tel:+359888123456" style="background: linear-gradient(90deg, #e11d48, #ff7f11); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; font-weight: 700;">+359 888 123 456</a>
+            <a href="tel:+359888123456" style="color: #ff7f11; text-decoration: none; font-weight: 700;">+359 888 123 456</a>
           </p>
           
           <div class="footer">

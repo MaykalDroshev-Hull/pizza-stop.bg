@@ -995,7 +995,7 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red/5 via-orange/5 to-yellow/5">
       {/* Header */}
-      <div className="bg-card border-b border-white/12 sticky top-0 z-30">
+      <div className="bg-card border-b border-white/12">
         <div className="container py-4">
           <div className="flex items-center space-x-4">
             <a href="/order" className="p-2 rounded-lg border border-white/12 text-muted hover:text-text transition-colors">
@@ -1627,7 +1627,7 @@ export default function CheckoutPage() {
                <CreditCard size={20} className="inline mr-2" />
                Начин на плащане *
              </h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {isCollection ? (
                  // Collection payment methods (1: Card at Restaurant, 2: Cash at Restaurant)
                  <>

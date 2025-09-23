@@ -33,7 +33,13 @@ export default function DrinksSuggestionBox({ onClose }: DrinksSuggestionBoxProp
         typeof drink.smallPrice === 'number' && 
         drink.smallPrice > 0
       )
-      setDrinks(validDrinks.slice(0, 6)) // Show only first 6 drinks
+      
+      // Show 6 drinks on PC, 4 on mobile
+      const maxDrinks = window.innerWidth >= 768 ? 6 : 4
+      
+      // Randomize the drinks array before slicing
+      const shuffledDrinks = [...validDrinks].sort(() => Math.random() - 0.5)
+      setDrinks(shuffledDrinks.slice(0, maxDrinks))
     } catch (error) {
       console.error('Error loading drinks:', error)
       setDrinks([])
@@ -113,7 +119,7 @@ export default function DrinksSuggestionBox({ onClose }: DrinksSuggestionBoxProp
 
       {/* Drinks Grid */}
       {isExpanded && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 lg: grid grid-cols-1 gap-4 mb-4">
           {drinks.map((drink) => (
             <div key={drink.id} className="bg-white/6 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
