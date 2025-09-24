@@ -869,7 +869,7 @@ export default function DashboardPage() {
             id: availableProduct.id,
             name: orderProduct.ProductName,
             price: orderProduct.UnitPrice,
-            image: availableProduct.image || '/images/placeholder-pizza.jpg',
+            image: availableProduct.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNjY2NjY2MiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5GVPzwvdGV4dD4KPC9zdmc+',
             category: availableProduct.category || 'pizza',
             size: orderProduct.ProductSize || 'Medium',
             addons: orderProduct.Addons || [],

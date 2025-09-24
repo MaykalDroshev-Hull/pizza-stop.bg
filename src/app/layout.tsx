@@ -4,10 +4,9 @@ import './globals.css'
 import { LoadingProvider } from '../components/LoadingContext'
 import LoadingOverlay from '../components/LoadingOverlay'
 import NavBar from '../components/NavBar'
-import Footer from '../components/Footer'
 import { CartProvider } from '../components/CartContext'
 import { LoginIDProvider } from '../components/LoginIDContext'
-import LayoutContent from '../components/LayoutContent'
+import ConditionalFooter from '../components/ConditionalFooter'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -88,9 +87,14 @@ export default function RootLayout({
           <LoadingProvider>
             <LoginIDProvider>
               <CartProvider>
-                <LayoutContent>
-                  {children}
-                </LayoutContent>
+                <div className="min-h-screen bg-bg text-text">
+                  <NavBar />
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <ConditionalFooter />
+                  <LoadingOverlay />
+                </div>
               </CartProvider>
             </LoginIDProvider>
           </LoadingProvider>

@@ -311,7 +311,7 @@ function OrderTrackingContent() {
                         </p>
                       </div>
                     </div>
-                    <p className="font-bold text-orange">{item.price.toFixed(2)} лв.</p>
+                    <p className="font-bold text-orange">{(item.price || 0).toFixed(2)} лв.</p>
                   </div>
                   
                   {/* Display addons if any */}
@@ -324,7 +324,7 @@ function OrderTrackingContent() {
                             className="text-xs bg-orange/20 text-orange px-2 py-1 rounded-md"
                           >
                             {addon.name}
-                            {addon.price > 0 && ` (+${addon.price.toFixed(2)} лв.)`}
+                            {(addon.price || 0) > 0 && ` (+${(addon.price || 0).toFixed(2)} лв.)`}
                           </span>
                         ))}
                       </div>

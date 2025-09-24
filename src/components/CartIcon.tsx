@@ -7,7 +7,7 @@ import { useCart } from './CartContext'
 import { isRestaurantOpen } from '../utils/openingHours'
 
 export default function CartIcon() {
-  const { items, removeItem, totalItems, totalPrice } = useCart()
+  const { items, removeItem, totalItems, totalPrice, getItemTotalPrice } = useCart()
   const [isOpen, setIsOpen] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
 
@@ -42,12 +42,12 @@ export default function CartIcon() {
           
           {/* Cart Modal - positioned below navbar on mobile, under cart icon on PC */}
           <div 
-            className="absolute top-16 right-0 md:top-20 md:right-4 bg-card border border-white/12 rounded-2xl max-w-md w-full max-h-[calc(100vh-4rem)] max-md:max-h-[75vh] overflow-y-auto m-4 md:m-0 shadow-2xl"
+            className="absolute top-16 right-0 md:top-20 md:right-4 bg-card border border-white/12 rounded-2xl max-w-md w-full h-[calc(100vh-4rem)] max-md:h-[75vh] m-4 md:m-0 shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
             style={{ zIndex: 9999 }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/12">
+            <div className="flex items-center justify-between p-6 border-b border-white/12 flex-shrink-0">
               <h2 className="text-xl font-bold text-text">Количка</h2>
               <button
                 onClick={() => setIsOpen(false)}
@@ -58,8 +58,8 @@ export default function CartIcon() {
               </button>
             </div>
 
-            {/* Cart Items */}
-            <div className="p-6 space-y-4">
+            {/* Cart Items - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
               {items.length === 0 ? (
                 <div className="text-center py-8">
                   <ShoppingCart size={48} className="mx-auto text-muted mb-4" />
@@ -77,7 +77,7 @@ export default function CartIcon() {
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
-                              target.src = '/images/placeholder-pizza.jpg';
+                              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNjY2NjY2MiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5GVPzwvdGV4dD4KPC9zdmc+';
                             }}
                           />
                         </div>
@@ -99,7 +99,7 @@ export default function CartIcon() {
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-orange">{item.price.toFixed(2)} лв.</p>
+                        <p className="font-bold text-orange">{(getItemTotalPrice(item) / item.quantity).toFixed(2)} лв.</p>
                         <button
                           onClick={() => removeItem(item.id)}
                           className="text-muted hover:text-red transition-colors p-1 mt-1"
@@ -110,27 +110,30 @@ export default function CartIcon() {
                       </div>
                     </div>
                   ))}
+                </>
+              )}
+            </div>
 
+            {/* Footer - Fixed at bottom */}
+            <div className="p-6 border-t border-white/12 flex-shrink-0">
+              {items.length > 0 ? (
+                <>
                   {/* Total */}
-                  <div className="text-center p-4 bg-white/6 rounded-xl border border-white/12">
+                  <div className="text-center p-4 bg-white/6 rounded-xl border border-white/12 mb-4">
                     <div className="text-sm text-muted">Обща сума:</div>
                     <div className="text-2xl font-bold text-orange">
                       {totalPrice.toFixed(2)} лв.
                     </div>
                   </div>
+                  
+                  {/* Checkout Button */}
+                  <a
+                    href="/checkout"
+                    className="w-full bg-gradient-to-r from-red to-orange text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 block text-center"
+                  >
+                    {isRestaurantOpen() ? 'Поръчай сега' : 'Поръчай за по-късно'}
+                  </a>
                 </>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-6 border-t border-white/12">
-              {items.length > 0 ? (
-                <a
-                  href="/checkout"
-                  className="w-full bg-gradient-to-r from-red to-orange text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 block text-center"
-                >
-                  {isRestaurantOpen() ? 'Поръчай сега' : 'Поръчай за по-късно'}
-                </a>
               ) : (
                 <button
                   onClick={() => setIsOpen(false)}
