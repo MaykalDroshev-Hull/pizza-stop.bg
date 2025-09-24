@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   MapPin, 
   Phone, 
@@ -19,7 +19,12 @@ import {
   RotateCcw,
   Star,
   Wifi,
-  WifiOff
+  WifiOff,
+  Calendar,
+  BarChart3,
+  Download,
+  Search,
+  Filter
 } from 'lucide-react';
 import { updateOrderStatusInDB, testDatabaseConnection, ORDER_STATUS, KitchenOrder, LkOrderProducts } from '../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
@@ -34,6 +39,8 @@ interface DeliveryOrder {
     name: string;
     quantity: number;
     price: number;
+    customizations?: string[];
+    comment?: string;
   }>;
   totalPrice: number;
   deliveryFee: number;
@@ -79,6 +86,8 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
     status = 'ready';
   } else if (kitchenOrder.OrderStatusID === ORDER_STATUS.IN_DELIVERY) { // OrderStatusID = 5, В процес на доставка
     status = 'en_route';
+  } else if (kitchenOrder.OrderStatusID === ORDER_STATUS.DELIVERED) { // OrderStatusID = 6, Доставена
+    status = 'delivered';
   }
 
   return {
@@ -89,12 +98,23 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
     items: kitchenOrder.Products.map(product => ({
       name: product.ProductName,
       quantity: product.Quantity,
-      price: product.UnitPrice
+      price: product.UnitPrice,
+      customizations: product.Addons ? (() => {
+        try {
+          const addons = JSON.parse(product.Addons);
+          return Array.isArray(addons) ? addons.map(addon => addon.Name || addon.name).filter(Boolean) : [];
+        } catch {
+          // Fallback to comma-separated string if JSON parsing fails
+          return product.Addons.split(',').map(c => c.trim()).filter(c => c);
+        }
+      })() : [],
+      comment: product.Comment || undefined
     })),
     totalPrice: kitchenOrder.Products.reduce((sum, product) => sum + product.TotalPrice, 0),
     deliveryFee: 3.00, // Fixed delivery fee
     status,
     orderTime,
+    deliveredTime: status === 'delivered' ? orderTime : undefined, // Set deliveredTime for delivered orders
     specialInstructions: kitchenOrder.SpecialInstructions || '',
     distance,
     estimatedTime: Math.round(distance * 3 + 5), // Rough estimate
@@ -125,6 +145,15 @@ const DeliveryDashboard = () => {
     rating: 4.8,
     totalTips: 45.20
   });
+
+  // Enhanced History State
+  const [timeFilter, setTimeFilter] = useState<'today' | 'week' | '2weeks' | 'month' | '3months' | '6months' | 'year' | 'custom'>('today');
+  const [customDateRange, setCustomDateRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'amount' | 'customer'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
 
   // Real delivery orders from database
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
@@ -170,13 +199,15 @@ const DeliveryDashboard = () => {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
       
-      // Fetch orders with status 4 or 5
+      // Fetch active orders with status 4 or 5
       const { data: orders, error: ordersError } = await supabase
         .from('Order')
         .select(`
           OrderID,
           LoginID,
           OrderDT,
+          ExpectedDT,
+          ReadyTime,
           OrderLocation,
           OrderLocationCoordinates,
           OrderStatusID,
@@ -185,68 +216,153 @@ const DeliveryDashboard = () => {
         .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
         .order('OrderDT', { ascending: false });
 
+      // Fetch delivered orders (status 6) for history
+      const { data: deliveredOrders, error: deliveredError } = await supabase
+        .from('Order')
+        .select(`
+          OrderID,
+          LoginID,
+          OrderDT,
+          ExpectedDT,
+          ReadyTime,
+          OrderLocation,
+          OrderLocationCoordinates,
+          OrderStatusID,
+          IsPaid
+        `)
+        .eq('OrderStatusID', ORDER_STATUS.DELIVERED)
+        .order('OrderDT', { ascending: false });
+
+      console.log('Delivered orders query result:', { deliveredOrders, deliveredError, ORDER_STATUS_DELIVERED: ORDER_STATUS.DELIVERED });
+
       if (ordersError) {
         console.error('Error fetching orders:', ordersError);
         return;
       }
 
-      if (!orders || orders.length === 0) {
-        setOrders([]);
+      if (deliveredError) {
+        console.error('Error fetching delivered orders:', deliveredError);
         return;
       }
 
-      // Get customer details and products for each order
-      const ordersWithDetails = await Promise.all(
-        orders.map(async (order) => {
-          let customer: { Name: string; phone: string; email: string } | null = null;
-          if (order.LoginID) {
-            const { data: customerData } = await supabase
-              .from('Login')
-              .select('Name, phone, email')
-              .eq('LoginID', order.LoginID)
-              .single();
-            customer = customerData || null;
-          }
+      // Process active orders (status 4 and 5)
+      let ordersWithDetails: DeliveryOrder[] = [];
+      if (orders && orders.length > 0) {
+        ordersWithDetails = await Promise.all(
+          orders.map(async (order) => {
+            let customer: { Name: string; phone: string; email: string } | null = null;
+            if (order.LoginID) {
+              const { data: customerData } = await supabase
+                .from('Login')
+                .select('Name, phone, email')
+                .eq('LoginID', order.LoginID)
+                .single();
+              customer = customerData || null;
+            }
 
-          // Get products for this order
-          const { data: products } = await supabase
-            .from('LkOrderProduct')
-            .select(`
-              LkOrderProductID,
-              OrderID,
-              ProductID,
-              ProductName,
-              ProductSize,
-              Quantity,
-              UnitPrice,
-              TotalPrice,
-              Addons,
-              Comment
-            `)
-            .eq('OrderID', order.OrderID);
+            // Get products for this order
+            const { data: products } = await supabase
+              .from('LkOrderProduct')
+              .select(`
+                LkOrderProductID,
+                OrderID,
+                ProductID,
+                ProductName,
+                ProductSize,
+                Quantity,
+                UnitPrice,
+                TotalPrice,
+                Addons,
+                Comment
+              `)
+              .eq('OrderID', order.OrderID);
 
-          const kitchenOrder: KitchenOrder = {
-            OrderID: order.OrderID,
-            OrderDT: order.OrderDT,
-            OrderLocation: order.OrderLocation,
-            OrderLocationCoordinates: order.OrderLocationCoordinates,
-            OrderStatusID: order.OrderStatusID,
-            IsPaid: order.IsPaid,
-            CustomerName: customer?.Name || 'Unknown',
-            CustomerPhone: customer?.phone || '',
-            CustomerEmail: customer?.email || '',
-            CustomerLocation: order.OrderLocation,
-            Products: (products as LkOrderProducts[]) || [],
-            TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
-            SpecialInstructions: ''
-          };
+            const kitchenOrder: KitchenOrder = {
+              OrderID: order.OrderID,
+              OrderDT: order.OrderDT,
+              ExpectedDT: order.ExpectedDT,
+              ReadyTime: order.ReadyTime,
+              OrderLocation: order.OrderLocation,
+              OrderLocationCoordinates: order.OrderLocationCoordinates,
+              OrderStatusID: order.OrderStatusID,
+              IsPaid: order.IsPaid,
+              CustomerName: customer?.Name || 'Unknown',
+              CustomerPhone: customer?.phone || '',
+              CustomerEmail: customer?.email || '',
+              CustomerLocation: order.OrderLocation,
+              Products: (products as LkOrderProducts[]) || [],
+              TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
+              SpecialInstructions: ''
+            };
 
-          return convertToDeliveryOrder(kitchenOrder);
-        })
-      );
+            return convertToDeliveryOrder(kitchenOrder);
+          })
+        );
+      }
       
       setOrders(ordersWithDetails);
       console.log(`Fetched ${ordersWithDetails.length} delivery orders`);
+
+      // Process delivered orders for history (always process, even if no active orders)
+      if (deliveredOrders && deliveredOrders.length > 0) {
+        const deliveredOrdersWithDetails = await Promise.all(
+          deliveredOrders.map(async (order) => {
+            let customer: { Name: string; phone: string; email: string } | null = null;
+            if (order.LoginID) {
+              const { data: customerData } = await supabase
+                .from('Login')
+                .select('Name, phone, email')
+                .eq('LoginID', order.LoginID)
+                .single();
+              customer = customerData || null;
+            }
+
+            // Get products for this order
+            const { data: products } = await supabase
+              .from('LkOrderProduct')
+              .select(`
+                LkOrderProductID,
+                OrderID,
+                ProductID,
+                ProductName,
+                ProductSize,
+                Quantity,
+                UnitPrice,
+                TotalPrice,
+                Addons,
+                Comment
+              `)
+              .eq('OrderID', order.OrderID);
+
+            const kitchenOrder: KitchenOrder = {
+              OrderID: order.OrderID,
+              OrderDT: order.OrderDT,
+              ExpectedDT: order.ExpectedDT,
+              ReadyTime: order.ReadyTime,
+              OrderLocation: order.OrderLocation,
+              OrderLocationCoordinates: order.OrderLocationCoordinates,
+              OrderStatusID: order.OrderStatusID,
+              IsPaid: order.IsPaid,
+              CustomerName: customer?.Name || 'Unknown',
+              CustomerPhone: customer?.phone || '',
+              CustomerEmail: customer?.email || '',
+              CustomerLocation: order.OrderLocation,
+              Products: (products as LkOrderProducts[]) || [],
+              TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
+              SpecialInstructions: ''
+            };
+
+            return convertToDeliveryOrder(kitchenOrder);
+          })
+        );
+        
+        // Set delivered orders as history
+        setDeliveryHistory(deliveredOrdersWithDetails);
+        console.log(`Fetched ${deliveredOrdersWithDetails.length} delivered orders for history`);
+      } else {
+        // If no delivered orders, keep existing history
+        console.log('No delivered orders found');
+      }
     } catch (error) {
       console.error('Error fetching delivery orders:', error);
     } finally {
@@ -468,6 +584,116 @@ const DeliveryDashboard = () => {
     }
   };
 
+  // Enhanced History Helper Functions
+  const getDateRange = (filter: string) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (filter) {
+      case 'today':
+        return { start: today, end: new Date(today.getTime() + 24 * 60 * 60 * 1000) };
+      case 'week':
+        const weekStart = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return { start: weekStart, end: now };
+      case '2weeks':
+        const twoWeeksStart = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
+        return { start: twoWeeksStart, end: now };
+      case 'month':
+        const monthStart = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        return { start: monthStart, end: now };
+      case '3months':
+        const threeMonthsStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+        return { start: threeMonthsStart, end: now };
+      case '6months':
+        const sixMonthsStart = new Date(today.getTime() - 180 * 24 * 60 * 60 * 1000);
+        return { start: sixMonthsStart, end: now };
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        return { start: yearStart, end: now };
+      case 'custom':
+        return customDateRange || { start: today, end: now };
+      default:
+        return { start: today, end: now };
+    }
+  };
+
+  const getFilteredHistory = useMemo(() => {
+    const { start, end } = getDateRange(timeFilter);
+    
+    return deliveryHistory.filter(order => {
+      const orderDate = new Date(order.orderTime);
+      const matchesDate = orderDate >= start && orderDate <= end;
+      const matchesSearch = searchTerm === '' || 
+        order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.id.toString().includes(searchTerm) ||
+        order.address.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return matchesDate && matchesSearch;
+    }).sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'date':
+          comparison = a.orderTime.getTime() - b.orderTime.getTime();
+          break;
+        case 'amount':
+          comparison = (a.totalPrice + a.deliveryFee) - (b.totalPrice + b.deliveryFee);
+          break;
+        case 'customer':
+          comparison = a.customerName.localeCompare(b.customerName);
+          break;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  }, [deliveryHistory, timeFilter, customDateRange, searchTerm, sortBy, sortOrder]);
+
+  const getTopProducts = useMemo(() => {
+    const productCounts: { [key: string]: { count: number; revenue: number; name: string } } = {};
+    
+    getFilteredHistory.forEach(order => {
+      order.items.forEach(item => {
+        const key = item.name;
+        if (!productCounts[key]) {
+          productCounts[key] = { count: 0, revenue: 0, name: item.name };
+        }
+        productCounts[key].count += item.quantity;
+        productCounts[key].revenue += item.price * item.quantity;
+      });
+    });
+    
+    return Object.values(productCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20);
+  }, [getFilteredHistory]);
+
+  const getAnalytics = useMemo(() => {
+    const orders = getFilteredHistory;
+    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice + order.deliveryFee, 0);
+    const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+    const totalOrders = orders.length;
+    
+    // Group by day for chart data
+    const dailyData: { [key: string]: { orders: number; revenue: number } } = {};
+    orders.forEach(order => {
+      const dateKey = order.orderTime.toISOString().split('T')[0];
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = { orders: 0, revenue: 0 };
+      }
+      dailyData[dateKey].orders += 1;
+      dailyData[dateKey].revenue += order.totalPrice + order.deliveryFee;
+    });
+    
+    return {
+      totalOrders,
+      totalRevenue,
+      averageOrderValue,
+      dailyData: Object.entries(dailyData).map(([date, data]) => ({
+        date,
+        orders: data.orders,
+        revenue: data.revenue
+      })).sort((a, b) => a.date.localeCompare(b.date))
+    };
+  }, [getFilteredHistory]);
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('bg-BG', { 
       hour: '2-digit', 
@@ -525,8 +751,37 @@ const DeliveryDashboard = () => {
           </div>
         </div>
 
-        <div className="text-sm text-gray-400 mb-3">
-          {order.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
+        <div className="text-xs text-gray-400 mb-2">
+          Поръчана: {order.orderTime.toLocaleString('bg-BG', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </div>
+
+        <div className="mb-3">
+          {order.items.slice(0, 3).map((item, index) => (
+            <div key={index} className="text-xs text-white mb-1">
+              <div>{item.quantity}x {item.name}</div>
+              {item.customizations && item.customizations.length > 0 && (
+                <div className="text-yellow-300 text-xs ml-2 mt-1">
+                  🧂 {item.customizations.join(', ')}
+                </div>
+              )}
+              {item.comment && (
+                <div className="text-blue-300 text-xs ml-2 mt-1 bg-blue-800/30 px-2 py-1 rounded">
+                  💬 {item.comment}
+                </div>
+              )}
+            </div>
+          ))}
+          {order.items.length > 3 && (
+            <div className="text-xs text-gray-400 mt-2">
+              +{order.items.length - 3} още артикула
+            </div>
+          )}
         </div>
 
         {order.specialInstructions && (
@@ -691,31 +946,6 @@ const DeliveryDashboard = () => {
         </button>
       </div>
 
-      {/* Stats Bar - Mobile Optimized */}
-      <div className="bg-gray-800 px-2 sm:px-4 py-2 border-b border-gray-600">
-        <div className="grid grid-cols-3 sm:flex sm:justify-between items-center gap-2 sm:gap-0 text-xs sm:text-sm">
-          <div className="flex items-center space-x-1">
-            <CheckCircle size={14} className="text-green-400" />
-            <span className="truncate">Днес: <strong>{stats.todaysDeliveries}</strong></span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <DollarSign size={14} className="text-green-400" />
-            <span className="truncate"><strong>{stats.todaysEarnings.toFixed(2)} лв</strong></span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <Clock size={14} className="text-orange-400" />
-            <span className="truncate hidden sm:inline">Средно: </span><strong>{stats.averageTime}мин</strong>
-          </div>
-          <div className="flex items-center space-x-1 col-span-1 sm:col-span-auto">
-            <Star size={14} className="text-yellow-400" />
-            <span><strong>{stats.rating}</strong></span>
-          </div>
-          <div className="flex items-center space-x-1 col-span-2 sm:col-span-auto">
-            <TrendingUp size={14} className="text-purple-400" />
-            <span className="truncate">Бакшиши: <strong>{stats.totalTips.toFixed(2)} лв</strong></span>
-          </div>
-        </div>
-      </div>
 
       {/* Main Content - Mobile Optimized */}
       <div className="flex-1 overflow-hidden">
@@ -977,21 +1207,174 @@ const DeliveryDashboard = () => {
         )}
 
         {currentView === 'history' && (
-          <div className="p-4 overflow-y-auto">
-            <h2 className="text-xl font-bold text-gray-300 mb-4">
-              📜 История на доставките ({deliveryHistory.length})
-            </h2>
-            {deliveryHistory.map((order, index) => (
-              <HistoryCard key={`${order.id}-${index}`} order={order} />
-            ))}
-            
-            {deliveryHistory.length === 0 && (
-              <div className="text-center text-gray-400 mt-20">
-                <History size={64} className="mx-auto mb-4 opacity-50" />
-                <div className="text-xl">Няма доставени поръчки</div>
-                <div className="text-sm">Историята ще се появи тук след първите доставки</div>
+          <div className="h-full flex flex-col overflow-hidden">
+            {/* Enhanced History Header */}
+            <div className="bg-gray-800 border-b border-gray-600 p-4 flex-shrink-0">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <h2 className="text-xl font-bold text-gray-300">
+                  📜 История на доставките ({getFilteredHistory.length})
+                </h2>
+                
+                {/* Time Filter Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'today', label: 'Днес' },
+                    { key: 'week', label: 'Тази седмица' },
+                    { key: '2weeks', label: 'Последните 2 седмици' },
+                    { key: 'month', label: 'Последния месец' },
+                    { key: '3months', label: 'Последните 3 месеца' },
+                    { key: '6months', label: 'Последните 6 месеца' },
+                    { key: 'year', label: 'Тази година' }
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setTimeFilter(key as any)}
+                      className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                        timeFilter === key
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Search and Sort Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Търси по клиент, поръчка или адрес..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="date">По дата</option>
+                    <option value="amount">По сума</option>
+                    <option value="customer">По клиент</option>
+                  </select>
+                  
+                  <button
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white hover:bg-gray-600 transition-colors"
+                    title={sortOrder === 'asc' ? 'Възходящо' : 'Низходящо'}
+                  >
+                    {sortOrder === 'asc' ? '↑' : '↓'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Analytics Dashboard */}
+            <div className="bg-gray-800 border-b border-gray-600 p-4 flex-shrink-0">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div className="bg-gray-700 rounded-lg p-3">
+                  <div className="text-sm text-gray-400">Общо поръчки</div>
+                  <div className="text-2xl font-bold text-white">{getAnalytics.totalOrders}</div>
+                </div>
+                <div className="bg-gray-700 rounded-lg p-3">
+                  <div className="text-sm text-gray-400">Общ приход</div>
+                  <div className="text-2xl font-bold text-green-400">{getAnalytics.totalRevenue.toFixed(2)} лв</div>
+                </div>
+                <div className="bg-gray-700 rounded-lg p-3">
+                  <div className="text-sm text-gray-400">Средна стойност</div>
+                  <div className="text-2xl font-bold text-blue-400">{getAnalytics.averageOrderValue.toFixed(2)} лв</div>
+                </div>
+                <div className="bg-gray-700 rounded-lg p-3">
+                  <div className="text-sm text-gray-400">Топ продукт</div>
+                  <div className="text-lg font-bold text-orange-400">
+                    {getTopProducts[0]?.name || 'Няма данни'}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Simple Chart Visualization */}
+              {getAnalytics.dailyData.length > 0 && (
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                    <BarChart3 size={20} className="mr-2" />
+                    Дневна статистика
+                  </h3>
+                  <div className="flex items-end gap-2 h-32">
+                    {getAnalytics.dailyData.slice(-7).map((day, index) => {
+                      const maxOrders = Math.max(...getAnalytics.dailyData.map(d => d.orders));
+                      const height = (day.orders / maxOrders) * 100;
+                      return (
+                        <div key={day.date} className="flex-1 flex flex-col items-center">
+                          <div 
+                            className="bg-blue-500 rounded-t w-full transition-all duration-300 hover:bg-blue-400"
+                            style={{ height: `${height}%` }}
+                            title={`${day.date}: ${day.orders} поръчки, ${day.revenue.toFixed(2)} лв`}
+                          ></div>
+                          <div className="text-xs text-gray-400 mt-2">
+                            {new Date(day.date).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit' })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Top Products Table */}
+            {getTopProducts.length > 0 && (
+              <div className="bg-gray-800 border-b border-gray-600 p-4 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-white mb-3">🏆 Топ 20 продукта</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-600">
+                        <th className="text-left py-2 text-gray-400">#</th>
+                        <th className="text-left py-2 text-gray-400">Продукт</th>
+                        <th className="text-right py-2 text-gray-400">Количество</th>
+                        <th className="text-right py-2 text-gray-400">Приход</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getTopProducts.map((product, index) => (
+                        <tr key={product.name} className="border-b border-gray-700">
+                          <td className="py-2 text-gray-300">{index + 1}</td>
+                          <td className="py-2 text-white font-medium">{product.name}</td>
+                          <td className="py-2 text-right text-blue-400">{product.count}</td>
+                          <td className="py-2 text-right text-green-400">{product.revenue.toFixed(2)} лв</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
+
+            {/* Order History List */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {getFilteredHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {getFilteredHistory.map((order, index) => (
+                    <HistoryCard key={`${order.id}-${index}`} order={order} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-400 mt-20">
+                  <History size={64} className="mx-auto mb-4 opacity-50" />
+                  <div className="text-xl">Няма поръчки за избрания период</div>
+                  <div className="text-sm">Опитайте с друг филтър или период</div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

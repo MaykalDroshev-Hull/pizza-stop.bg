@@ -8,11 +8,57 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: NextRequest) {
   try {
-    const { orderId, statusId } = await request.json();
+    const { orderId, statusId, readyTime } = await request.json();
 
-    if (!orderId || !statusId) {
+    if (!orderId) {
       return NextResponse.json(
-        { error: 'Order ID and Status ID are required' },
+        { error: 'Order ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Handle ready time update
+    if (readyTime) {
+      console.log(`API: Updating order ${orderId} ready time to ${readyTime}`);
+
+      // First check if order exists
+      const { data: existingOrder, error: fetchError } = await supabaseAdmin
+        .from('Order')
+        .select('OrderID')
+        .eq('OrderID', orderId)
+        .single();
+
+      if (fetchError) {
+        console.error('API: Error fetching order:', fetchError);
+        return NextResponse.json(
+          { error: 'Order not found' },
+          { status: 404 }
+        );
+      }
+
+      // Update the order ready time
+      const { data, error } = await supabaseAdmin
+        .from('Order')
+        .update({ ReadyTime: readyTime })
+        .eq('OrderID', orderId)
+        .select();
+
+      if (error) {
+        console.error('API: Error updating order ready time:', error);
+        return NextResponse.json(
+          { error: 'Failed to update order ready time', details: error.message },
+          { status: 500 }
+        );
+      }
+
+      console.log('API: Successfully updated order ready time:', data);
+      return NextResponse.json({ success: true, data });
+    }
+
+    // Handle status update
+    if (!statusId) {
+      return NextResponse.json(
+        { error: 'Status ID is required for status updates' },
         { status: 400 }
       );
     }
@@ -53,7 +99,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data });
 
   } catch (error) {
-    console.error('API: Exception in update order status:', error);
+    console.error('API: Exception in update order:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

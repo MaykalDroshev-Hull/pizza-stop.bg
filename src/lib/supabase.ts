@@ -74,6 +74,8 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
       OrderID,
       LoginID,
       OrderDT,
+      ExpectedDT,
+      ReadyTime,
       OrderLocation,
       OrderLocationCoordinates,
       OrderStatusID,
@@ -130,6 +132,8 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
       return {
         OrderID: order.OrderID,
         OrderDT: order.OrderDT,
+        ExpectedDT: order.ExpectedDT,
+        ReadyTime: order.ReadyTime,
         OrderLocation: order.OrderLocation,
         OrderLocationCoordinates: order.OrderLocationCoordinates,
         OrderStatusID: order.OrderStatusID,
@@ -156,6 +160,8 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
         OrderID,
         LoginID,
         OrderDT,
+        ExpectedDT,
+        ReadyTime,
         OrderLocation,
         OrderLocationCoordinates,
         OrderStatusID,
@@ -208,6 +214,8 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
       return {
         OrderID: order.OrderID,
         OrderDT: order.OrderDT,
+        ExpectedDT: order.ExpectedDT,
+        ReadyTime: order.ReadyTime,
         OrderLocation: order.OrderLocation,
         OrderLocationCoordinates: order.OrderLocationCoordinates,
         OrderStatusID: order.OrderStatusID,
@@ -256,6 +264,42 @@ export async function updateOrderStatusInDB(orderId: number, statusId: number) {
     return true;
   } catch (error) {
     console.error('Exception in updateOrderStatus:', error);
+    console.error('Exception details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    return false;
+  }
+}
+
+export async function updateOrderReadyTime(orderId: number, readyTime: Date): Promise<boolean> {
+  try {
+    console.log(`Attempting to update order ${orderId} ready time to ${readyTime.toISOString()}`);
+    
+    // Use API route to update order ready time (server-side with service role key)
+    const response = await fetch('/api/kitchen-and-delivery', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        orderId,
+        readyTime: readyTime.toISOString()
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('API error updating order ready time:', errorData);
+      return false;
+    }
+
+    const result = await response.json();
+    console.log('Successfully updated order ready time via API:', result);
+    return true;
+  } catch (error) {
+    console.error('Exception in updateOrderReadyTime:', error);
     console.error('Exception details:', {
       name: error.name,
       message: error.message,
@@ -340,6 +384,8 @@ export interface LkOrderProducts {
 export interface KitchenOrder {
   OrderID: number
   OrderDT: string
+  ExpectedDT: string | null
+  ReadyTime: string | null
   OrderLocation: string | null
   OrderLocationCoordinates: string | null
   OrderStatusID: number

@@ -77,7 +77,7 @@ export default function AdminLogin({ title, onLogin, redirectPath }: AdminLoginP
             <div className="flex items-center space-x-3 mb-2">
               <User className="text-red-400" size={24} />
               <label className="text-lg font-semibold text-white">
-                👤 Админ Потребител
+              Админ Потребител
               </label>
             </div>
             <input
@@ -95,7 +95,7 @@ export default function AdminLogin({ title, onLogin, redirectPath }: AdminLoginP
             <div className="flex items-center space-x-3 mb-2">
               <Lock className="text-red-400" size={24} />
               <label className="text-lg font-semibold text-white">
-                🔐 Парола
+                Парола
               </label>
             </div>
             <div className="relative">

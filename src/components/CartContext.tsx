@@ -46,10 +46,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return []
   })
 
-  // Calculate addon cost for an item (first 3 free, others cost money)
+  // Calculate addon cost for an item (first 3 of each type free)
   const calculateAddonCost = (addons: ProductAddon[]) => {
     return addons
-      .map((addon, index) => index < 3 ? 0 : addon.Price)
+      .map((addon) => {
+        // Count how many of this type are selected
+        const typeSelected = addons.filter(a => a.AddonType === addon.AddonType)
+        const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID)
+        return positionInType < 3 ? 0 : addon.Price // First 3 of each type are free
+      })
       .reduce((sum, price) => sum + price, 0)
   }
 
@@ -60,7 +65,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const addItem = (newItem: CartItem) => {
+    console.log('🔍 CartContext addItem called with:', newItem)
     setItems(prevItems => {
+      console.log('🔍 Previous items:', prevItems)
       const existingItemIndex = prevItems.findIndex(item => 
         item.id === newItem.id && 
         item.size === newItem.size &&
@@ -69,11 +76,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       )
 
       if (existingItemIndex > -1) {
+        console.log('🔍 Item exists, updating quantity')
         const updatedItems = [...prevItems]
         updatedItems[existingItemIndex].quantity += newItem.quantity
+        console.log('🔍 Updated items:', updatedItems)
         return updatedItems
       } else {
-        return [...prevItems, newItem]
+        console.log('🔍 New item, adding to cart')
+        const newItems = [...prevItems, newItem]
+        console.log('🔍 New items:', newItems)
+        return newItems
       }
     })
   }
