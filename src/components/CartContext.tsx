@@ -64,82 +64,82 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return (item.price + addonCost) * item.quantity
   }, [])
 
-  const addItem = (newItem: CartItem) => {
-    console.log('🔍 CartContext addItem called with:', newItem)
+  const addItem = useCallback((newItem: CartItem) => {
+    console.log('🔍 CartContext addItem called with:', newItem);
     setItems(prevItems => {
-      console.log('🔍 Previous items:', prevItems)
+      console.log('🔍 Previous items:', prevItems);
       const existingItemIndex = prevItems.findIndex(item => 
         item.id === newItem.id && 
         item.size === newItem.size &&
         JSON.stringify(item.addons.map(a => a.AddonID).sort()) === JSON.stringify(newItem.addons.map(a => a.AddonID).sort()) &&
         item.comment === newItem.comment
-      )
+      );
 
       if (existingItemIndex > -1) {
-        console.log('🔍 Item exists, updating quantity')
-        const updatedItems = [...prevItems]
-        updatedItems[existingItemIndex].quantity += newItem.quantity
-        console.log('🔍 Updated items:', updatedItems)
-        return updatedItems
+        console.log('🔍 Item exists, updating quantity');
+        const updatedItems = [...prevItems];
+        updatedItems[existingItemIndex].quantity += newItem.quantity;
+        console.log('🔍 Updated items:', updatedItems);
+        return updatedItems;
       } else {
-        console.log('🔍 New item, adding to cart')
-        const newItems = [...prevItems, newItem]
-        console.log('🔍 New items:', newItems)
-        return newItems
+        console.log('🔍 New item, adding to cart');
+        const newItems = [...prevItems, newItem];
+        console.log('🔍 New items:', newItems);
+        return newItems;
       }
-    })
-  }, [])
+    });
+  }, []);
 
   const removeItem = useCallback((id: number) => {
     setItems(prevItems => prevItems.filter(item => item.id !== id))
-  }, [])
+  }, []);
 
   const updateQuantity = useCallback((id: number, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(id)
-      return
+      removeItem(id);
+      return;
     }
     setItems(prevItems => 
       prevItems.map(item => 
         item.id === id ? { ...item, quantity } : item
       )
-    )
-  }, [removeItem])
+    );
+  }, [removeItem]);
 
   const clearCart = useCallback(() => {
-    setItems([])
+    setItems([]);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('pizza-stop-cart')
+      localStorage.removeItem('pizza-stop-cart');
     }
-  }, [])
+  }, []);
 
   const refreshFromStorage = useCallback(() => {
     if (typeof window !== 'undefined') {
-      const savedCart = localStorage.getItem('pizza-stop-cart')
+      const savedCart = localStorage.getItem('pizza-stop-cart');
       if (savedCart) {
         try {
-          const parsedCart = JSON.parse(savedCart)
-          setItems(parsedCart)
+          const parsedCart = JSON.parse(savedCart);
+          setItems(parsedCart);
         } catch (error) {
-          console.error('Error parsing saved cart:', error)
-          localStorage.removeItem('pizza-stop-cart')
-          setItems([])
+          console.error('Error parsing saved cart:', error);
+          localStorage.removeItem('pizza-stop-cart');
+          setItems([]);
         }
       } else {
-        setItems([])
+        setItems([]);
       }
     }
-  }, []) // Empty dependency array since this function doesn't depend on any props or state
+  }, []); // Empty dependency array since this function doesn't depend on any props or state
 
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
-  const totalPrice = items.reduce((sum, item) => sum + getItemTotalPrice(item), 0)
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = items.reduce((sum, item) => sum + getItemTotalPrice(item), 0);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('pizza-stop-cart', JSON.stringify(items))
+      localStorage.setItem('pizza-stop-cart', JSON.stringify(items));
     }
-  }, [items])
+  }, [items]);
 
   return (
     <CartContext.Provider value={{
