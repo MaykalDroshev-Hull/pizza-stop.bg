@@ -19,6 +19,10 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
   const [isChecking, setIsChecking] = useState(false)
   const [deliveryZone, setDeliveryZone] = useState('')
   const [isDetectingLocation, setIsDetectingLocation] = useState(false)
+  const [notification, setNotification] = useState<{
+    type: 'error' | 'success' | 'info'
+    message: string
+  } | null>(null)
 
   useEffect(() => {
     if (!mapRef.current || mapLoaded) return
@@ -112,11 +116,20 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
     setIsAddressInCoverage(null)
     setIsChecking(false)
     setDeliveryZone('')
+    setNotification(null)
+  }
+
+  const showNotification = (type: 'error' | 'success' | 'info', message: string) => {
+    setNotification({ type, message })
+    // Auto-hide notification after 5 seconds
+    setTimeout(() => {
+      setNotification(null)
+    }, 5000)
   }
 
   const detectDeviceLocation = () => {
     if (!navigator.geolocation) {
-      alert('Геолокацията не се поддържа от вашия браузър.')
+      showNotification('error', 'Геолокацията не се поддържа от вашия браузър.')
       return
     }
 
@@ -148,13 +161,13 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
                 // Automatically check coverage for this address
                 checkAddressCoverage(detectedAddress)
               } else {
-                alert('Неуспешно определяне на адреса. Моля, въведете го ръчно.')
+                showNotification('error', 'Неуспешно определяне на адреса. Моля, въведете го ръчно.')
               }
             }
           )
         } else {
           setIsDetectingLocation(false)
-          alert(`Вашата локация е на ${Math.round(distance / 1000)}km от Ловеч, което е извън зоната за доставка. Моля, въведете адрес ръчно.`)
+          showNotification('error', `Вашата локация е на ${Math.round(distance / 1000)}km от Ловеч, което е извън зоната за доставка. Моля, въведете адрес ръчно.`)
         }
       },
       (error) => {
@@ -173,7 +186,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
             break
         }
         
-        alert(errorMessage)
+        showNotification('error', errorMessage)
       },
       {
         enableHighAccuracy: true,
@@ -224,7 +237,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
           setAddress(place.formatted_address)
         } else {
           // Show error for addresses outside the range
-          alert('Този адрес е извън зоната за доставка (над 30km от Ловеч). Моля, изберете адрес по-близо до града.')
+          showNotification('error', 'Този адрес е извън зоната за доставка (над 30km от Ловеч). Моля, изберете адрес по-близо до града.')
         }
       }
     })
@@ -475,6 +488,23 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
                         {isChecking ? 'Проверявам...' : 'Провери'}
                       </button>
                     </div>
+                    
+                    {/* Notification */}
+                    {notification && (
+                      <div className={`${styles.notification} ${styles[notification.type]}`}>
+                        <div className={styles.notificationContent}>
+                          <span className={styles.notificationMessage}>
+                            {notification.message}
+                          </span>
+                          <button
+                            className={styles.notificationClose}
+                            onClick={() => setNotification(null)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </>
                                                ) : isAddressInCoverage ? (
                   <div className={styles.successMessage}>
