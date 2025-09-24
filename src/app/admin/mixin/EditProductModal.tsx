@@ -61,6 +61,9 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     { id: 1, name: 'Пици' },
     { id: 2, name: 'Бургери' },
     { id: 3, name: 'Дюнери' },
+    { id: 4, name: 'Напитки' },
+    { id: 5, name: 'Сосове' },
+    { id: 6, name: 'Добавки' },
     { id: 7, name: 'Десерти' }
   ];
 
@@ -142,6 +145,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
       case 4:
         return 'Напитки';
       case 5:
+        return 'Сосове';
       case 6:
         return 'Добавки';
       default:
