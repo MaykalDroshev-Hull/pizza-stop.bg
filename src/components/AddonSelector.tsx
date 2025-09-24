@@ -30,14 +30,16 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
     onAddonChange(newSelectedAddons)
   }
 
-  const getAddonPrice = (addon: ProductAddon, index: number) => {
-    // First 3 addons are free, others cost money
-    const isFree = index < 3
+  const getAddonPrice = (addon: ProductAddon, index: number, addonType: string) => {
+    // First 3 addons of each type (sauce/vegetable) are free
+    const typeAddons = selectedAddons.filter(a => a.AddonType === addonType)
+    const typeIndex = typeAddons.indexOf(addon)
+    const isFree = typeIndex < 3
     return isFree ? 0 : addon.Price
   }
 
   const totalAddonCost = selectedAddons
-    .map((addon, index) => getAddonPrice(addon, index))
+    .map((addon, index) => getAddonPrice(addon, index, addon.AddonType))
     .reduce((sum, price) => sum + price, 0)
 
   const renderAddonGroup = (addons: ProductAddon[], title: string) => {
@@ -49,8 +51,10 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
         <div className="grid grid-cols-2 gap-3">
           {addons.map((addon) => {
             const isSelected = selectedAddonIds.includes(addon.AddonID)
-            const addonIndex = selectedAddonIds.indexOf(addon.AddonID)
-            const price = getAddonPrice(addon, addonIndex)
+            
+            // HARDCODE: Always show "Безплатно" for now
+            let displayText = 'Безплатно'
+            let textColor = isSelected ? 'text-green-300' : 'text-green-400'
             
             return (
               <button
@@ -63,10 +67,8 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
                 }`}
               >
                 <div className="font-medium">{addon.Name}</div>
-                <div className={`text-xs mt-1 ${
-                  isSelected ? 'text-green-300' : 'text-muted'
-                }`}>
-                  {selectedAddonIds.length >= 3 ? (price === 0 ? 'Безплатно' : `${price.toFixed(2)} лв.`) : ''}
+                <div className={`text-xs mt-1 ${textColor}`}>
+                  {displayText}
                 </div>
               </button>
             )
@@ -81,7 +83,7 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
       <div className="mb-4">
         <h2 className="text-xl font-bold text-white mb-2">Добавки</h2>
         <p className="text-sm text-muted">
-          Първите 3 добавки са безплатни, останалите се заплащат отделно
+          Първите 3 съса и първите 3 салата са безплатни. След избора на 3-ти със/салат ще се покажат цените за останалите.
         </p>
       </div>
 
@@ -93,25 +95,25 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
           <div className="flex justify-between items-center mb-2">
             <span className="text-white font-medium">Избрани добавки:</span>
             <span className="text-sm text-muted">
-              {selectedAddons.length}/3 безплатни
+              {selectedAddons.filter(a => a.AddonType === 'sauce').length}/3 съса, {selectedAddons.filter(a => a.AddonType === 'vegetable').length}/3 салата
             </span>
           </div>
           
           <div className="space-y-2 mb-3">
             {selectedAddons.map((addon, index) => {
-              const price = getAddonPrice(addon, index)
+              const price = getAddonPrice(addon, index, addon.AddonType)
               return (
                 <div key={addon.AddonID} className="flex justify-between items-center text-sm">
                   <span className="text-white">{addon.Name}</span>
                   <span className={price === 0 ? 'text-green-400' : 'text-red-400'}>
-                    {selectedAddons.length >= 3 ? (price === 0 ? 'Безплатно' : `+${price.toFixed(2)} лв.`) : ''}
+                    {price === 0 ? 'Безплатно' : `+${price.toFixed(2)} лв.`}
                   </span>
                 </div>
               )
             })}
           </div>
 
-          {selectedAddons.length >= 3 && (
+          {totalAddonCost > 0 && (
             <div className="pt-3 border-t border-white/10">
               <div className="flex justify-between items-center">
                 <span className="text-white font-medium">Допълнителна цена:</span>

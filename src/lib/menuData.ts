@@ -142,8 +142,32 @@ export async function fetchAddons(productTypeID: number) {
     }
     
     if (!linkedAddons || linkedAddons.length === 0) {
-      console.log(`No linked addons found for product type ${productTypeID}`)
-      return []
+      console.log(`No linked addons found for product type ${productTypeID}, using fallback addons`)
+      // Fallback: get all available addons (sauces and vegetables) for all product types
+      const { data: fallbackAddons, error: fallbackError } = await supabase
+        .from('Addon')
+        .select('*')
+        .in('ProductTypeID', [5, 6]) // Only sauces (5) and vegetables (6)
+      
+      if (fallbackError) {
+        console.error('Error fetching fallback addons:', fallbackError)
+        return []
+      }
+      
+      if (!fallbackAddons) return []
+      
+      // Transform to our interface format
+      const transformedFallbackAddons: any[] = fallbackAddons.map(addon => ({
+        AddonID: addon.AddonID,
+        Name: addon.Name,
+        Price: addon.Price || 0,
+        ProductTypeID: addon.ProductTypeID,
+        AddonType: addon.ProductTypeID === 5 ? 'sauce' : 'vegetable',
+        AddonTypeBG: addon.ProductTypeID === 5 ? 'сосове' : 'салати'
+      }))
+      
+      console.log(`✅ Using fallback addons for product type ${productTypeID}:`, transformedFallbackAddons)
+      return transformedFallbackAddons
     }
     
     const addonIDs = linkedAddons.map(item => item.AddonID)
@@ -274,44 +298,64 @@ export async function fetchMenuData() {
         addons: [] // Initialize addons array
       }
 
+      // Debug drinks specifically
+      if (category === 'drinks') {
+        console.log('🥤 Drink product data:', {
+          name: product.Product,
+          ProductTypeID: product.ProductTypeID,
+          SmallPrice: product.SmallPrice,
+          MediumPrice: product.MediumPrice,
+          LargePrice: product.LargePrice,
+          menuItem: {
+            basePrice: menuItem.basePrice,
+            smallPrice: menuItem.smallPrice,
+            mediumPrice: menuItem.mediumPrice,
+            largePrice: menuItem.largePrice
+          }
+        })
+      }
+
       // Create sizes dynamically based on available prices in database
       // No hardcoded size names - let the database control everything
       const availableSizes: Array<{ name: string; price: number; multiplier: number; weight?: number | null }> = []
       
-      // Determine size names based on product category (Bulgarian grammar)
-      const isPizza = category === 'pizza'
-      
-      // Add Small size if available in database
-      if (product.SmallPrice && product.SmallPrice > 0) {
-        availableSizes.push({
-          name: isPizza ? 'Малка' : 'Малък',
-          price: product.SmallPrice,
-          multiplier: 1.0,
-          weight: product.SmallWeight || null
-        })
+      // Only create sizes for items that need size selection (pizzas and doners)
+      if (category === 'pizza' || category === 'doners') {
+        // Determine size names based on product category (Bulgarian grammar)
+        const isPizza = category === 'pizza'
+        
+        // Add Small size if available in database
+        if (product.SmallPrice && product.SmallPrice > 0) {
+          availableSizes.push({
+            name: isPizza ? 'Малка' : 'Малък',
+            price: product.SmallPrice,
+            multiplier: 1.0,
+            weight: product.SmallWeight || null
+          })
+        }
+        
+        // Add Medium size if available in database
+        if (product.MediumPrice && product.MediumPrice > 0) {
+          availableSizes.push({
+            name: isPizza ? 'Средна' : 'Среден',
+            price: product.MediumPrice,
+            multiplier: product.MediumPrice / (product.SmallPrice || 1),
+            weight: product.MediumWeight || null
+          })
+        }
+        
+        // Add Large size if available in database
+        if (product.LargePrice && product.LargePrice > 0) {
+          availableSizes.push({
+            name: isPizza ? 'Голяма' : 'Голям',
+            price: product.LargePrice,
+            multiplier: product.LargePrice / (product.SmallPrice || 1),
+            weight: product.LargeWeight || null
+          })
+        }
       }
       
-      // Add Medium size if available in database
-      if (product.MediumPrice && product.MediumPrice > 0) {
-        availableSizes.push({
-          name: isPizza ? 'Средна' : 'Среден',
-          price: product.MediumPrice,
-          multiplier: product.MediumPrice / (product.SmallPrice || 1),
-          weight: product.MediumWeight || null
-        })
-      }
-      
-      // Add Large size if available in database
-      if (product.LargePrice && product.LargePrice > 0) {
-        availableSizes.push({
-          name: isPizza ? 'Голяма' : 'Голям',
-          price: product.LargePrice,
-          multiplier: product.LargePrice / (product.SmallPrice || 1),
-          weight: product.LargeWeight || null
-        })
-      }
-      
-      // Assign the dynamically created sizes
+      // Assign the dynamically created sizes (empty array for burgers and drinks)
       menuItem.sizes = availableSizes
 
       menuData[category].push(menuItem)

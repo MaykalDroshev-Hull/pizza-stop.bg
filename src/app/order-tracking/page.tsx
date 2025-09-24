@@ -403,7 +403,7 @@ function OrderTrackingContent() {
                         {item.size} • {item.quantity}x
                       </p>
                     </div>
-                    <p className="font-bold text-orange">{item.price.toFixed(2)} лв.</p>
+                    <p className="font-bold text-orange">{(item.price || 0).toFixed(2)} лв.</p>
                   </div>
                   
                   {/* Display addons if any */}
