@@ -168,7 +168,9 @@ export async function POST(request: NextRequest) {
       RfPaymentMethodID: paymentMethodId,
       IsPaid: false, // Orders start as unpaid
       ExpectedDT: expectedDT.toISOString(),
-      OrderType: isCollection ? 1 : 2 // 1 = Restaurant collection, 2 = Delivery
+      OrderType: isCollection ? 1 : 2, // 1 = Restaurant collection, 2 = Delivery
+      DeliveryPrice: isCollection ? 0 : deliveryCost, // Add delivery charge
+      TotalAmount: totalPrice + (isCollection ? 0 : deliveryCost) // Add total amount for the order
     }
 
     console.log('📋 Creating order with data:', orderData)
@@ -191,17 +193,30 @@ export async function POST(request: NextRequest) {
     if (orderItems && orderItems.length > 0) {
       console.log('📦 Saving order items:', orderItems.length)
       
-      const orderItemsData = orderItems.map((item: any) => ({
-        OrderID: order.OrderID,
-        ProductID: item.id,
-        ProductName: item.name,
-        ProductSize: item.size || 'Medium',
-        Quantity: item.quantity,
-        UnitPrice: item.price,
-        TotalPrice: item.price * item.quantity,
-        Addons: item.addons ? JSON.stringify(item.addons) : null,
-        Comment: item.comment || null
-      }))
+      const orderItemsData = orderItems.map((item: any) => {
+        // Calculate addon prices
+        let addonTotal = 0
+        if (item.addons && Array.isArray(item.addons)) {
+          addonTotal = item.addons.reduce((sum: number, addon: any) => {
+            return sum + (addon.price || 0)
+          }, 0)
+        }
+        
+        // Calculate total price including addons
+        const itemTotal = (item.price + addonTotal) * item.quantity
+        
+        return {
+          OrderID: order.OrderID,
+          ProductID: item.id,
+          ProductName: item.name,
+          ProductSize: item.size || 'Medium',
+          Quantity: item.quantity,
+          UnitPrice: item.price,
+          TotalPrice: itemTotal,
+          Addons: item.addons ? JSON.stringify(item.addons) : null,
+          Comment: item.comment || null
+        }
+      })
 
       const { error: itemsError } = await supabase
         .from('LkOrderProduct')

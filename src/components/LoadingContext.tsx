@@ -12,8 +12,8 @@ interface LoadingContextType {
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined)
 
 export function LoadingProvider({ children }: { children: ReactNode }) {
-  const [isLoading, setIsLoading] = useState(true) // Start with loading true
-  const [isInitialLoad, setIsInitialLoad] = useState(true) // Track initial page load
+  const [isLoading, setIsLoading] = useState(false) // Start with loading false
+  const [isInitialLoad, setIsInitialLoad] = useState(false) // Track initial page load
 
   const startLoading = () => {
     console.log('🚀 LoadingContext: startLoading() called')

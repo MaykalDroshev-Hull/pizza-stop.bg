@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { ArrowLeft, Clock, MapPin, Phone, CreditCard, Truck, Store, CheckCircle, AlertCircle, Package, ChefHat, Utensils } from 'lucide-react'
+import { decryptOrderId } from '@/utils/orderEncryption'
 
 interface OrderDetails {
   orderId: string
@@ -16,7 +17,7 @@ interface OrderDetails {
   isCollection: boolean
   status: string
   estimatedTime?: string
-  items: Array<{
+  items?: Array<{
     name: string
     size: string
     quantity: number
@@ -40,29 +41,28 @@ interface OrderStatus {
 
 function OrderTrackingContent() {
   const searchParams = useSearchParams()
-  const orderId = searchParams.get('orderId')
+  const encryptedOrderId = searchParams.get('orderId')
   
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  
+  // Decrypt the order ID
+  const orderId = encryptedOrderId ? decryptOrderId(encryptedOrderId) : null
 
-  // Order status tracking
-  const [orderStatuses] = useState<OrderStatus[]>([
-    { id: 1, name: 'Поръчката е получена', description: 'Вашата поръчка е потвърдена', completed: true },
-    { id: 2, name: 'Приготвя се', description: 'Готвачите започнаха да приготвят вашата поръчка', completed: true },
-    { id: 3, name: 'Готова за доставка', description: 'Поръчката е готова и очаква доставка', completed: false },
-    { id: 4, name: 'В доставка', description: 'Куриерът е на път към вас', completed: false },
-    { id: 5, name: 'Доставена', description: 'Поръчката е доставена успешно', completed: false }
-  ])
 
   useEffect(() => {
-    if (orderId) {
+    if (encryptedOrderId && !orderId) {
+      // Invalid encrypted order ID
+      setError('Невалиден номер на поръчка')
+      setIsLoading(false)
+    } else if (orderId) {
       fetchOrderDetails(orderId)
     } else {
       setError('Не е предоставен номер на поръчка')
       setIsLoading(false)
     }
-  }, [orderId])
+  }, [orderId, encryptedOrderId])
 
   const fetchOrderDetails = async (orderId: string) => {
     try {
@@ -78,8 +78,47 @@ function OrderTrackingContent() {
         throw new Error('Грешка при зареждане на поръчката')
       }
       
-      const data = await response.json()
-      setOrderDetails(data)
+      const responseData = await response.json()
+      
+      // Debug: Log the response data to see the structure
+      console.log('API Response Data:', responseData)
+      
+      // Extract the order data from the API response
+      const orderData = responseData.order || responseData
+      
+      // Debug: Log the order data and items
+      console.log('Order Data:', orderData)
+      console.log('Order Items:', orderData.items)
+      
+      // Transform the data to match our interface
+      const transformedData = {
+        orderId: orderData.OrderID || orderData.orderId,
+        customerName: orderData.Login?.Name || orderData.customerName || 'Неизвестен клиент',
+        customerPhone: orderData.Login?.phone || orderData.customerPhone || '',
+        orderLocation: orderData.Login?.LocationText || orderData.orderLocation || '',
+        orderTime: orderData.OrderDT || orderData.orderTime || '',
+        paymentMethod: orderData.PaymentMethod?.PaymentMethodName || orderData.paymentMethod || '',
+        totalAmount: parseFloat(orderData.TotalAmount || orderData.totalAmount || 0),
+        deliveryCost: parseFloat(orderData.DeliveryPrice || orderData.DeliveryCost || orderData.deliveryCost || 0),
+        isCollection: orderData.OrderType === 1 || orderData.isCollection || false,
+        status: orderData.OrderStatus?.StatusName || orderData.status || 'Неизвестен',
+        estimatedTime: orderData.ExpectedDT || orderData.estimatedTime,
+        items: (orderData.items || []).map(item => ({
+          name: item.ProductName || item.name || 'Продукт',
+          size: item.Size || item.size || 'Стандарт',
+          quantity: item.Quantity || item.quantity || 1,
+          price: parseFloat(item.TotalPrice || item.UnitPrice || item.Price || item.price || 0),
+          addons: item.Addons || item.addons || [],
+          comment: item.Comment || item.comment
+        })),
+        deliveryInstructions: orderData.Login?.addressInstructions || orderData.deliveryInstructions
+      }
+      
+      // Debug: Log the transformed data
+      console.log('Transformed Data:', transformedData)
+      console.log('Transformed Items:', transformedData.items)
+      
+      setOrderDetails(transformedData)
     } catch (err: any) {
       setError(err.message || 'Грешка при зареждане на поръчката')
     } finally {
@@ -93,6 +132,65 @@ function OrderTrackingContent() {
 
   const handleBackToOrders = () => {
     window.location.href = '/dashboard'
+  }
+
+  // Format date to DD/mm/yy HH:MM
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return ''
+    
+    try {
+      const date = new Date(dateString)
+      const day = date.getDate().toString().padStart(2, '0')
+      const month = (date.getMonth() + 1).toString().padStart(2, '0')
+      const year = date.getFullYear().toString().slice(-2)
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      
+      return `${day}/${month}/${year} ${hours}:${minutes}`
+    } catch (error) {
+      console.error('Error formatting date:', error)
+      return dateString
+    }
+  }
+
+  // Calculate total from individual items
+  const calculateItemsTotal = (items: any[]) => {
+    if (!items || items.length === 0) return 0
+    
+    return items.reduce((total, item) => {
+      const itemTotal = parseFloat(item.TotalPrice || item.UnitPrice || item.Price || item.price || 0)
+      
+      // Add addon prices
+      let addonTotal = 0
+      if (item.Addons && Array.isArray(item.Addons)) {
+        addonTotal = item.Addons.reduce((addonSum: number, addon: any) => {
+          return addonSum + parseFloat(addon.Price || addon.price || 0)
+        }, 0)
+      }
+      
+      return total + itemTotal + addonTotal
+    }, 0)
+  }
+
+  // Get order status based on the actual status
+  const getOrderStatuses = (currentStatus: string) => {
+    const statusMap: { [key: string]: number } = {
+      'Получена': 1,
+      'Приготвя се': 2,
+      'Готова за доставка': 3,
+      'В доставка': 4,
+      'Доставена': 5
+    }
+    
+    const currentStep = statusMap[currentStatus] || 1
+    
+    return [
+      { id: 1, name: 'Поръчката е получена', description: 'Вашата поръчка е потвърдена', completed: currentStep >= 1 },
+      { id: 2, name: 'Приготвя се', description: 'Готвачите започнаха да приготвят вашата поръчка', completed: currentStep >= 2 },
+      { id: 3, name: 'Готова за доставка', description: 'Поръчката е готова и очаква доставка', completed: currentStep >= 3 },
+      { id: 4, name: 'В доставка', description: 'Куриерът е на път към вас', completed: currentStep >= 4 },
+      { id: 5, name: 'Доставена', description: 'Поръчката е доставена успешно', completed: currentStep >= 5 }
+    ]
   }
 
   if (isLoading) {
@@ -181,7 +279,7 @@ function OrderTrackingContent() {
             </h2>
             
             <div className="space-y-4">
-              {orderStatuses.map((status, index) => (
+              {getOrderStatuses(orderDetails.status).map((status, index) => (
                 <div key={status.id} className="flex items-start space-x-4">
                   <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                     status.completed 
@@ -201,9 +299,6 @@ function OrderTrackingContent() {
                       {status.name}
                     </h3>
                     <p className="text-sm text-muted">{status.description}</p>
-                    {status.timestamp && (
-                      <p className="text-xs text-muted mt-1">{status.timestamp}</p>
-                    )}
                   </div>
                 </div>
               ))}
@@ -221,8 +316,8 @@ function OrderTrackingContent() {
               {/* Customer Info */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-orange/20 rounded-lg flex items-center justify-center">
-                    <Phone size={20} className="text-orange" />
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                    <Phone size={20} className="text-white" />
                   </div>
                   <div>
                     <p className="text-sm text-muted">Клиент</p>
@@ -232,8 +327,8 @@ function OrderTrackingContent() {
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue/20 rounded-lg flex items-center justify-center">
-                    {orderDetails.isCollection ? <Store size={20} className="text-blue" /> : <MapPin size={20} className="text-blue" />}
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                    {orderDetails.isCollection ? <Store size={20} className="text-white" /> : <MapPin size={20} className="text-white" />}
                   </div>
                   <div>
                     <p className="text-sm text-muted">
@@ -244,8 +339,8 @@ function OrderTrackingContent() {
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green/20 rounded-lg flex items-center justify-center">
-                    <CreditCard size={20} className="text-green" />
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                    <CreditCard size={20} className="text-white" />
                   </div>
                   <div>
                     <p className="text-sm text-muted">Начин на плащане</p>
@@ -257,18 +352,18 @@ function OrderTrackingContent() {
               {/* Order Info */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-purple/20 rounded-lg flex items-center justify-center">
-                    <Clock size={20} className="text-purple" />
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                    <Clock size={20} className="text-white" />
                   </div>
                   <div>
                     <p className="text-sm text-muted">Време за поръчка</p>
-                    <p className="font-medium text-text">{orderDetails.orderTime}</p>
+                    <p className="font-medium text-text">{formatDateTime(orderDetails.orderTime)}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-red/20 rounded-lg flex items-center justify-center">
-                    <Package size={20} className="text-red" />
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                    <Package size={20} className="text-white" />
                   </div>
                   <div>
                     <p className="text-sm text-muted">Статус</p>
@@ -278,12 +373,12 @@ function OrderTrackingContent() {
 
                 {orderDetails.estimatedTime && (
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-yellow/20 rounded-lg flex items-center justify-center">
-                      <Truck size={20} className="text-yellow" />
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                      <Truck size={20} className="text-white" />
                     </div>
                     <div>
                       <p className="text-sm text-muted">Очаквано време</p>
-                      <p className="font-medium text-text">{orderDetails.estimatedTime}</p>
+                      <p className="font-medium text-text">{formatDateTime(orderDetails.estimatedTime)}</p>
                     </div>
                   </div>
                 )}
@@ -299,31 +394,28 @@ function OrderTrackingContent() {
             </h2>
             
             <div className="space-y-4">
-              {orderDetails.items.map((item, index) => (
+              {orderDetails.items && orderDetails.items.length > 0 ? orderDetails.items.map((item, index) => (
                 <div key={index} className="p-4 bg-white/6 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-3">
-                      <div className="text-2xl">🍕</div>
-                      <div>
-                        <h4 className="font-medium text-text">{item.name}</h4>
-                        <p className="text-sm text-muted">
-                          {item.size} • {item.quantity}x
-                        </p>
-                      </div>
+                    <div>
+                      <h4 className="font-medium text-text">{item.name}</h4>
+                      <p className="text-sm text-muted">
+                        {item.size} • {item.quantity}x
+                      </p>
                     </div>
                     <p className="font-bold text-orange">{(item.price || 0).toFixed(2)} лв.</p>
                   </div>
                   
                   {/* Display addons if any */}
                   {item.addons && item.addons.length > 0 && (
-                    <div className="mt-3 pl-11">
+                    <div className="mt-3">
                       <div className="flex flex-wrap gap-2">
                         {item.addons.map((addon, addonIndex) => (
                           <span 
                             key={addonIndex}
                             className="text-xs bg-orange/20 text-orange px-2 py-1 rounded-md"
                           >
-                            {addon.name}
+                            {addon.name || 'Добавка'}
                             {(addon.price || 0) > 0 && ` (+${(addon.price || 0).toFixed(2)} лв.)`}
                           </span>
                         ))}
@@ -333,14 +425,19 @@ function OrderTrackingContent() {
                   
                   {/* Display comment if any */}
                   {item.comment && (
-                    <div className="mt-2 pl-11">
+                    <div className="mt-2">
                       <p className="text-xs text-muted">
                         <span className="font-medium">Коментар:</span> {item.comment}
                       </p>
                     </div>
                   )}
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8">
+                  <Package size={48} className="text-muted mx-auto mb-4" />
+                  <p className="text-muted">Няма налични детайли за продуктите</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -351,7 +448,7 @@ function OrderTrackingContent() {
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted">Сума на продуктите:</span>
-                <span className="text-white">{orderDetails.totalAmount.toFixed(2)} лв.</span>
+                <span className="text-white">{calculateItemsTotal(orderDetails.items || []).toFixed(2)} лв.</span>
               </div>
               
               {!orderDetails.isCollection && (
@@ -367,7 +464,7 @@ function OrderTrackingContent() {
                 <div className="flex items-center justify-between text-lg font-bold">
                   <span>Обща сума:</span>
                   <span className="text-white">
-                    {(orderDetails.totalAmount + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} лв.
+                    {(calculateItemsTotal(orderDetails.items || []) + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} лв.
                   </span>
                 </div>
               </div>

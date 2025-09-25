@@ -30,10 +30,14 @@ export default function UserPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      // User is already logged in, redirect to dashboard
-      window.location.href = '/dashboard'
+      // User is already logged in, redirect to returnUrl or dashboard
+      if (returnUrl) {
+        window.location.href = returnUrl
+      } else {
+        window.location.href = '/dashboard'
+      }
     }
-  }, [user])
+  }, [user, returnUrl])
 
   // Prevent browser validation tooltips
   useEffect(() => {
