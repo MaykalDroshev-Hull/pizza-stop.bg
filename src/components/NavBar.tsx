@@ -17,7 +17,17 @@ function DoorSign() {
           <div className="hanger-strings"></div>
         </div>
         <span className="sign-text">
-          {isOpen ? 'ОТВОРЕНО' : 'ЗАТВОРЕНО'}
+          {isOpen ? (
+            <>
+              <span className="hidden sm:inline">ОТВОРЕНО</span>
+              <span className="sm:hidden">ОТВ.</span>
+            </>
+          ) : (
+            <>
+              <span className="hidden sm:inline">ЗАТВОРЕНО</span>
+              <span className="sm:hidden">ЗАТВ.</span>
+            </>
+          )}
         </span>
       </div>
     </div>
