@@ -12,6 +12,50 @@ interface PasswordResetEmailOptions {
   resetUrl: string
 }
 
+interface OrderConfirmationEmailOptions {
+  to: string
+  name: string
+  orderId: string
+  orderDetails: {
+    items: Array<{
+      name: string
+      size?: string
+      quantity: number
+      price: number
+      addons?: Array<{ name: string; price?: number }>
+      comment?: string
+    }>
+    totalAmount: number
+    orderTime: string
+    orderType: string
+    paymentMethod: string
+    location: string
+    estimatedTime?: string
+  }
+}
+
+interface OrderReadyTimeEmailOptions {
+  to: string
+  name: string
+  orderId: string
+  readyTimeMinutes: number
+  orderDetails: {
+    items: Array<{
+      name: string
+      size?: string
+      quantity: number
+      price: number
+      addons?: Array<{ name: string; price?: number }>
+      comment?: string
+    }>
+    totalAmount: number
+    orderTime: string
+    orderType: string
+    paymentMethod: string
+    location: string
+  }
+}
+
 export class EmailService {
   private transporter: nodemailer.Transporter
 
@@ -26,7 +70,7 @@ export class EmailService {
   }
 
   async sendWelcomeEmail({ to, name }: EmailOptions): Promise<void> {
-    const logoUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public/images/home/logo.png`
+    const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -37,32 +81,36 @@ export class EmailService {
         <title>Добре дошли в Pizza Stop!</title>
         <style>
           body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Inter, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #f8fafc;
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f8f9fa;
+            background: linear-gradient(180deg, #0b1020 0%, #0b1020 50%, #111827 100%);
+            background-color: #0b1020;
           }
           .email-container {
-            background-color: white;
-            border-radius: 12px;
+            background-color: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
             padding: 40px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
           }
           .logo {
             text-align: center;
             margin-bottom: 30px;
           }
           .logo img {
-            max-width: 200px;
+            width: 80px;
             height: auto;
+            border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(225, 29, 72, 0.35);
           }
           .welcome-title {
-            color: #d32f2f;
+            color: #ff7f11;
             font-size: 28px;
-            font-weight: bold;
+            font-weight: 800;
             text-align: center;
             margin-bottom: 20px;
           }
@@ -70,43 +118,37 @@ export class EmailService {
             font-size: 16px;
             text-align: center;
             margin-bottom: 30px;
-            color: #555;
+            color: #cbd5e1;
           }
           .order-button {
             display: inline-block;
-            background-color: #d32f2f;
+            background-color: #ff7f11;
             color: white;
-            padding: 15px 30px;
+            padding: 18px 35px;
             text-decoration: none;
-            border-radius: 25px;
-            font-weight: bold;
+            border-radius: 18px;
+            font-weight: 800;
             font-size: 16px;
             text-align: center;
             margin: 20px auto;
-            transition: background-color 0.3s ease;
-          }
-          .order-button:hover {
-            background-color: #b71c1c;
+            border: none;
           }
           .footer {
             text-align: center;
             margin-top: 40px;
             padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #888;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
             font-size: 14px;
           }
           .highlight {
-            color: #d32f2f;
-            font-weight: bold;
+            color: #ff7f11;
+            font-weight: 700;
           }
         </style>
       </head>
       <body>
         <div class="email-container">
-          <div class="logo">
-            <img src="${logoUrl}" alt="Pizza Stop Logo" />
-          </div>
           
           <h1 class="welcome-title">Добре дошли в Pizza Stop! 🍕</h1>
           
@@ -153,7 +195,7 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail({ to, name, resetToken, resetUrl }: PasswordResetEmailOptions): Promise<void> {
-    const logoUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/public/images/home/logo.png`
+    const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -164,32 +206,36 @@ export class EmailService {
         <title>Възстановяване на парола - Pizza Stop</title>
         <style>
           body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Inter, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #f8fafc;
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f8f9fa;
+            background: linear-gradient(180deg, #0b1020 0%, #0b1020 50%, #111827 100%);
+            background-color: #0b1020;
           }
           .email-container {
-            background-color: white;
-            border-radius: 12px;
+            background-color: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
             padding: 40px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
           }
           .logo {
             text-align: center;
             margin-bottom: 30px;
           }
           .logo img {
-            max-width: 200px;
+            width: 80px;
             height: auto;
+            border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(225, 29, 72, 0.35);
           }
           .reset-title {
-            color: #d32f2f;
+            color: #ff7f11;
             font-size: 28px;
-            font-weight: bold;
+            font-weight: 800;
             text-align: center;
             margin-bottom: 20px;
           }
@@ -197,51 +243,46 @@ export class EmailService {
             font-size: 16px;
             text-align: center;
             margin-bottom: 30px;
-            color: #555;
+            color: #cbd5e1;
           }
           .reset-button {
             display: inline-block;
-            background-color: #d32f2f;
+            background-color: #ff7f11;
             color: white;
-            padding: 15px 30px;
+            padding: 18px 35px;
             text-decoration: none;
-            border-radius: 25px;
-            font-weight: bold;
+            border-radius: 18px;
+            font-weight: 800;
             font-size: 16px;
             text-align: center;
             margin: 20px auto;
-            transition: background-color 0.3s ease;
-          }
-          .reset-button:hover {
-            background-color: #b71c1c;
+            border: none;
           }
           .footer {
             text-align: center;
             margin-top: 40px;
             padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #888;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
             font-size: 14px;
           }
           .highlight {
-            color: #d32f2f;
-            font-weight: bold;
+            color: #ff7f11;
+            font-weight: 700;
           }
           .warning {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 15px;
+            background-color: rgba(255, 127, 17, 0.1);
+            border: 1px solid rgba(255, 127, 17, 0.3);
+            border-radius: 12px;
+            padding: 20px;
             margin: 20px 0;
-            color: #856404;
+            color: #ff7f11;
+            font-weight: 500;
           }
         </style>
       </head>
       <body>
         <div class="email-container">
-          <div class="logo">
-            <img src="${logoUrl}" alt="Pizza Stop Logo" />
-          </div>
           
           <h1 class="reset-title">Възстановяване на парола 🔐</h1>
           
@@ -264,7 +305,7 @@ export class EmailService {
           
           <p class="reset-text">
             Ако имате проблеми с бутона, копирайте този линк в браузъра:<br>
-            <a href="${resetUrl}" style="color: #d32f2f; word-break: break-all;">${resetUrl}</a>
+            <a href="${resetUrl}" style="color: #ff7f11; word-break: break-all; font-weight: 700;">${resetUrl}</a>
           </p>
           
           <div class="footer">
@@ -289,6 +330,526 @@ export class EmailService {
     } catch (error) {
       console.error('Error sending password reset email:', error)
       throw new Error('Failed to send password reset email')
+    }
+  }
+
+  async sendOrderConfirmationEmail({ to, name, orderId, orderDetails }: OrderConfirmationEmailOptions): Promise<void> {
+    const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
+    
+    // Generate items HTML
+    const itemsHtml = orderDetails.items.map(item => `
+      <div style="margin-bottom: 15px; padding: 16px; background-color: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="flex: 1;">
+            <p style="margin: 0; font-weight: 800; color: #f8fafc; font-size: 16px;">
+              ${item.name}${item.size ? ` (${item.size})` : ''}
+            </p>
+            ${item.addons && item.addons.length > 0 ? `
+              <p style="margin: 5px 0 0 0; font-size: 14px; color: #cbd5e1;">
+                Добавки: ${item.addons.map(addon => addon.name).join(', ')}
+              </p>
+            ` : ''}
+            ${item.comment ? `
+              <p style="margin: 5px 0 0 0; font-size: 14px; color: #cbd5e1; font-style: italic;">
+                Бележка: ${item.comment}
+              </p>
+            ` : ''}
+          </div>
+          <div style="text-align: right; min-width: 120px;">
+            <p style="margin: 0; font-weight: 800; color: #ff7f11; font-size: 16px;">
+              ${item.quantity} × ${item.price.toFixed(2)} лв.
+            </p>
+            <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">
+              Общо: ${(item.quantity * (item.price || 0)).toFixed(2)} лв.
+            </p>
+          </div>
+        </div>
+      </div>
+    `).join('')
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="bg">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Потвърждение за поръчка - Pizza Stop</title>
+        <style>
+          body {
+            font-family: Inter, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #f8fafc;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(180deg, #0b1020 0%, #0b1020 50%, #111827 100%);
+            background-color: #0b1020;
+          }
+          .email-container {
+            background-color: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            padding: 40px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+          }
+          .logo {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .logo img {
+            width: 80px;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(225, 29, 72, 0.35);
+          }
+          .order-title {
+            color: #ff7f11;
+            font-size: 28px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .order-id {
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 2px solid rgba(225, 29, 72, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+          }
+          .order-id h3 {
+            margin: 0;
+            color: #ff7f11;
+            font-size: 24px;
+            font-weight: 800;
+          }
+          .order-details {
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          }
+          .detail-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 18px;
+            color: #ff7f11;
+          }
+          .detail-label {
+            color: #cbd5e1;
+            font-weight: 500;
+          }
+          .detail-value {
+            color: #f8fafc;
+            font-weight: 600;
+          }
+          .items-section {
+            margin: 25px 0;
+          }
+          .items-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #f8fafc;
+            margin-bottom: 15px;
+            border-bottom: 2px solid rgba(225, 29, 72, 0.3);
+            padding-bottom: 8px;
+          }
+          .total-section {
+            background-color: rgba(255, 127, 17, 0.1);
+            border: 1px solid rgba(255, 127, 17, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+          }
+          .total-amount {
+            font-size: 24px;
+            font-weight: 800;
+            color: #ff7f11;
+            margin: 0;
+          }
+          .action-buttons {
+            text-align: center;
+            margin: 30px 0;
+          }
+          .order-button {
+            display: inline-block;
+            background-color: #ff7f11;
+            color: white;
+            padding: 18px 35px;
+            text-decoration: none;
+            border-radius: 18px;
+            font-weight: 800;
+            font-size: 18px;
+            margin: 10px;
+            text-align: center;
+            min-width: 200px;
+            border: none;
+          }
+          .secondary-button {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #f8fafc;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            font-size: 14px;
+          }
+          .highlight {
+            color: #ff7f11;
+            font-weight: 700;
+          }
+          .estimated-time {
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+          }
+          .estimated-time h4 {
+            margin: 0 0 5px 0;
+            color: #10b981;
+            font-size: 18px;
+            font-weight: 700;
+          }
+          .estimated-time p {
+            margin: 0;
+            color: #10b981;
+            font-weight: 500;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+          
+          <h1 class="order-title">Поръчката е потвърдена! 🍕</h1>
+          
+          <div class="order-id">
+            <h3>Номер на поръчката: #${orderId}</h3>
+          </div>
+          
+          <p style="text-align: center; font-size: 16px; margin-bottom: 30px; color: #cbd5e1;">
+            Здравейте, <span class="highlight">${name}</span>!<br><br>
+            Благодарим ви за поръчката!
+          </p>
+          
+          <div class="order-details">
+            <div class="detail-row">
+              <span class="detail-label">Време на поръчка: </span>
+              <span class="detail-value">${orderDetails.orderTime}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Начин на получаване: </span>
+              <span class="detail-value">${orderDetails.orderType}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Адрес: </span>
+              <span class="detail-value">${orderDetails.location}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Начин на плащане: </span>
+              <span class="detail-value">${orderDetails.paymentMethod}</span>
+            </div>
+          </div>
+          
+          ${orderDetails.estimatedTime ? `
+            <div class="estimated-time">
+              <h4>⏰ Очаквано време</h4>
+              <p>${orderDetails.estimatedTime}</p>
+            </div>
+          ` : ''}
+          
+          <div class="items-section">
+            <h3 class="items-title">Артикули в поръчката</h3>
+            ${itemsHtml}
+          </div>
+          
+          <div class="total-section">
+            <h3 class="total-amount">Обща сума: ${orderDetails.totalAmount.toFixed(2)} лв.</h3>
+          </div>
+          
+          <div class="action-buttons">
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://pizza-stop.bg'}/order" class="order-button">
+              ПОРЪЧАЙ ОТНОВО
+            </a>
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://pizza-stop.bg'}/user" class="order-button secondary-button">
+              МОИТЕ ПОРЪЧКИ
+            </a>
+          </div>
+          
+          <p style="text-align: center; font-size: 14px; color: #cbd5e1;">
+            Ако имате въпроси относно поръчката, моля свържете се с нас на 
+            <a href="tel:+359888123456" style="color: #ff7f11; text-decoration: none; font-weight: 700;">+359 888 123 456</a>
+          </p>
+          
+          <div class="footer">
+            <p>Този имейл е изпратен автоматично. Моля, не отговаряйте на него.</p>
+            <p>© 2024 Pizza Stop. Всички права запазени.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    const mailOptions = {
+      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      to,
+      subject: `Потвърждение за поръчка #${orderId} - Pizza Stop 🍕`,
+      html: htmlContent,
+    }
+
+    try {
+      await this.transporter.sendMail(mailOptions)
+      console.log(`Order confirmation email sent successfully to ${to}`)
+    } catch (error) {
+      console.error('Error sending order confirmation email:', error)
+      throw new Error('Failed to send order confirmation email')
+    }
+  }
+
+  async sendOrderReadyTimeEmail({ to, name, orderId, readyTimeMinutes, orderDetails }: OrderReadyTimeEmailOptions): Promise<void> {
+    const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
+    
+    // Generate items HTML
+    const itemsHtml = orderDetails.items.map(item => `
+      <div style="margin-bottom: 15px; padding: 12px; background-color: #f8f9fa; border-radius: 8px;">
+        <div style="font-weight: bold; color: #333; margin-bottom: 5px;">
+          ${item.name}${item.size ? ` (${item.size})` : ''}
+        </div>
+        <div style="color: #666; font-size: 14px;">
+          Количество: ${item.quantity} × ${item.price.toFixed(2)} лв. = ${(item.quantity * item.price).toFixed(2)} лв.
+        </div>
+        ${item.addons && item.addons.length > 0 ? `
+          <div style="color: #d32f2f; font-size: 13px; margin-top: 5px;">
+            Добавки: ${item.addons.map(addon => addon.name).join(', ')}
+          </div>
+        ` : ''}
+        ${item.comment ? `
+          <div style="color: #666; font-size: 13px; margin-top: 5px; font-style: italic;">
+            Коментар: ${item.comment}
+          </div>
+        ` : ''}
+      </div>
+    `).join('')
+
+    // Format ready time text
+    const readyTimeText = readyTimeMinutes < 60 
+      ? `${readyTimeMinutes} минути` 
+      : `Време за приготвяне: ${Math.floor(readyTimeMinutes / 60)} час/часа ${readyTimeMinutes % 60 > 0 ? `и ${readyTimeMinutes % 60} минути` : ''}`
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="bg">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Поръчката започва да се приготвя - Pizza Stop!</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+          }
+          .email-container {
+            background-color: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .logo {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .logo img {
+            width: 80px;
+            height: auto;
+          }
+          .title {
+            color: #d32f2f;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .ready-time-box {
+            background-color: #e8f5e8;
+            border: 2px solid #4caf50;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+          }
+          .ready-time-text {
+            color: #2e7d32;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+          }
+          .ready-time-subtitle {
+            color: #388e3c;
+            font-size: 16px;
+          }
+          .order-info {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+          }
+          .info-row:last-child {
+            border-bottom: none;
+          }
+          .info-label {
+            font-weight: bold;
+            color: #555;
+          }
+          .info-value {
+            color: #333;
+          }
+          .items-section {
+            margin: 20px 0;
+          }
+          .section-title {
+            color: #d32f2f;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #d32f2f;
+            padding-bottom: 5px;
+          }
+          .total-section {
+            background-color: #d32f2f;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+          }
+          .total-text {
+            font-size: 18px;
+            font-weight: bold;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #888;
+            font-size: 14px;
+          }
+          .highlight {
+            color: #d32f2f;
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+          <div class="logo">
+            <img src="${logoUrl}" alt="Pizza Stop Logo" />
+          </div>
+          
+          <h1 class="title">Поръчката започва да се приготвя! 🍕</h1>
+          
+          <div class="ready-time-box">
+            <div class="ready-time-text">⏰ ${readyTimeText}</div>
+            <div class="ready-time-subtitle">Ще бъде готова за вземане/доставка</div>
+          </div>
+          
+          <p style="text-align: center; font-size: 16px; color: #555; margin-bottom: 30px;">
+            Здравейте, <span class="highlight">${name}</span>!<br><br>
+            Радваме се да ви уведомим, че започнахме да приготвяме вашата поръчка!
+          </p>
+          
+          <div class="order-info">
+            <div class="info-row">
+              <span class="info-label">Номер на поръчката:</span>
+              <span class="info-value">#${orderId}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Време на поръчка:</span>
+              <span class="info-value">${orderDetails.orderTime}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Начин на получаване:</span>
+              <span class="info-value">${orderDetails.orderType}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Адрес:</span>
+              <span class="info-value">${orderDetails.location}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Начин на плащане:</span>
+              <span class="info-value">${orderDetails.paymentMethod}</span>
+            </div>
+          </div>
+          
+          <div class="items-section">
+            <h2 class="section-title">Артикули в поръчката</h2>
+            ${itemsHtml}
+          </div>
+          
+          <div class="total-section">
+            <div class="total-text">Обща сума: ${orderDetails.totalAmount.toFixed(2)} лв.</div>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXT_PUBLIC_SUPABASE_URL}/order" 
+               style="display: inline-block; background-color: #d32f2f; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px;">
+              ПОРЪЧАЙ ОТНОВО МОИТЕ ПОРЪЧКИ
+            </a>
+          </div>
+          
+          <p style="text-align: center; font-size: 14px; color: #666;">
+            Ако имате въпроси относно поръчката, моля свържете се с нас на 
+            <a href="tel:+359888123456" style="color: #d32f2f; text-decoration: none;">+359 888 123 456</a>
+          </p>
+          
+          <div class="footer">
+            <p>Този имейл е изпратен автоматично. Моля, не отговаряйте на него.</p>
+            <p>© 2024 Pizza Stop. Всички права запазени.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    const mailOptions = {
+      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      to,
+      subject: `Поръчката започва да се приготвя - #${orderId} - Pizza Stop 🍕`,
+      html: htmlContent,
+    }
+
+    try {
+      await this.transporter.sendMail(mailOptions)
+      console.log(`Order ready time email sent successfully to ${to}`)
+    } catch (error) {
+      console.error('Error sending order ready time email:', error)
+      throw new Error('Failed to send order ready time email')
     }
   }
 }

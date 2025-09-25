@@ -78,14 +78,14 @@ export default function TeamCarousel() {
     return styles.cardHidden
   }
 
-  // Debug: Log current state
-  useEffect(() => {
-    console.log('Current index:', currentIndex)
-    teamMembers.forEach((member, index) => {
-      const className = getCardClass(index)
-      console.log(`Card ${index} (${member.name}): ${className}`)
-    })
-  }, [currentIndex])
+  // Debug: Log current state (removed for performance)
+  // useEffect(() => {
+  //   console.log('Current index:', currentIndex)
+  //   teamMembers.forEach((member, index) => {
+  //     const className = getCardClass(index)
+  //     console.log(`Card ${index} (${member.name}): ${className}`)
+  //   })
+  // }, [currentIndex])
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft') {
@@ -103,11 +103,11 @@ export default function TeamCarousel() {
   // Auto-switch every 3 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      updateCarousel(currentIndex + 1)
+      setCurrentIndex(prevIndex => (prevIndex + 1) % teamMembers.length)
     }, 3000)
 
     return () => clearInterval(interval)
-  }, [currentIndex])
+  }, []) // Remove currentIndex from dependencies to prevent infinite loop
 
   return (
     <div className={styles.teamCarouselSection}>

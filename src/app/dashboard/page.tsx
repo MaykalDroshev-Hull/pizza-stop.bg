@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   User, 
@@ -13,10 +13,16 @@ import {
   LogOut,
   ArrowRight,
   Plus,
-  Edit3
+  Edit3,
+  Navigation,
+  CheckCircle,
+  XCircle
 } from 'lucide-react'
 import { isRestaurantOpen } from '@/utils/openingHours'
+import { encryptOrderId } from '@/utils/orderEncryption'
 import styles from './dashboard.module.css'
+import { useLoginID } from '@/components/LoginIDContext'
+import { useLoading } from '@/components/LoadingContext'
 
 interface User {
   id: string
@@ -31,19 +37,32 @@ interface Order {
   OrderDate: string
   TotalAmount: number
   Status: string
+  PaymentMethod: string
+  IsPaid: boolean
   DeliveryAddress: string
+  OrderType?: number // 1 = collection, 2 = delivery
+  ExpectedDT?: string // Expected delivery/collection time
+  DeliveredDT?: string // Actual delivery/collection time
   Products: Array<{
     ProductName: string
+    ProductSize: string
     Quantity: number
-    Price: number
+    UnitPrice: number
+    TotalPrice: number
+    Addons: Array<{
+      Name: string
+      Price: number
+      AddonType: string
+    }>
+    Comment?: string
   }>
 }
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useLoginID()
+  const { startLoading, stopLoading } = useLoading()
   const [activeTab, setActiveTab] = useState('orders')
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [orders, setOrders] = useState<Order[]>([])
   const [favouriteOrder, setFavouriteOrder] = useState<Order | null>(null)
@@ -57,16 +76,279 @@ export default function DashboardPage() {
   const [addressData, setAddressData] = useState({
     address: '',
     phone: '',
-    addressInstructions: ''
+    addressInstructions: '',
+    coordinates: null as { lat: number; lng: number } | null
   })
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateSuccess, setUpdateSuccess] = useState('')
   const [hasFetchedData, setHasFetchedData] = useState(false)
   const [isOpen, setIsOpen] = useState(isRestaurantOpen())
+  const successMessageRef = useRef<HTMLDivElement>(null)
+  
+  // Address validation state
+  const [addressZone, setAddressZone] = useState<'yellow' | 'blue' | 'outside' | null>(null)
+  const [addressConfirmed, setAddressConfirmed] = useState(false)
+  const [isValidatingAddress, setIsValidatingAddress] = useState(false)
+  const [mapLoaded, setMapLoaded] = useState(false)
+  const addressInputRef = useRef<HTMLInputElement>(null)
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+  
+  // Map modal state
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false)
+  const [mapModalLoaded, setMapModalLoaded] = useState(false)
+  const mapModalRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<google.maps.Map | null>(null)
+  const markerRef = useRef<google.maps.Marker | null>(null)
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
+
+  // Load Google Maps script
+  useEffect(() => {
+    if (mapLoaded) return
+
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    
+    if (!apiKey) {
+      console.error('Google Maps API Key is missing! Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local')
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.defer = true
+    
+    script.onload = () => {
+      setMapLoaded(true)
+    }
+
+    script.onerror = () => {
+      console.error('Failed to load Google Maps script')
+    }
+
+    document.head.appendChild(script)
+
+    return () => {
+      if (document.head.contains(script)) {
+        document.head.removeChild(script)
+      }
+    }
+  }, [mapLoaded])
+
+  // Initialize autocomplete when map is loaded and address tab is active
+  useEffect(() => {
+    if (mapLoaded && addressInputRef.current && !autocompleteRef.current && activeTab === 'address') {
+      // Add a small delay to ensure the input is fully rendered
+      const timer = setTimeout(() => {
+        if (addressInputRef.current && !autocompleteRef.current) {
+          initializeAutocomplete()
+        }
+      }, 500) // 500ms delay to ensure input is ready
+
+      return () => clearTimeout(timer)
+    }
+  }, [mapLoaded, activeTab])
+
+  // Initialize map modal when opened
+  useEffect(() => {
+    if (isMapModalOpen && mapLoaded && mapModalRef.current && !mapModalLoaded) {
+      const initMap = () => {
+        if (!window.google?.maps) return
+
+        const map = new window.google.maps.Map(mapModalRef.current!, {
+          center: { lat: 43.1333, lng: 24.7167 }, // Lovech center
+          zoom: 13,
+          mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+          // Use default map style to ensure streets are visible
+          styles: []
+        })
+
+        mapInstanceRef.current = map
+
+        // Wait for map to be ready before adding overlays and listeners
+        window.google.maps.event.addListenerOnce(map, 'idle', async () => {
+          // Automatically get user location when map opens
+          try {
+            const userLocation = await getUserLocation()
+            
+            // Center map on user location with 25 meter radius zoom
+            map.setCenter(userLocation)
+            map.setZoom(18) // This gives approximately 25 meter radius
+            
+            // Add marker at user location
+            markerRef.current = new window.google.maps.Marker({
+              position: userLocation,
+              map: map,
+              draggable: true,
+              title: 'Вашата локация'
+            })
+
+            // Add marker drag listener
+            markerRef.current.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+              if (event.latLng) {
+                const lat = event.latLng.lat()
+                const lng = event.latLng.lng()
+                validateAddressZone({ lat, lng })
+              }
+            })
+
+            // Validate zone for user location
+            validateAddressZone(userLocation)
+          } catch (error) {
+            console.error('Error getting user location:', error)
+            // Continue with default map view if location fails
+          }
+          
+          // Add delivery zone overlays
+        const lovechArea = [
+          { lat: 43.12525, lng: 24.71518 },
+          { lat: 43.12970, lng: 24.70579 },
+          { lat: 43.13005, lng: 24.69994 },
+          { lat: 43.12483, lng: 24.68928 },
+          { lat: 43.12299, lng: 24.67855 },
+          { lat: 43.13595, lng: 24.67501 },
+          { lat: 43.14063, lng: 24.67991 },
+          { lat: 43.14337, lng: 24.67877 },
+          { lat: 43.14687, lng: 24.67553 },
+          { lat: 43.15432, lng: 24.68221 },
+          { lat: 43.15486, lng: 24.68312 },
+          { lat: 43.15629, lng: 24.69245 },
+          { lat: 43.15968, lng: 24.70306 },
+          { lat: 43.16907, lng: 24.72538 },
+          { lat: 43.15901, lng: 24.74022 },
+          { lat: 43.15548, lng: 24.73935 },
+          { lat: 43.14960, lng: 24.73785 },
+          { lat: 43.13553, lng: 24.73599 },
+          { lat: 43.13952, lng: 24.72210 },
+          { lat: 43.12939, lng: 24.72549 }
+        ]
+
+        const extendedArea = [
+          { lat: 43.19740, lng: 24.67377 },
+          { lat: 43.19530, lng: 24.68420 },
+          { lat: 43.18795, lng: 24.69091 },
+          { lat: 43.18184, lng: 24.69271 },
+          { lat: 43.16906, lng: 24.70673 },
+          { lat: 43.18185, lng: 24.73747 },
+          { lat: 43.19690, lng: 24.78520 },
+          { lat: 43.19429, lng: 24.78849 },
+          { lat: 43.19177, lng: 24.79354 },
+          { lat: 43.18216, lng: 24.77405 },
+          { lat: 43.15513, lng: 24.78379 },
+          { lat: 43.14733, lng: 24.78212 },
+          { lat: 43.14837, lng: 24.76925 },
+          { lat: 43.14629, lng: 24.74900 },
+          { lat: 43.13578, lng: 24.74945 },
+          { lat: 43.12876, lng: 24.76489 },
+          { lat: 43.12203, lng: 24.75945 },
+          { lat: 43.11969, lng: 24.76062 },
+          { lat: 43.10933, lng: 24.75319 },
+          { lat: 43.10442, lng: 24.75046 },
+          { lat: 43.09460, lng: 24.75211 },
+          { lat: 43.09237, lng: 24.74715 },
+          { lat: 43.09868, lng: 24.73602 },
+          { lat: 43.10296, lng: 24.72085 },
+          { lat: 43.10702, lng: 24.70585 },
+          { lat: 43.11009, lng: 24.70742 },
+          { lat: 43.11222, lng: 24.71048 },
+          { lat: 43.12163, lng: 24.70547 },
+          { lat: 43.12097, lng: 24.67849 },
+          { lat: 43.14318, lng: 24.67233 },
+          { lat: 43.15453, lng: 24.68183 },
+          { lat: 43.15655, lng: 24.68643 },
+          { lat: 43.16302, lng: 24.69263 },
+          { lat: 43.17894, lng: 24.67871 },
+          { lat: 43.17927, lng: 24.65107 },
+          { lat: 43.18665, lng: 24.64179 },
+          { lat: 43.19006, lng: 24.64309 },
+          { lat: 43.19788, lng: 24.64881 }
+        ]
+
+        // Yellow zone (Lovech city)
+        new window.google.maps.Polygon({
+          paths: lovechArea,
+          strokeColor: '#fbbf24',
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: '#fbbf24',
+          fillOpacity: 0.2
+        }).setMap(map)
+
+        // Blue zone (Extended area)
+        new window.google.maps.Polygon({
+          paths: extendedArea,
+          strokeColor: '#3b82f6',
+          strokeOpacity: 0.8,
+          strokeWeight: 2,
+          fillColor: '#3b82f6',
+          fillOpacity: 0.2
+        }).setMap(map)
+
+        // Add click listener to place marker
+        map.addListener('click', (event: google.maps.MapMouseEvent) => {
+          if (event.latLng) {
+            const lat = event.latLng.lat()
+            const lng = event.latLng.lng()
+            
+            // Remove existing marker
+            if (markerRef.current) {
+              markerRef.current.setMap(null)
+            }
+            
+            // Add new marker
+            markerRef.current = new window.google.maps.Marker({
+              position: { lat, lng },
+              map: map,
+              draggable: true,
+              title: 'Избран адрес'
+            })
+
+            // Add marker drag listener
+            markerRef.current.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+              if (event.latLng) {
+                const lat = event.latLng.lat()
+                const lng = event.latLng.lng()
+                validateAddressZone({ lat, lng })
+              }
+            })
+
+            // Validate zone for clicked location
+            validateAddressZone({ lat, lng })
+          }
+        })
+
+          setMapModalLoaded(true)
+        })
+      }
+
+      // Small delay to ensure modal is rendered
+      setTimeout(initMap, 100)
+    }
+  }, [isMapModalOpen, mapLoaded, mapModalLoaded])
+
+  // Re-initialize autocomplete when the address tab becomes active
+  useEffect(() => {
+    if (activeTab === 'address' && mapLoaded && addressInputRef.current && autocompleteRef.current) {
+      // Re-bind autocomplete to ensure it works when tab is switched
+      setTimeout(() => {
+        if (addressInputRef.current && autocompleteRef.current) {
+          console.log('🔄 Re-binding autocomplete for address tab')
+          // Set bounds using the setBounds method instead of bindTo
+          autocompleteRef.current.setBounds(new google.maps.LatLngBounds())
+        }
+      }, 100)
+    }
+  }, [activeTab, mapLoaded])
 
   useEffect(() => {
-    checkAuth()
-  }, []) // Only run once on mount
+    // Don't redirect while auth is still loading
+    if (authLoading) return
+    
+    if (!isAuthenticated) {
+      router.push('/user')
+      return
+    }
+  }, [isAuthenticated, authLoading, router])
 
   useEffect(() => {
     if (user && !hasFetchedData) {
@@ -90,34 +372,22 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [])
 
-  const checkAuth = async () => {
-    try {
-      // Check if user is logged in (you might want to use a more robust auth check)
-      const userData = localStorage.getItem('user')
-      if (!userData) {
-        router.push('/user')
-        return
-      }
-      
-      const userObj = JSON.parse(userData)
-      setUser(userObj)
-    } catch (error) {
-      console.error('Auth check failed:', error)
-      router.push('/user')
-    }
-  }
+
 
   const fetchUserData = async () => {
     if (!user) return
     
     try {
-      setIsLoading(true)
+      startLoading()
       
       // Fetch user's orders
       const ordersResponse = await fetch(`/api/user/orders?userId=${user.id}`)
       if (ordersResponse.ok) {
         const ordersData = await ordersResponse.json()
-        setOrders(ordersData.orders || [])
+        const sortedOrders = (ordersData.orders || []).sort((a: Order, b: Order) => 
+          new Date(b.OrderDate).getTime() - new Date(a.OrderDate).getTime()
+        )
+        setOrders(sortedOrders)
         
         // Find favourite order (most ordered)
         if (ordersData.orders && ordersData.orders.length > 0) {
@@ -149,11 +419,37 @@ export default function DashboardPage() {
         const profileData = await profileResponse.json()
         if (profileData.user) {
           // Update address data with existing user data
+          let coordinates = null
+          if (profileData.user.LocationCoordinates) {
+            try {
+              let parsedCoords = typeof profileData.user.LocationCoordinates === 'string' 
+                ? JSON.parse(profileData.user.LocationCoordinates)
+                : profileData.user.LocationCoordinates
+              
+              // Fix typo in database: "Ing" should be "lng"
+              if (parsedCoords && parsedCoords.Ing !== undefined) {
+                parsedCoords.lng = parsedCoords.Ing
+                delete parsedCoords.Ing
+                console.log('Fixed coordinate typo: Ing -> lng')
+              }
+              
+              coordinates = parsedCoords
+            } catch (error) {
+              console.warn('Failed to parse coordinates:', profileData.user.LocationCoordinates)
+            }
+          }
+          
           setAddressData({
-            address: profileData.user.address || '',
+            address: profileData.user.LocationText || '',
             phone: profileData.user.phone || '',
-            addressInstructions: profileData.user.addressInstructions || ''
+            addressInstructions: profileData.user.addressInstructions || '',
+            coordinates: coordinates
           })
+          
+          // Validate existing coordinates if available
+          if (coordinates) {
+            validateAddressZone(coordinates)
+          }
         }
       }
       
@@ -161,13 +457,163 @@ export default function DashboardPage() {
       console.error('Failed to fetch user data:', error)
       setError('Грешка при зареждане на данните')
     } finally {
-      setIsLoading(false)
+      stopLoading()
     }
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('user')
+    logout()
     router.push('/user')
+  }
+
+  // Point-in-polygon function to check if coordinates are within a polygon
+  const isPointInPolygon = (point: { lat: number; lng: number }, polygon: { lat: number; lng: number }[]) => {
+    let inside = false
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      if (((polygon[i].lat > point.lat) !== (polygon[j].lat > point.lat)) &&
+          (point.lng < (polygon[j].lng - polygon[i].lng) * (point.lat - polygon[i].lat) / (polygon[j].lat - polygon[i].lat) + polygon[i].lng)) {
+        inside = !inside
+      }
+    }
+    return inside
+  }
+
+  const initializeAutocomplete = () => {
+    if (mapLoaded && addressInputRef.current && !autocompleteRef.current) {
+      try {
+        autocompleteRef.current = new google.maps.places.Autocomplete(addressInputRef.current, {
+          types: ['address'],
+          componentRestrictions: { country: 'bg' },
+          fields: ['formatted_address', 'geometry', 'place_id']
+        })
+
+        autocompleteRef.current.addListener('place_changed', () => {
+          const place = autocompleteRef.current?.getPlace()
+          
+          if (place?.geometry?.location) {
+            const coordinates = {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng()
+            }
+            
+            setAddressData(prev => ({
+              ...prev,
+              address: place.formatted_address || '',
+              coordinates: coordinates
+            }))
+            validateAddressZone(coordinates)
+          }
+        })
+      } catch (error) {
+        console.error('Error initializing autocomplete:', error)
+      }
+    }
+  }
+
+  const validateAddressZone = (coordinates: { lat: number; lng: number } | null): 'blue' | 'yellow' | 'outside' | null => {
+    if (!coordinates) {
+      setAddressZone(null)
+      setAddressConfirmed(false)
+      return null
+    }
+
+    if (!coordinates.lat || !coordinates.lng) {
+      setAddressZone(null)
+      setAddressConfirmed(false)
+      return null
+    }
+
+    // Define Lovech city area (3 BGN delivery) - Yellow zone
+    const lovechArea = [
+      { lat: 43.12525, lng: 24.71518 },
+      { lat: 43.12970, lng: 24.70579 },
+      { lat: 43.13005, lng: 24.69994 },
+      { lat: 43.12483, lng: 24.68928 },
+      { lat: 43.12299, lng: 24.67855 },
+      { lat: 43.13595, lng: 24.67501 },
+      { lat: 43.14063, lng: 24.67991 },
+      { lat: 43.14337, lng: 24.67877 },
+      { lat: 43.14687, lng: 24.67553 },
+      { lat: 43.15432, lng: 24.68221 },
+      { lat: 43.15486, lng: 24.68312 },
+      { lat: 43.15629, lng: 24.69245 },
+      { lat: 43.15968, lng: 24.70306 },
+      { lat: 43.16907, lng: 24.72538 },
+      { lat: 43.15901, lng: 24.74022 },
+      { lat: 43.15548, lng: 24.73935 },
+      { lat: 43.14960, lng: 24.73785 },
+      { lat: 43.13553, lng: 24.73599 },
+      { lat: 43.13952, lng: 24.72210 },
+      { lat: 43.12939, lng: 24.72549 }
+    ]
+    
+    // Define extended area (7 BGN delivery) - Blue zone
+    const extendedArea = [
+      { lat: 43.19740, lng: 24.67377 },
+      { lat: 43.19530, lng: 24.68420 },
+      { lat: 43.18795, lng: 24.69091 },
+      { lat: 43.18184, lng: 24.69271 },
+      { lat: 43.16906, lng: 24.70673 },
+      { lat: 43.18185, lng: 24.73747 },
+      { lat: 43.19690, lng: 24.78520 },
+      { lat: 43.19429, lng: 24.78849 },
+      { lat: 43.19177, lng: 24.79354 },
+      { lat: 43.18216, lng: 24.77405 },
+      { lat: 43.15513, lng: 24.78379 },
+      { lat: 43.14733, lng: 24.78212 },
+      { lat: 43.14837, lng: 24.76925 },
+      { lat: 43.14629, lng: 24.74900 },
+      { lat: 43.13578, lng: 24.74945 },
+      { lat: 43.12876, lng: 24.76489 },
+      { lat: 43.12203, lng: 24.75945 },
+      { lat: 43.11969, lng: 24.76062 },
+      { lat: 43.10933, lng: 24.75319 },
+      { lat: 43.10442, lng: 24.75046 },
+      { lat: 43.09460, lng: 24.75211 },
+      { lat: 43.09237, lng: 24.74715 },
+      { lat: 43.09868, lng: 24.73602 },
+      { lat: 43.10296, lng: 24.72085 },
+      { lat: 43.10702, lng: 24.70585 },
+      { lat: 43.11009, lng: 24.70742 },
+      { lat: 43.11222, lng: 24.71048 },
+      { lat: 43.12163, lng: 24.70547 },
+      { lat: 43.12097, lng: 24.67849 },
+      { lat: 43.14318, lng: 24.67233 },
+      { lat: 43.15453, lng: 24.68183 },
+      { lat: 43.15655, lng: 24.68643 },
+      { lat: 43.16302, lng: 24.69263 },
+      { lat: 43.17894, lng: 24.67871 },
+      { lat: 43.17927, lng: 24.65107 },
+      { lat: 43.18665, lng: 24.64179 },
+      { lat: 43.19006, lng: 24.64309 },
+      { lat: 43.19788, lng: 24.64881 }
+    ]
+    
+    let zone: 'yellow' | 'blue' | 'outside' | null = null
+    
+    // Check if point is in Lovech city area (yellow zone - 3 BGN)
+    if (isPointInPolygon(coordinates, lovechArea)) {
+      zone = 'yellow'
+    }
+    // Check if point is in extended area (blue zone - 7 BGN)
+    else if (isPointInPolygon(coordinates, extendedArea)) {
+      zone = 'blue'
+    }
+    // Point is outside both areas
+    else {
+      zone = 'outside'
+    }
+    
+    setAddressZone(zone)
+    
+    // Only confirm address if it's within delivery zone
+    if (zone === 'outside') {
+      setAddressConfirmed(false)
+    } else {
+      setAddressConfirmed(true)
+    }
+    
+    return zone
   }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -214,8 +660,143 @@ export default function DashboardPage() {
     }
   }
 
+  const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Геолокацията не се поддържа от вашия браузър.'))
+        return
+      }
+
+      setIsGettingLocation(true)
+      setLocationError(null)
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+          setIsGettingLocation(false)
+          resolve(location)
+        },
+        (error) => {
+          setIsGettingLocation(false)
+          let errorMessage = 'Грешка при определяне на локацията.'
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Достъпът до геолокацията е отказан. Моля, разрешете достъпа в настройките на браузъра.'
+              break
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Информацията за локацията не е налична.'
+              break
+            case error.TIMEOUT:
+              errorMessage = 'Времето за определяне на локацията изтече.'
+              break
+          }
+          
+          setLocationError(errorMessage)
+          reject(new Error(errorMessage))
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      )
+    })
+  }
+
+
+  const handleMapModalClose = () => {
+    setIsMapModalOpen(false)
+    setMapModalLoaded(false)
+    if (markerRef.current) {
+      markerRef.current.setMap(null)
+      markerRef.current = null
+    }
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current = null
+    }
+  }
+
+  const handleMapLocationSelect = async () => {
+    if (markerRef.current && addressZone && addressZone !== 'outside') {
+      const position = markerRef.current.getPosition()
+      if (position) {
+        const lat = position.lat()
+        const lng = position.lng()
+        
+        // Reverse geocode to get address
+        const geocoder = new google.maps.Geocoder()
+        try {
+          const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+            geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+              if (status === 'OK' && results) {
+                resolve(results)
+              } else {
+                reject(new Error(`Geocoding failed: ${status}`))
+              }
+            })
+          })
+          
+          if (result[0]) {
+            setAddressData(prev => ({
+              ...prev,
+              address: result[0].formatted_address,
+              coordinates: { lat, lng }
+            }))
+            handleMapModalClose()
+          }
+        } catch (error) {
+          console.error('Reverse geocoding failed:', error)
+        }
+      }
+    }
+  }
+
   const handleAddressUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // If no coordinates from autocomplete, try to geocode manually
+    if (!addressData.coordinates && addressData.address) {
+      try {
+        const geocoder = new google.maps.Geocoder()
+        const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+          geocoder.geocode({ address: addressData.address }, (results, status) => {
+            if (status === 'OK' && results) {
+              resolve(results)
+            } else {
+              reject(new Error(`Geocoding failed: ${status}`))
+            }
+          })
+        })
+        
+        if (result[0]?.geometry?.location) {
+          const coordinates = {
+            lat: result[0].geometry.location.lat(),
+            lng: result[0].geometry.location.lng()
+          }
+          setAddressData(prev => ({ ...prev, coordinates }))
+          validateAddressZone(coordinates)
+        }
+      } catch (error) {
+        console.error('Manual geocoding failed:', error)
+        setError('Не можахме да намерим координатите на адреса. Моля, опитайте отново.')
+        return
+      }
+    }
+    
+    // Validate address is within delivery zone
+    if (!addressConfirmed || addressZone === 'outside') {
+      setError('Моля, изберете адрес в зоната за доставка')
+      return
+    }
+    
+    if (!addressData.coordinates) {
+      setError('Моля, изберете адрес с валидни координати')
+      return
+    }
     
     setIsUpdating(true)
     setError('')
@@ -227,7 +808,10 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user?.id,
-          address: addressData
+          address: {
+            ...addressData,
+            coordinates: JSON.stringify(addressData.coordinates)
+          }
         })
       })
       
@@ -239,6 +823,14 @@ export default function DashboardPage() {
       
       setUpdateSuccess('Адресът е обновен успешно!')
       
+      // Scroll to success message smoothly
+      setTimeout(() => {
+        successMessageRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        })
+      }, 100)
+      
     } catch (err: any) {
       setError(err.message || 'Грешка при обновяване на адреса')
     } finally {
@@ -246,19 +838,77 @@ export default function DashboardPage() {
     }
   }
 
-  const handleOrderAgain = (order: Order) => {
-    // Add order items to cart (you'll need to implement this)
-    console.log('Ordering again:', order)
-    router.push('/order')
+  const handleOrderAgain = async (order: Order) => {
+    try {
+      startLoading()
+      
+      // Get current menu to check product availability
+      const { fetchMenuData } = await import('../../lib/menuData')
+      const menuData = await fetchMenuData()
+      
+      // Flatten all products from all categories
+      const availableProducts = [
+        ...menuData.pizza,
+        ...menuData.burgers,
+        ...menuData.doners,
+        ...menuData.drinks
+      ]
+      
+      // Map order products to cart items, checking availability
+      const cartItems: any[] = []
+      const unavailableItems: string[] = []
+      
+      for (const orderProduct of order.Products) {
+        // Find matching product in current menu
+        const availableProduct = availableProducts.find((p: any) => 
+          p.name === orderProduct.ProductName
+        )
+        
+        if (availableProduct) {
+          // Product is available - add to cart
+          const cartItem = {
+            id: availableProduct.id,
+            name: orderProduct.ProductName,
+            price: orderProduct.UnitPrice,
+            image: availableProduct.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNjY2NjY2MiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5GVPzwvdGV4dD4KPC9zdmc+',
+            category: availableProduct.category || 'pizza',
+            size: orderProduct.ProductSize || 'Medium',
+            addons: orderProduct.Addons || [],
+            comment: orderProduct.Comment || '',
+            quantity: orderProduct.Quantity
+          }
+          cartItems.push(cartItem)
+        } else {
+          // Product is unavailable
+          unavailableItems.push(orderProduct.ProductName)
+        }
+      }
+      
+      // Clear current cart and add items
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pizza-stop-cart', JSON.stringify(cartItems))
+        
+        // Store order type and unavailable items info for checkout
+        const orderInfo = {
+          isCollection: order.OrderType === 1, // 1 = collection, 2 = delivery
+          unavailableItems
+        }
+        localStorage.setItem('pizza-stop-order-again', JSON.stringify(orderInfo))
+      }
+      
+      // Navigate to checkout
+      router.push('/checkout')
+      
+    } catch (error) {
+      console.error('Error setting up order again:', error)
+      setError('Грешка при зареждане на поръчката. Моля, опитайте отново.')
+    } finally {
+      stopLoading()
+    }
   }
 
-  if (isLoading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.loadingSpinner}></div>
-        <p>Зареждане на вашия панел...</p>
-      </div>
-    )
+  if (authLoading) {
+    return null
   }
 
   if (!user) {
@@ -312,7 +962,7 @@ export default function DashboardPage() {
 
         {/* Error and Success Messages */}
         {error && <div className={styles.errorMessage}>{error}</div>}
-        {updateSuccess && <div className={styles.successMessage}>{updateSuccess}</div>}
+        {updateSuccess && <div ref={successMessageRef} className={styles.successMessage}>{updateSuccess}</div>}
 
         {/* Orders Tab */}
         {activeTab === 'orders' && (
@@ -327,32 +977,46 @@ export default function DashboardPage() {
                 <div className={styles.orderCard}>
                   <div className={styles.orderHeader}>
                     <div>
-                      <h3>Order #{favouriteOrder.OrderID}</h3>
-                      <p className={styles.orderDate}>
-                        <Clock size={16} />
-                        {new Date(favouriteOrder.OrderDate).toLocaleDateString()}
-                      </p>
+                      <h3>Поръчка #{favouriteOrder.OrderID}</h3>
                     </div>
                     <div className={styles.orderTotal}>
-                      ${favouriteOrder.TotalAmount.toFixed(2)}
+                      {favouriteOrder.TotalAmount.toFixed(2)} лв.
                     </div>
                   </div>
                   <div className={styles.orderProducts}>
                     {favouriteOrder.Products.map((product, index) => (
                       <div key={index} className={styles.productItem}>
-                        <span>{product.ProductName}</span>
-                        <span>x{product.Quantity}</span>
-                        <span>${product.Price.toFixed(2)}</span>
+                        <div className={styles.productMain}>
+                          <span className={styles.productName}>{product.ProductName}</span>
+                          <span className={styles.productSize}>{product.ProductSize}</span>
+                          <span className={styles.productQuantity}>x{product.Quantity}</span>
+                          <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} лв.</span>
+                        </div>
+                        {product.Addons && product.Addons.length > 0 && (
+                          <div className={styles.productAddons}>
+                            {product.Addons.map((addon, addonIndex) => (
+                              <span key={addonIndex} className={styles.addonItem}>
+                                {addon.Name}
+                                {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {product.Comment && (
+                          <div className={styles.productComment}>
+                            <em>"{product.Comment}"</em>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                                     <button 
-                     onClick={() => handleOrderAgain(favouriteOrder)}
-                     className={styles.orderAgainBtn}
-                   >
-                     <Plus size={20} />
-                     Поръчай отново
-                   </button>
+                  <button 
+                    onClick={() => handleOrderAgain(favouriteOrder)}
+                    className={styles.orderAgainBtn}
+                  >
+                    <Plus size={16} />
+                    Поръчай отново
+                  </button>
                 </div>
               </section>
             )}
@@ -369,51 +1033,89 @@ export default function DashboardPage() {
                     <div key={order.OrderID} className={styles.orderCard}>
                       <div className={styles.orderHeader}>
                         <div>
-                          <h3>Order #{order.OrderID}</h3>
+                          <h3>Поръчка #{order.OrderID}</h3>
                           <p className={styles.orderDate}>
                             <Clock size={16} />
-                            {new Date(order.OrderDate).toLocaleDateString()}
+                            Поръчана: {new Date(order.OrderDate).toLocaleDateString('bg-BG')} в {new Date(order.OrderDate).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}
                           </p>
+                          {order.ExpectedDT && (
+                            <p className={styles.orderDate}>
+                              <Clock size={16} />
+                              {order.DeliveredDT 
+                                ? (order.OrderType === 1 ? 'Взета' : 'Доставена') + ': ' + new Date(order.DeliveredDT).toLocaleDateString('bg-BG') + ' в ' + new Date(order.DeliveredDT).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })
+                                : (order.OrderType === 1 ? 'За вземане' : 'За доставка') + ': ' + new Date(order.ExpectedDT).toLocaleDateString('bg-BG') + ' в ' + new Date(order.ExpectedDT).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })
+                              }
+                            </p>
+                          )}
                           <p className={styles.orderStatus}>{order.Status}</p>
                         </div>
                         <div className={styles.orderTotal}>
-                          ${order.TotalAmount.toFixed(2)}
+                          {order.TotalAmount.toFixed(2)} лв.
                         </div>
                       </div>
                       <div className={styles.orderProducts}>
-                        {order.Products.slice(0, 3).map((product, index) => (
+                        {order.Products.slice(0, 2).map((product, index) => (
                           <div key={index} className={styles.productItem}>
-                            <span>{product.ProductName}</span>
-                            <span>x{product.Quantity}</span>
-                            <span>${product.Price.toFixed(2)}</span>
+                            <div className={styles.productMain}>
+                              <span className={styles.productName}>{product.ProductName}</span>
+                              <span className={styles.productSize}>{product.ProductSize}</span>
+                              <span className={styles.productQuantity}>x{product.Quantity}</span>
+                              <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} лв.</span>
+                            </div>
+                            {product.Addons && product.Addons.length > 0 && (
+                              <div className={styles.productAddons}>
+                                {product.Addons.slice(0, 2).map((addon, addonIndex) => (
+                                  <span key={addonIndex} className={styles.addonItem}>
+                                    {addon.Name}
+                                    {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                                  </span>
+                                ))}
+                                {product.Addons.length > 2 && (
+                                  <span className={styles.moreAddons}>+{product.Addons.length - 2} още</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
-                        {order.Products.length > 3 && (
-                          <p className={styles.moreItems}>+{order.Products.length - 3} още продукти</p>
+                        {order.Products.length > 2 && (
+                          <p className={styles.moreItems}>+{order.Products.length - 2} още продукти</p>
                         )}
                       </div>
-                                             <button 
-                         onClick={() => handleOrderAgain(order)}
-                         className={styles.orderAgainBtn}
-                       >
-                         <Plus size={20} />
-                         Поръчай отново
-                       </button>
+                      <div className={styles.orderActions}>
+                        <button 
+                          onClick={() => {
+                            const encryptedOrderId = encryptOrderId(order.OrderID)
+                            router.push(`/order-tracking?orderId=${encryptedOrderId}`)
+                          }}
+                          className={styles.followOrderBtn}
+                        >
+                          <Clock size={16} />
+                          Следи поръчката
+                        </button>
+                        <button 
+                          onClick={() => handleOrderAgain(order)}
+                          className={styles.orderAgainBtn}
+                        >
+                          <Plus size={16} />
+                          Поръчай отново
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                                 <div className={styles.emptyState}>
-                   <h3>Все още нямате поръчки</h3>
-                   <p>Започнете първата си поръчка и ще я покажем тук!</p>
-                   <button 
-                     onClick={() => router.push('/order')}
-                     className={styles.primaryBtn}
-                   >
-                     {isOpen ? 'Поръчай сега' : 'Поръчай за по-късно'}
-                     <ArrowRight size={20} />
-                   </button>
-                 </div>
+                <div className={styles.emptyState}>
+                  <h3>Все още нямате поръчки</h3>
+                  <p>Започнете първата си поръчка и ще я покажем тук!</p>
+                  <div className={styles.emptyStateButton}>
+                    <button 
+                      onClick={() => router.push('/order')}
+                      className={styles.navbarStyleBtn}
+                    >
+                      {isOpen ? 'ПОРЪЧАЙ СЕГА' : 'ПОРЪЧАЙ ЗА ПО-КЪСНО'}
+                    </button>
+                  </div>
+                </div>
               )}
             </section>
           </div>
@@ -442,7 +1144,7 @@ export default function DashboardPage() {
                 </div>
                 <div className={styles.infoRow}>
                                      <label>Член от:</label>
-                  <span>{new Date(user.created_at).toLocaleDateString()}</span>
+                  <span>{user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Не е налична'}</span>
                 </div>
               </div>
             </section>
@@ -508,14 +1210,61 @@ export default function DashboardPage() {
                              <form onSubmit={handleAddressUpdate} className={styles.form}>
                  <div className={styles.formGroup}>
                    <label htmlFor="address">Адрес</label>
-                   <input
-                     type="text"
-                     id="address"
-                     value={addressData.address}
-                     onChange={(e) => setAddressData(prev => ({ ...prev, address: e.target.value }))}
-                     placeholder="Улица, номер, град, пощенски код"
-                     required
-                   />
+                   <div className={styles.addressInputContainer}>
+                     <input
+                       ref={addressInputRef}
+                       type="text"
+                       id="address"
+                       value={addressData.address}
+                       onChange={(e) => setAddressData(prev => ({ ...prev, address: e.target.value }))}
+                       onFocus={() => {
+                         // Initialize autocomplete when user focuses on the input
+                         if (mapLoaded && addressInputRef.current && !autocompleteRef.current) {
+                           initializeAutocomplete()
+                         }
+                       }}
+                       onClick={() => {
+                         // Also initialize on click as a fallback
+                         if (mapLoaded && addressInputRef.current && !autocompleteRef.current) {
+                           initializeAutocomplete()
+                         }
+                       }}
+                       placeholder="Въведете адрес (напр. ул. Христо Ботев 1, Ловеч)"
+                       required
+                       className={styles.addressInput}
+                       autoComplete="off"
+                     />
+                     {addressZone && (
+                       <div className={styles.zoneIndicator}>
+                         {addressZone === 'yellow' && (
+                           <div className={styles.zoneYellow}>
+                             <CheckCircle size={16} />
+                             <span>Зона 1 (3 лв.)</span>
+                           </div>
+                         )}
+                         {addressZone === 'blue' && (
+                           <div className={styles.zoneBlue}>
+                             <CheckCircle size={16} />
+                             <span>Зона 2 (7 лв.)</span>
+                           </div>
+                         )}
+                         {addressZone === 'outside' && (
+                           <div className={styles.zoneOutside}>
+                             <XCircle size={16} />
+                             <span>Извън зоната</span>
+                           </div>
+                         )}
+                       </div>
+                     )}
+                   </div>
+                   <button 
+                     type="button"
+                     onClick={() => setIsMapModalOpen(true)}
+                     className={styles.mapButton}
+                   >
+                     <MapPin size={16} />
+                     Не намирате адреса си?
+                   </button>
                  </div>
                  <div className={styles.formGroup}>
                    <label htmlFor="phone">Телефон</label>
@@ -537,10 +1286,10 @@ export default function DashboardPage() {
                      rows={3}
                    />
                  </div>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className={styles.primaryBtn}
-                  disabled={isUpdating}
+                  disabled={isUpdating || !addressConfirmed || addressZone === 'outside'}
                 >
                                      {isUpdating ? 'Обновяване...' : 'Обнови адрес'}
                 </button>
@@ -549,6 +1298,62 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Map Modal */}
+      {isMapModalOpen && (
+        <div className={styles.mapModalOverlay}>
+          <div className={styles.mapModal}>
+            <div className={styles.mapModalHeader}>
+              <h3>Изберете адрес на картата</h3>
+              <button 
+                onClick={handleMapModalClose}
+                className={styles.closeButton}
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.mapModalContent}>
+              {locationError && (
+                <div className={styles.locationError}>
+                  <XCircle size={16} />
+                  <span>{locationError}</span>
+                </div>
+              )}
+              <div 
+                ref={mapModalRef} 
+                className={styles.mapContainer}
+              />
+              <div className={styles.mapModalFooter}>
+                <div className={styles.zoneLegend}>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendColor} style={{ backgroundColor: '#fbbf24' }}></div>
+                    <span>Зона 1 (3 лв.)</span>
+                  </div>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendColor} style={{ backgroundColor: '#3b82f6' }}></div>
+                    <span>Зона 2 (7 лв.)</span>
+                  </div>
+                </div>
+                <div className={styles.mapModalActions}>
+                  <button 
+                    onClick={handleMapModalClose}
+                    className={styles.cancelButton}
+                  >
+                    Отказ
+                  </button>
+                  <button 
+                    onClick={handleMapLocationSelect}
+                    disabled={!markerRef.current || addressZone === 'outside'}
+                    className={styles.confirmButton}
+                  >
+                    Потвърди адрес
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

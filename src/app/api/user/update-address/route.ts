@@ -16,6 +16,8 @@ export async function POST(request: NextRequest) {
   try {
     const { userId, address } = await request.json()
 
+    console.log('📍 Update address request:', { userId, address })
+
     // Validate input
     if (!userId) {
       return NextResponse.json(
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update address, phone, and instructions fields in the Login table
+    // Update address, phone, coordinates, and instructions fields in the Login table
     const updateData: any = {}
     
     if (address.address) {
@@ -42,9 +44,30 @@ export async function POST(request: NextRequest) {
       updateData.phone = address.phone
     }
     
+    if (address.coordinates) {
+      // Ensure coordinates are properly formatted as JSON string
+      // Check if coordinates are already a string to avoid double-encoding
+      if (typeof address.coordinates === 'string') {
+        // Clean up any escaped characters from double-encoding
+        let cleanCoords = address.coordinates
+        try {
+          // Try to parse and re-stringify to remove escape characters
+          const parsed = JSON.parse(cleanCoords)
+          updateData.LocationCoordinates = JSON.stringify(parsed)
+        } catch (error) {
+          // If parsing fails, use the string as-is
+          updateData.LocationCoordinates = cleanCoords
+        }
+      } else {
+        updateData.LocationCoordinates = JSON.stringify(address.coordinates)
+      }
+    }
+    
     if (address.addressInstructions) {
       updateData.addressInstructions = address.addressInstructions
     }
+
+    console.log('📍 Update data to be saved:', updateData)
 
     // Update user information
     const { error: updateError } = await supabase

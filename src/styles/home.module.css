@@ -95,7 +95,7 @@
 
 /* Decorative images - NO HOVER EFFECTS */
 .heroLeft {
-  width: 300px !important;
+  width: 250px !important;
   height: auto !important;
   opacity: 0.8 !important;
   transform: none !important;
@@ -595,10 +595,12 @@
   padding: 0px 0;
   animation: scroll-left 120s linear infinite;
   width: max-content;
+  animation-play-state: running;
 }
 
-.galleryScroll:hover {
-  animation-play-state: paused;
+/* Second row scrolls in opposite direction */
+.galleryRow:nth-child(2) .galleryScroll {
+  animation: scroll-right 120s linear infinite;
 }
 
 @keyframes scroll-left {
@@ -610,31 +612,31 @@
   }
 }
 
+@keyframes scroll-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
 .galleryItem {
   flex: 0 0 auto;
-  width: 210px;
-  height: 150px;
+  width: 160px;
+  height: 120px;
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.galleryItem:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  transition: none;
+  cursor: default;
 }
 
 .galleryItem img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.galleryItem:hover img {
-  transform: scale(1.1);
+  transition: none;
 }
 
 /* Team Carousel - Modern 3D Carousel */
@@ -892,8 +894,8 @@
   }
   
   .galleryItem {
-    width: 180px;
-    height: 135px;
+    width: 140px;
+    height: 105px;
   }
   
   .galleryScroll {
@@ -1014,8 +1016,8 @@
 
 @media (max-width: 480px) {
   .galleryItem {
-    width: 150px;
-    height: 113px;
+    width: 120px;
+    height: 90px;
   }
   
   .galleryScroll {
@@ -1102,4 +1104,77 @@
     background: linear-gradient(135deg, var(--red), var(--orange));
     transform: translateY(-50%);
   }
+}
+
+/* Additional Info Section */
+.additionalInfoSection {
+  padding: 60px 0;
+  background: var(--background);
+}
+
+.rulesContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ruleItem {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.ruleItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.ruleItem h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ruleItem h4::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  border-radius: 2px;
+}
+
+.ruleItem p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.price {
+  color: var(--orange);
+  font-weight: 700;
+  background: rgba(255, 127, 17, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* Icon styles for additional info section */
+.additionalInfoSection .card h3 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 20px;
+}
+
+.additionalInfoSection .lucideIcon {
+  width: 24px;
+  height: 24px;
+  color: var(--orange);
+  flex-shrink: 0;
 }

@@ -17,14 +17,19 @@ export interface MenuItem {
   category: string
   rating: number
   time: string
+  description?: string
   sizes: Array<{
     name: string
     price: number
     multiplier: number
+    weight?: number | null
   }>
   smallPrice: number
   mediumPrice: number | null
   largePrice: number | null
+  smallWeight: number | null
+  mediumWeight: number | null
+  largeWeight: number | null
   addons: any[]
 }
 
@@ -34,16 +39,70 @@ const categoryMap: { [key: number]: string } = {
   2: 'burgers', 
   3: 'doners',
   4: 'drinks',
-  5: 'drinks'
+  5: 'sauces',
+  6: 'sauces'
 }
 
-// Map ProductTypeID to emojis
+// Map ProductTypeID to images
+const imageMap: { [key: number]: string[] } = {
+  1: [ // Pizzas
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1590947132387-155cc02f3212?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=300&h=300&fit=crop'
+  ],
+  2: [ // Burgers
+    'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1551615593-ef5fe247e8f7?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1553979459-d2229ba7433a?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1525059696034-4967a729002e?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=300&h=300&fit=crop'
+  ],
+  3: [ // Doners
+    'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1529042410759-befb1204b468?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1593504049359-74330189a345?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=300&h=300&fit=crop'
+  ],
+  4: [ // Drinks
+    'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1581636625402-29b2a704ef13?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1505252585461-04db1eb84625?w=300&h=300&fit=crop'
+  ],
+  5: [ // Sauces & Addons
+    'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1586511925558-a4c6376fe65f?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1552767059-ce182ead6c1b?w=300&h=300&fit=crop'
+  ],
+  6: [ // Sauces & Addons (same as 5)
+    'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1586511925558-a4c6376fe65f?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1552767059-ce182ead6c1b?w=300&h=300&fit=crop'
+  ]
+}
+
+// Map ProductTypeID to emojis (fallback)
 const emojiMap: { [key: number]: string } = {
   1: '🍕',
   2: '🍔',
   3: '🥙',
   4: '🥤',
-  5: '🧃'
+  5: '🍶',
+  6: '🍶'
 }
 
 // Map ProductTypeID to preparation times
@@ -52,7 +111,8 @@ const timeMap: { [key: number]: string } = {
   2: '10-15 мин',
   3: '8-12 мин',
   4: '2-5 мин',
-  5: '2-5 мин'
+  5: '1-2 мин',
+  6: '1-2 мин'
 }
 
 // Map ProductTypeID to ratings
@@ -61,7 +121,8 @@ const ratingMap: { [key: number]: number } = {
   2: 4.6,
   3: 4.7,
   4: 4.5,
-  5: 4.5
+  5: 4.3,
+  6: 4.3
 }
 
 // Function to fetch addons for a specific product type
@@ -81,8 +142,32 @@ export async function fetchAddons(productTypeID: number) {
     }
     
     if (!linkedAddons || linkedAddons.length === 0) {
-      console.log(`No linked addons found for product type ${productTypeID}`)
-      return []
+      console.log(`No linked addons found for product type ${productTypeID}, using fallback addons`)
+      // Fallback: get all available addons (sauces and vegetables) for all product types
+      const { data: fallbackAddons, error: fallbackError } = await supabase
+        .from('Addon')
+        .select('*')
+        .in('ProductTypeID', [5, 6]) // Only sauces (5) and vegetables (6)
+      
+      if (fallbackError) {
+        console.error('Error fetching fallback addons:', fallbackError)
+        return []
+      }
+      
+      if (!fallbackAddons) return []
+      
+      // Transform to our interface format
+      const transformedFallbackAddons: any[] = fallbackAddons.map(addon => ({
+        AddonID: addon.AddonID,
+        Name: addon.Name,
+        Price: addon.Price || 0,
+        ProductTypeID: addon.ProductTypeID,
+        AddonType: addon.ProductTypeID === 5 ? 'sauce' : 'vegetable',
+        AddonTypeBG: addon.ProductTypeID === 5 ? 'сосове' : 'салати'
+      }))
+      
+      console.log(`✅ Using fallback addons for product type ${productTypeID}:`, transformedFallbackAddons)
+      return transformedFallbackAddons
     }
     
     const addonIDs = linkedAddons.map(item => item.AddonID)
@@ -174,10 +259,11 @@ export async function fetchMenuData() {
       pizza: [],
       burgers: [],
       doners: [],
-      drinks: []
+      drinks: [],
+      sauces: []
     }
 
-    products.forEach((product: any) => {
+    products.forEach((product: any, index: number) => {
       const category = categoryMap[product.ProductTypeID]
       console.log(`🍽️ Processing product: ${product.Product} (TypeID: ${product.ProductTypeID} → Category: ${category})`)
       
@@ -186,54 +272,90 @@ export async function fetchMenuData() {
         return
       }
 
+      // Get image with rotation for variety
+      const imageArray = imageMap[product.ProductTypeID] || []
+      const imageIndex = index % imageArray.length
+      const selectedImage = imageArray[imageIndex] || emojiMap[product.ProductTypeID] || '🍽️'
+      
+      console.log(`🖼️ Product ${product.Product}: Using image ${selectedImage} (index ${imageIndex}/${imageArray.length})`)
+
       const menuItem: MenuItem = {
         id: product.ProductID,
         name: product.Product,
         basePrice: product.SmallPrice,
-        image: emojiMap[product.ProductTypeID] || '🍽️',
+        image: selectedImage,
         category,
         rating: ratingMap[product.ProductTypeID] || 4.5,
         time: timeMap[product.ProductTypeID] || '10-15 мин',
+        description: product.Description || null,
         sizes: [],
         smallPrice: product.SmallPrice,
         mediumPrice: product.MediumPrice || null,
         largePrice: product.LargePrice || null,
+        smallWeight: product.SmallWeight || null,
+        mediumWeight: product.MediumWeight || null,
+        largeWeight: product.LargeWeight || null,
         addons: [] // Initialize addons array
+      }
+
+      // Debug drinks specifically
+      if (category === 'drinks') {
+        console.log('🥤 Drink product data:', {
+          name: product.Product,
+          ProductTypeID: product.ProductTypeID,
+          SmallPrice: product.SmallPrice,
+          MediumPrice: product.MediumPrice,
+          LargePrice: product.LargePrice,
+          menuItem: {
+            basePrice: menuItem.basePrice,
+            smallPrice: menuItem.smallPrice,
+            mediumPrice: menuItem.mediumPrice,
+            largePrice: menuItem.largePrice
+          }
+        })
       }
 
       // Create sizes dynamically based on available prices in database
       // No hardcoded size names - let the database control everything
-      const availableSizes: Array<{ name: string; price: number; multiplier: number }> = []
+      const availableSizes: Array<{ name: string; price: number; multiplier: number; weight?: number | null }> = []
       
-      // Determine size names based on product category (Bulgarian grammar)
-      const isPizza = category === 'pizza'
-      
-      // Always add Small size (required)
-      availableSizes.push({
-        name: isPizza ? 'Малка' : 'Малък',
-        price: product.SmallPrice,
-        multiplier: 1.0
-      })
-      
-      // Add Medium size if available in database
-      if (product.MediumPrice && product.MediumPrice > 0) {
-        availableSizes.push({
-          name: isPizza ? 'Средна' : 'Среден',
-          price: product.MediumPrice,
-          multiplier: product.MediumPrice / product.SmallPrice
-        })
+      // Only create sizes for items that need size selection (pizzas and doners)
+      if (category === 'pizza' || category === 'doners') {
+        // Determine size names based on product category (Bulgarian grammar)
+        const isPizza = category === 'pizza'
+        
+        // Add Small size if available in database
+        if (product.SmallPrice && product.SmallPrice > 0) {
+          availableSizes.push({
+            name: isPizza ? 'Малка' : 'Малък',
+            price: product.SmallPrice,
+            multiplier: 1.0,
+            weight: product.SmallWeight || null
+          })
+        }
+        
+        // Add Medium size if available in database
+        if (product.MediumPrice && product.MediumPrice > 0) {
+          availableSizes.push({
+            name: isPizza ? 'Средна' : 'Среден',
+            price: product.MediumPrice,
+            multiplier: product.MediumPrice / (product.SmallPrice || 1),
+            weight: product.MediumWeight || null
+          })
+        }
+        
+        // Add Large size if available in database
+        if (product.LargePrice && product.LargePrice > 0) {
+          availableSizes.push({
+            name: isPizza ? 'Голяма' : 'Голям',
+            price: product.LargePrice,
+            multiplier: product.LargePrice / (product.SmallPrice || 1),
+            weight: product.LargeWeight || null
+          })
+        }
       }
       
-      // Add Large size if available in database
-      if (product.LargePrice && product.LargePrice > 0) {
-        availableSizes.push({
-          name: isPizza ? 'Голяма' : 'Голям',
-          price: product.LargePrice,
-          multiplier: product.LargePrice / product.SmallPrice
-        })
-      }
-      
-      // Assign the dynamically created sizes
+      // Assign the dynamically created sizes (empty array for burgers and drinks)
       menuItem.sizes = availableSizes
 
       menuData[category].push(menuItem)

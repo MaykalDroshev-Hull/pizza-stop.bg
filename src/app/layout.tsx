@@ -4,8 +4,9 @@ import './globals.css'
 import { LoadingProvider } from '../components/LoadingContext'
 import LoadingOverlay from '../components/LoadingOverlay'
 import NavBar from '../components/NavBar'
-import Footer from '../components/Footer'
 import { CartProvider } from '../components/CartContext'
+import { LoginIDProvider } from '../components/LoginIDContext'
+import ConditionalFooter from '../components/ConditionalFooter'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -49,7 +50,9 @@ export const metadata: Metadata = {
   verification: {
     google: 'your-google-verification-code',
   },
+  manifest: '/site.webmanifest',
 }
+
 
 export default function RootLayout({
   children,
@@ -63,6 +66,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#0b1020" />
         <meta name="color-scheme" content="dark" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Pizza Stop" />
@@ -78,20 +82,21 @@ export default function RootLayout({
         <link rel="canonical" href="https://pizza-stop.bg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body className={inter.className}>
           <LoadingProvider>
-            <CartProvider>
-              <div className="min-h-screen bg-bg text-text">
-                <NavBar />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-                <LoadingOverlay />
-              </div>
-            </CartProvider>
+            <LoginIDProvider>
+              <CartProvider>
+                <div className="min-h-screen bg-bg text-text">
+                  <NavBar />
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <ConditionalFooter />
+                  <LoadingOverlay />
+                </div>
+              </CartProvider>
+            </LoginIDProvider>
           </LoadingProvider>
       </body>
     </html>

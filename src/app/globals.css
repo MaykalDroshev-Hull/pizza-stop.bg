@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Orange gradient button style */
+.btn-gradient-orange {
+  background: linear-gradient(135deg, #f97316, #dc2626);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  transition: all 0.3s ease;
+}
+
+.btn-gradient-orange:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.9), rgba(220, 38, 38, 0.9));
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(249, 115, 22, 0.25);
+}
+
 /* Custom fast spin animation for logo */
 @keyframes spin-fast {
   from {
@@ -24,6 +37,41 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Gentle bounce animation for loading dots */
+@keyframes bounce-gentle {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-8px);
+  }
+  60% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Custom grid template for mobile order details */
+@media (max-width: 768px) {
+  .grid-mobile-minmax {
+    grid-template-columns: repeat(1, minmax(0, 20rem));
+    justify-content: start;
+  }
+}
+
+/* Refresh icon spin animation */
+@keyframes refreshSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.refresh-spinning {
+  animation: refreshSpin 0.6s ease-in-out;
 }
 
 :root{
@@ -78,6 +126,8 @@ body{
   /* Force dark theme colors */
   background-color: #0b1020;
   color: #f8fafc;
+  /* Add top padding to account for fixed header */
+  padding-top: 90px;
 }
 
 /* Force dark theme backgrounds */
@@ -170,9 +220,10 @@ img:hover{transform:scale(1.1);box-shadow:0 20px 40px rgba(0,0,0,.4)}
 .group:hover .group-hover\:scale-110 { transform: scale(1.1); }
 .text-center { text-align: center; }
 .grid { display: grid; }
-.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 10rem)); }
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 30rem)); }
 .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 10rem)); }
 .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 10rem)); }
+.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 20rem)); }
 .gap-2 { gap: 0.5rem; }
 .gap-4 { gap: 1rem; }
 .gap-6 { gap: 1.5rem; }
@@ -213,7 +264,7 @@ img:hover{transform:scale(1.1);box-shadow:0 20px 40px rgba(0,0,0,.4)}
 .min-w-0 { min-width: 0px; }
 
 /* Header */
-header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--border);transition:background-color 0.3s ease,border-color 0.3s ease}
+header{position:fixed;top:0;left:0;right:0;z-index:50;background:var(--card);backdrop-filter:saturate(180%) blur(8px);border-bottom:1px solid var(--border);transition:background-color 0.3s ease,border-color 0.3s ease}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
 .brand{display:flex;gap:12px;align-items:center}
 .logo{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;overflow:hidden;box-shadow:0 6px 16px rgba(225,29,72,.35)}
@@ -326,6 +377,15 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
 .nav a.btn{padding:10px 14px;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--orange));font-weight:800;box-shadow:0 8px 20px rgba(225,29,72,.45);transition:transform 0.2s ease}
 .nav a.btn:hover{transform:translateY(-1px)}
 
+/* Responsive button text */
+.desktop-text {
+  display: inline;
+}
+
+.mobile-text {
+  display: none;
+}
+
 /* Account icon styling */
 .account-icon {
   display: flex;
@@ -353,14 +413,19 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
   .nav-contact{gap:8px}
   .nav-contact .btn{font-size:14px;padding:8px 12px}
   
+  /* Adjust body padding for mobile header */
+  body {
+    padding-top: 80px;
+  }
+  
   .account-icon {
     width: 36px;
     height: 36px;
   }
 
-  /* Hide logo on mobile */
+  /* Show logo on mobile */
   .logo {
-    display: none;
+    display: block;
   }
 
   /* Mobile door sign adjustments */
@@ -380,11 +445,18 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
     border-width: 2px;
   }
 
+  /* Responsive button text for mobile */
+  .desktop-text {
+    display: none;
+  }
 
+  .mobile-text {
+    display: inline;
+  }
 }
 
 /* Hero - Basic styles only (detailed styles moved to home.module.css) */
-.hero-inner{padding:36px 16px 12px}
+.hero-inner{padding:36px 16px 12px;margin-top:20px}
 .hero-grid{display:grid;gap:16px;align-items:center}
 .hero h2{font-size:clamp(28px,4.5vw,48px);margin:0 0 10px;font-weight:800}
 .hero p{color:var(--muted);margin:0 0 16px}
@@ -402,7 +474,7 @@ header{position:sticky;top:0;z-index:50;background:var(--card);backdrop-filter:s
 /* Home-specific styles moved to home.module.css */
 
 /* Sections */
-section{padding:24px 0;position:relative;z-index:1}
+section{padding:24px 0;position:relative;z-index:1;margin-top:10px}
 .section-title{font-size:22px;margin:0 0 12px;font-weight:800}
 .grid{display:grid;gap:12px}
 @media (min-width:740px){
@@ -571,12 +643,16 @@ footer{padding:24px 16px;border-top:1px solid var(--border);background:var(--car
 .max-h-\[90vh\] { max-height: 90vh !important; }
 .overflow-y-auto { overflow-y: auto !important; }
 .z-50 { z-index: 50 !important; }
+.z-\[60\] { z-index: 60 !important; }
+.z-\[70\] { z-index: 70 !important; }
+
 
 /* Ensure modal backdrop works */
 .bg-black\/50 {
   background-color: rgba(0, 0, 0, 0.5) !important;
   backdrop-filter: blur(4px) !important;
 }
+
 
 /* Modal content styling */
 .bg-card {
@@ -810,10 +886,37 @@ button {
   }
 }
 
+/* Hide system date/time picker icons on mobile */
+@media (max-width: 768px) {
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+  }
+  
+  input[type="date"]::-webkit-inner-spin-button,
+  input[type="time"]::-webkit-inner-spin-button {
+    display: none;
+    -webkit-appearance: none;
+  }
+  
+  input[type="date"]::-webkit-clear-button,
+  input[type="time"]::-webkit-clear-button {
+    display: none;
+    -webkit-appearance: none;
+  }
+}
+
 /* Extra small mobile devices */
 @media (max-width: 480px) {
   .nav-contact {
-    gap: 6px;
+    gap: 2px;
+    margin-left: 3px;
+  }
+  
+  /* Adjust body padding for extra small mobile header */
+  body {
+    padding-top: 75px;
   }
   
   .nav-contact .btn {
@@ -963,4 +1066,39 @@ button {
     margin-bottom: 24px;
   }
 }
+
+/* Tab Gap CSS Variables - Configurable from Dev Console */
+.tab-gap-container {
+  --tab-gap-mobile: 0.25rem; /* 4px - Default mobile gap */
+  --tab-gap-desktop: 0.5rem; /* 8px - Default desktop gap */
+}
+
+/* Mobile tab gap */
+.tab-gap-container .tab-gap-flex {
+  gap: var(--tab-gap-mobile);
+}
+
+/* Desktop tab gap */
+@media (min-width: 640px) {
+  .tab-gap-container .tab-gap-flex {
+    gap: var(--tab-gap-desktop);
+  }
+}
+
+/* Dev Console Instructions:
+   To test different gaps in dev console:
+   
+   Mobile gap:
+   document.querySelector('.tab-gap-container').style.setProperty('--tab-gap-mobile', '0.5rem');
+   
+   Desktop gap:
+   document.querySelector('.tab-gap-container').style.setProperty('--tab-gap-desktop', '1rem');
+   
+   Common values:
+   - 0.25rem = 4px
+   - 0.5rem = 8px
+   - 0.75rem = 12px
+   - 1rem = 16px
+   - 1.25rem = 20px
+*/
 

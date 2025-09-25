@@ -1,17 +1,60 @@
 'use client'
 
-import { useState } from 'react'
-import { User, Mail, Lock, Phone, Eye, EyeOff } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { User, Mail, Lock, Phone, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import styles from './user.module.css'
+import { useLoginID } from '../../components/LoginIDContext'
+import { useLoading } from '../../components/LoadingContext'
 
 export default function UserPage() {
+  const { login, user } = useLoginID()
+  const { isLoading, startLoading, stopLoading } = useLoading()
   const [isLogin, setIsLogin] = useState(true)
-  const [isResetPassword, setIsResetPassword] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [returnUrl, setReturnUrl] = useState<string | null>(null)
+
+  // Get return URL from query parameters on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const returnUrlParam = urlParams.get('returnUrl')
+      if (returnUrlParam) {
+        setReturnUrl(decodeURIComponent(returnUrlParam))
+      }
+    }
+  }, [])
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      // User is already logged in, redirect to returnUrl or dashboard
+      if (returnUrl) {
+        window.location.href = returnUrl
+      } else {
+        window.location.href = '/dashboard'
+      }
+    }
+  }, [user, returnUrl])
+
+  // Prevent browser validation tooltips
+  useEffect(() => {
+    const preventBrowserValidation = (e: Event) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' && target.hasAttribute('required')) {
+        target.addEventListener('invalid', (e) => {
+          e.preventDefault()
+        })
+      }
+    }
+
+    document.addEventListener('focusin', preventBrowserValidation)
+    return () => {
+      document.removeEventListener('focusin', preventBrowserValidation)
+    }
+  }, [])
 
   // Form state
   const [loginData, setLoginData] = useState({ email: '', password: '' })
@@ -21,52 +64,163 @@ export default function UserPage() {
     phone: '', 
     password: '' 
   })
-  const [resetData, setResetData] = useState({ email: '' })
-  const [resetPasswordData, setResetPasswordData] = useState({ 
-    password: '', 
-    confirmPassword: '' 
+
+  // Email validation states
+  const [emailValidation, setEmailValidation] = useState({
+    isValid: true,
+    errors: [] as string[],
+    showTooltip: false
   })
+
+  // Loading overlay state
+
+  // Comprehensive email validation function
+  const validateEmail = (email: string) => {
+    const errors: string[] = []
+    
+    if (!email) {
+      return { isValid: true, errors: [] }
+    }
+
+    // Check for exactly one @ symbol
+    const atCount = (email.match(/@/g) || []).length
+    if (atCount === 0) {
+      errors.push('Имейлът трябва да съдържа символ @')
+    } else if (atCount > 1) {
+      errors.push('Имейлът може да съдържа само един символ @')
+    }
+
+    if (atCount === 1) {
+      const [localPart, domainPart] = email.split('@')
+      
+      // Local part validation
+      if (!localPart) {
+        errors.push('Частта преди @ не може да бъде празна')
+      } else {
+        // Check for consecutive dots
+        if (localPart.includes('..')) {
+          errors.push('Не са позволени последователни точки (..)')
+        }
+        
+        // Check if starts or ends with dot
+        if (localPart.startsWith('.') || localPart.endsWith('.')) {
+          errors.push('Частта преди @ не може да започва или завършва с точка')
+        }
+        
+        // Check allowed characters in local part
+        const localPartRegex = /^[a-zA-Z0-9._+-]+$/
+        if (!localPartRegex.test(localPart)) {
+          errors.push('Частта преди @ може да съдържа само букви, цифри, точки, долни черти, тирета и плюсове')
+        }
+      }
+      
+      // Domain part validation
+      if (!domainPart) {
+        errors.push('Частта след @ не може да бъде празна')
+      } else {
+        // Check for at least one dot
+        if (!domainPart.includes('.')) {
+          errors.push('Домейнът трябва да съдържа поне една точка')
+        }
+        
+        // Check for consecutive dots
+        if (domainPart.includes('..')) {
+          errors.push('Не са позволени последователни точки (..) в домейна')
+        }
+        
+        // Check if starts or ends with dot
+        if (domainPart.startsWith('.') || domainPart.endsWith('.')) {
+          errors.push('Домейнът не може да започва или завършва с точка')
+        }
+        
+        // Check allowed characters in domain
+        const domainRegex = /^[a-zA-Z0-9.-]+$/
+        if (!domainRegex.test(domainPart)) {
+          errors.push('Домейнът може да съдържа само букви, цифри, тирета и точки')
+        }
+        
+        // Check domain labels don't start/end with -
+        const domainLabels = domainPart.split('.')
+        for (const label of domainLabels) {
+          if (label.startsWith('-') || label.endsWith('-')) {
+            errors.push('Частите на домейна не могат да започват или завършват с тире')
+            break
+          }
+        }
+        
+        // Check top-level domain is at least 2 characters
+        const topLevelDomain = domainLabels[domainLabels.length - 1]
+        if (topLevelDomain && topLevelDomain.length < 2) {
+          errors.push('Домейнът от най-високо ниво трябва да бъде поне 2 символа дълъг')
+        }
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    }
+  }
 
   const toggleForm = () => {
     setIsLogin(!isLogin)
-    setIsResetPassword(false)
     setError('')
     setSuccess('')
-  }
-
-  const toggleResetPassword = () => {
-    setIsResetPassword(!isResetPassword)
-    setIsLogin(false)
-    setError('')
-    setSuccess('')
-  }
-
-  const backToLogin = () => {
-    setIsResetPassword(false)
-    setIsLogin(true)
-    setError('')
-    setSuccess('')
+    setEmailValidation({ isValid: true, errors: [], showTooltip: false })
   }
 
   const handleLoginChange = (field: string, value: string) => {
+    // Prevent spaces in password field
+    if (field === 'password' && value.includes(' ')) {
+      return
+    }
+    
     setLoginData(prev => ({ ...prev, [field]: value }))
+    
+    if (field === 'email') {
+      const validation = validateEmail(value)
+      setEmailValidation({ ...validation, showTooltip: false })
+    }
   }
 
   const handleRegisterChange = (field: string, value: string) => {
+    // Prevent spaces in password field
+    if (field === 'password' && value.includes(' ')) {
+      return
+    }
+    
     setRegisterData(prev => ({ ...prev, [field]: value }))
+    
+    if (field === 'email') {
+      const validation = validateEmail(value)
+      setEmailValidation({ ...validation, showTooltip: false })
+    }
   }
 
-  const handleResetChange = (field: string, value: string) => {
-    setResetData(prev => ({ ...prev, [field]: value }))
-  }
-
-  const handleResetPasswordChange = (field: string, value: string) => {
-    setResetPasswordData(prev => ({ ...prev, [field]: value }))
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
+    
+    // Clear any browser validation messages
+    const form = e.currentTarget as HTMLFormElement
+    form.reportValidity = () => true
+    
+    // Check email validation before proceeding
+    if (loginData.email) {
+      const emailValidation = validateEmail(loginData.email)
+      if (!emailValidation.isValid) {
+        setError('Моля, въведете валиден имейл адрес')
+        // Show tooltip briefly - force it to show
+        setEmailValidation({ ...emailValidation, showTooltip: true })
+        // Clear any existing timeout
+        setTimeout(() => {
+          setEmailValidation(prev => ({ ...prev, showTooltip: false }))
+        }, 3000)
+        return
+      }
+    }
+    
+    startLoading()
     setError('')
     setSuccess('')
 
@@ -83,25 +237,66 @@ export default function UserPage() {
         throw new Error(data.error || 'Login failed')
       }
 
-      setSuccess('Успешен вход!')
       console.log('Login successful:', data.user)
       
-      // Store user data in localStorage and redirect to dashboard
-      localStorage.setItem('user', JSON.stringify(data.user))
-      setTimeout(() => {
+      // Fetch complete profile data including coordinates
+      try {
+        console.log('🔄 Fetching profile data for user ID:', data.user.id)
+        const profileResponse = await fetch(`/api/user/profile?userId=${data.user.id}`)
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json()
+          console.log('📋 Profile data received:', profileData)
+          if (profileData.user) {
+            console.log('✅ Using complete profile data for login:', profileData.user)
+            // Use the complete profile data for login
+            login(profileData.user)
+          } else {
+            console.log('⚠️ No user data in profile response, using basic login data')
+            // Fallback to basic login data
+            login(data.user)
+          }
+        } else {
+          console.log('❌ Profile response not ok, using basic login data')
+          // Fallback to basic login data
+          login(data.user)
+        }
+      } catch (profileError) {
+        console.error('❌ Error fetching profile data:', profileError)
+        // Fallback to basic login data
+        login(data.user)
+      }
+      
+      // Redirect as soon as profile data is ready
+      if (returnUrl) {
+        window.location.href = returnUrl
+      } else {
         window.location.href = '/dashboard'
-      }, 1500)
+      }
       
     } catch (err: any) {
-      setError(err.message || 'Грешка при влизане')
+      setError(err.message || 'Невалиден имейл или парола')
     } finally {
-      setIsLoading(false)
+      stopLoading()
     }
   }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
+    
+    // Clear any browser validation messages
+    const form = e.currentTarget as HTMLFormElement
+    form.reportValidity = () => true
+    
+    // Check email validation before proceeding
+    if (registerData.email) {
+      const emailValidation = validateEmail(registerData.email)
+      if (!emailValidation.isValid) {
+        setError('Моля, въведете валиден имейл адрес')
+        return
+      }
+    }
+    
+    startLoading()
     setError('')
     setSuccess('')
 
@@ -121,73 +316,44 @@ export default function UserPage() {
       setSuccess('Успешна регистрация!')
       console.log('Registration successful:', data.user)
       
-      // Clear form and switch to login
+      // Auto-fill login form with registration data
+      setLoginData({
+        email: registerData.email,
+        password: registerData.password
+      })
+      
+      // Clear registration form
       setRegisterData({ name: '', email: '', phone: '', password: '' })
+      
+      // If there's a return URL, show message about logging in to continue
+      if (returnUrl) {
+        setSuccess('Успешна регистрация! Сега влезте в акаунта си за да продължите с поръчката.')
+      }
+      
       setTimeout(() => setIsLogin(true), 2000)
       
     } catch (err: any) {
       setError(err.message || 'Грешка при регистрация')
     } finally {
-      setIsLoading(false)
+      stopLoading()
     }
   }
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!resetData.email) {
-      setError('Моля, въведете имейл адреса си')
-      return
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(resetData.email)) {
-      setError('Моля, въведете валиден имейл адрес')
-      return
-    }
-
-    setIsLoading(true)
-    setError('')
-    setSuccess('')
-
-    try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetData.email })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Грешка при изпращането на заявката')
-      }
-
-      setSuccess(data.message || 'Ако имейл адресът съществува, ще получите линк за възстановяване на паролата')
-      setResetData({ email: '' })
-
-    } catch (err: any) {
-      setError(err.message || 'Грешка при изпращането на заявката')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   return (
     <main className={styles.userPage}>
-      <div className={`${styles.wrapper} ${!isLogin ? styles.active : ''} ${isResetPassword ? styles.resetActive : ''}`}>
+      <div className={`${styles.wrapper} ${!isLogin ? styles.active : ''} ${(error || success) ? styles.hasMessage : ''}`}>
         {/* Rotating background elements */}
         <span className={styles.rotateBg}></span>
         <span className={styles.rotateBg2}></span>
 
         {/* Login Form */}
         <div className={`${styles.formBox} ${styles.login}`}>
-          <h2 className={`${styles.title} ${styles.animation}`} style={{ '--i': 0, '--j': 21 } as React.CSSProperties}>
+          <h2 className={`${styles.title} ${styles.animation}`} style={{ '--i': 0, '--j': 21, paddingTop: '20px' } as React.CSSProperties}>
             Вход
           </h2>
 
           {error && <div className={styles.errorMessage}>{error}</div>}
-          {success && <div className={styles.successMessage}>{success}</div>}
           
           <form onSubmit={handleLogin}>
             <div className={`${styles.inputBox} ${styles.animation}`} style={{ '--i': 1, '--j': 22 } as React.CSSProperties}>
@@ -200,9 +366,40 @@ export default function UserPage() {
                 data-form-type="other"
                 value={loginData.email}
                 onChange={(e) => handleLoginChange('email', e.target.value)}
+                onFocus={() => {
+                  if (!emailValidation.isValid && loginData.email) {
+                    setEmailValidation(prev => ({ ...prev, showTooltip: true }))
+                  }
+                }}
+                onBlur={() => {
+                  // Don't hide tooltip immediately on blur, let timeout handle it
+                  setTimeout(() => {
+                    setEmailValidation(prev => ({ ...prev, showTooltip: false }))
+                  }, 100)
+                }}
+                className={!emailValidation.isValid && loginData.email ? styles.invalidInput : ''}
               />
               <label>Имейл</label>
               <Mail className={styles.inputIcon} size={18} />
+              {!emailValidation.isValid && loginData.email && (
+                <AlertCircle 
+                  className={styles.validationIcon} 
+                  size={18} 
+                  onMouseEnter={() => setEmailValidation(prev => ({ ...prev, showTooltip: true }))}
+                  onMouseLeave={() => setEmailValidation(prev => ({ ...prev, showTooltip: false }))}
+                />
+              )}
+              {emailValidation.showTooltip && !emailValidation.isValid && emailValidation.errors.length > 0 && (
+                <div className={styles.validationTooltip}>
+                  <div className={styles.tooltipContent}>
+                    {emailValidation.errors.map((error, index) => (
+                      <div key={index} className={styles.tooltipError}>
+                        {error}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className={`${styles.inputBox} ${styles.animation}`} style={{ '--i': 2, '--j': 23 } as React.CSSProperties}>
@@ -239,13 +436,12 @@ export default function UserPage() {
             <div className={`${styles.linkTxt} ${styles.animation}`} style={{ '--i': 5, '--j': 25 } as React.CSSProperties}>
               <p>Нямате акаунт? <button type="button" className={styles.linkBtn} onClick={toggleForm}>Регистрация</button></p>
               <p className={styles.forgotPassword}>
-                <button 
-                  type="button" 
+                <a 
+                  href="/forgot-password"
                   className={styles.forgotLink}
-                  onClick={toggleResetPassword}
                 >
                   Забравена парола?
-                </button>
+                </a>
               </p>
             </div>
           </form>
@@ -262,13 +458,13 @@ export default function UserPage() {
         </div>
 
         {/* Registration Form */}
-        <div className={`${styles.formBox} ${styles.register}`}>
+        <div className={`${styles.formBox} ${styles.register} ${!isLogin ? styles.active : ''}`}>
           <h2 className={`${styles.title} ${styles.animation}`} style={{ '--i': 17, '--j': 0 } as React.CSSProperties}>
             Регистрация
           </h2>
 
           {error && <div className={styles.errorMessage}>{error}</div>}
-          {success && <div className={styles.successMessage}>{success}</div>}
+          {success && !isLogin && <div className={styles.successMessage}>{success}</div>}
           
           <form onSubmit={handleRegister}>
             <div className={`${styles.inputBox} ${styles.animation}`} style={{ '--i': 18, '--j': 1 } as React.CSSProperties}>
@@ -296,9 +492,31 @@ export default function UserPage() {
                 data-form-type="other"
                 value={registerData.email}
                 onChange={(e) => handleRegisterChange('email', e.target.value)}
+                onFocus={() => setEmailValidation(prev => ({ ...prev, showTooltip: true }))}
+                onBlur={() => setEmailValidation(prev => ({ ...prev, showTooltip: false }))}
+                className={!emailValidation.isValid && registerData.email ? styles.invalidInput : ''}
               />
               <label>Имейл</label>
               <Mail className={styles.inputIcon} size={18} />
+              {!emailValidation.isValid && registerData.email && (
+                <AlertCircle 
+                  className={styles.validationIcon} 
+                  size={18} 
+                  onMouseEnter={() => setEmailValidation(prev => ({ ...prev, showTooltip: true }))}
+                  onMouseLeave={() => setEmailValidation(prev => ({ ...prev, showTooltip: false }))}
+                />
+              )}
+              {emailValidation.showTooltip && !emailValidation.isValid && emailValidation.errors.length > 0 && (
+                <div className={styles.validationTooltip}>
+                  <div className={styles.tooltipContent}>
+                    {emailValidation.errors.map((error, index) => (
+                      <div key={index} className={styles.tooltipError}>
+                        {error}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className={`${styles.inputBox} ${styles.animation}`} style={{ '--i': 20, '--j': 3 } as React.CSSProperties}>
@@ -363,56 +581,8 @@ export default function UserPage() {
           </p>
         </div>
 
-        {/* Password Reset Form */}
-        <div className={`${styles.formBox} ${styles.resetPassword}`}>
-          <h2 className={`${styles.title} ${styles.animation}`} style={{ '--i': 24, '--j': 0 } as React.CSSProperties}>
-            Забравена парола
-          </h2>
-
-          {error && <div className={styles.errorMessage}>{error}</div>}
-          {success && <div className={styles.successMessage}>{success}</div>}
-          
-          <form onSubmit={handleForgotPassword}>
-            <div className={`${styles.inputBox} ${styles.animation}`} style={{ '--i': 25, '--j': 1 } as React.CSSProperties}>
-              <input 
-                type="email" 
-                required 
-                placeholder=" " 
-                autoComplete="email"
-                data-lpignore="true"
-                data-form-type="other"
-                value={resetData.email}
-                onChange={(e) => handleResetChange('email', e.target.value)}
-              />
-              <label>Имейл адрес</label>
-              <Mail className={styles.inputIcon} size={18} />
-            </div>
-
-            <button 
-              type="submit" 
-              className={`${styles.btn} ${styles.animation}`} 
-              style={{ '--i': 26, '--j': 2 } as React.CSSProperties}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Изпращам...' : 'Изпрати линк за възстановяване'}
-            </button>
-
-            <div className={`${styles.linkTxt} ${styles.animation}`} style={{ '--i': 27, '--j': 3 } as React.CSSProperties}>
-              <p>Връщане към <button type="button" className={styles.linkBtn} onClick={backToLogin}>входа</button></p>
-            </div>
-          </form>
-        </div>
-
-        {/* Password Reset Info Text */}
-        <div className={`${styles.infoText} ${styles.resetPassword}`}>
-          <h2 className={styles.animation} style={{ '--i': 24, '--j': 0 } as React.CSSProperties}>
-            Възстановяване на парола
-          </h2>
-          <p className={styles.animation} style={{ '--i': 25, '--j': 1 } as React.CSSProperties}>
-            Въведете имейл адреса си и ще получите линк за възстановяване
-          </p>
-        </div>
       </div>
+
     </main>
   )
 }

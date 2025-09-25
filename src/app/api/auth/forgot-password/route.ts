@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         to: email,
         name: user.Name,
         resetToken,
-        resetUrl: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/reset-password?token=${resetToken}`
+        resetUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`
       })
     } catch (emailError) {
       console.error('Failed to send password reset email:', emailError)
