@@ -33,13 +33,15 @@ interface EditProductModalProps {
   onClose: () => void;
   product: Product | null;
   onSave: (productId: number, updatedProduct: Product) => void;
+  categoryOptions: { id: number; name: string }[];
 }
 
 const EditProductModal: React.FC<EditProductModalProps> = ({
   isOpen,
   onClose,
   product,
-  onSave
+  onSave,
+  categoryOptions
 }): React.JSX.Element => {
   const [formData, setFormData] = useState<EditProductForm>({
     name: "",
@@ -56,16 +58,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
   const [originalData, setOriginalData] = useState<EditProductForm | null>(null);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
-  // Category options for product type dropdown
-  const categoryOptions = [
-    { id: 1, name: 'Пици' },
-    { id: 2, name: 'Бургери' },
-    { id: 3, name: 'Дюнери' },
-    { id: 4, name: 'Напитки' },
-    { id: 5, name: 'Сосове' },
-    { id: 6, name: 'Добавки' },
-    { id: 7, name: 'Десерти' }
-  ];
+  // Category options are now passed as props from parent component
 
   // Initialize form data when product changes
   useEffect((): void => {
@@ -333,7 +326,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
             >
               <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden xs:inline">Възстанови</span>
-              <span className="xs:hidden">Reset</span>
+              <span className="xs:hidden">Възстанови</span>
             </button>
             <button
               type="button"
@@ -342,7 +335,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden xs:inline">Отказ</span>
-              <span className="xs:hidden">Cancel</span>
+              <span className="xs:hidden">Отказ</span>
             </button>
             <button
               type="submit"
@@ -351,7 +344,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
             >
               <Save className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden xs:inline">Запази промените</span>
-              <span className="xs:hidden">Save</span>
+              <span className="xs:hidden">Запази</span>
             </button>
           </div>
         </form>

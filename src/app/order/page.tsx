@@ -198,31 +198,38 @@ export default function MenuPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6">
             {filteredItems.map(item => (
-              <div key={item.id} className="card group hover:shadow-xl transition-all transform hover:-translate-y-2 overflow-hidden">
-                <div className="text-6xl text-center py-8 bg-gradient-to-br from-red/10 to-orange/10 group-hover:scale-110 transition-transform duration-300">
-                  {item.image}
-                </div>
-                <div className="p-6">
-                  <h3 className="font-bold text-lg mb-2 text-text">{item.name}</h3>
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-orange font-bold text-2xl">{item.basePrice?.toFixed(2)} лв.</span>
-                    <div className="flex items-center text-sm text-muted">
-                      <Star className="w-4 h-4 text-yellow fill-current mr-1" />
-                      {item.rating}
-                    </div>
+              <div key={item.id} className="card group hover:shadow-2xl hover:shadow-orange/20 transition-all duration-300 transform hover:-translate-y-3 hover:scale-[1.02] overflow-hidden border border-white/8 hover:border-orange/30 bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm">
+                <div className="relative text-4xl sm:text-5xl lg:text-6xl text-center py-6 sm:py-8 bg-gradient-to-br from-red/10 to-orange/10 group-hover:from-red/20 group-hover:to-orange/20 transition-all duration-300">
+                  <div className="group-hover:scale-110 transition-transform duration-300">
+                    {item.image}
                   </div>
-                  
-                  <div className="flex items-center text-sm text-muted mb-4">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {item.time}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </div>
+                <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-base sm:text-lg text-text group-hover:text-orange transition-colors duration-300 overflow-hidden" style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>{item.name}</h3>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-orange font-bold text-xl sm:text-2xl bg-gradient-to-r from-red to-orange bg-clip-text text-transparent">
+                        {item.basePrice?.toFixed(2)} лв.
+                      </span>
+                      <div className="flex items-center text-xs sm:text-sm text-muted bg-white/5 px-2 py-1 rounded-full">
+                        <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow fill-current mr-1" />
+                        <span className="font-medium">{item.rating}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center text-xs sm:text-sm text-muted bg-white/5 px-2 py-1 rounded-full w-fit">
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-orange" />
+                      <span>{item.time}</span>
+                    </div>
                   </div>
 
                   {item.sizes && item.sizes.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm text-muted mb-2">Избери размер:</p>
+                    <div className="space-y-3">
+                      <p className="text-xs sm:text-sm text-muted font-medium">Избери размер:</p>
                       <div className={`${
                         // Special case: Any product with 3 sizes gets vertical layout (like doners)
                         item.sizes.length === 3
@@ -246,14 +253,14 @@ export default function MenuPage() {
                                 ...prev,
                                 [item.id]: typeof size === 'string' ? { name: size, price: sizePrice } : size
                               }))}
-                              className={`px-3 py-2 rounded-lg text-xs border transition-all ${
+                              className={`px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm border transition-all duration-200 transform hover:scale-105 active:scale-95 ${
                                 isSelected
-                                  ? 'bg-orange/20 border-orange text-orange shadow-lg shadow-orange/25'
-                                  : 'bg-white/8 border-white/12 text-text hover:border-orange/50 hover:bg-orange/10'
+                                  ? 'bg-gradient-to-r from-red/20 to-orange/20 border-orange text-orange shadow-lg shadow-orange/25 ring-2 ring-orange/30'
+                                  : 'bg-white/8 border-white/12 text-text hover:border-orange/50 hover:bg-orange/10 hover:shadow-md'
                               }`}
                             >
-                              <div className="font-medium">{sizeName}</div>
-                              <div className="text-xs opacity-75">{sizePrice?.toFixed(2)} лв.</div>
+                              <div className="font-medium truncate">{sizeName}</div>
+                              <div className="text-xs opacity-75 font-semibold">{sizePrice?.toFixed(2)} лв.</div>
                             </button>
                           )
                         })}
@@ -276,14 +283,14 @@ export default function MenuPage() {
                       handleAddToCart(item)
                     }}
                     disabled={item.sizes && item.sizes.length > 0 && !selectedSizes[item.id]}
-                    className={`w-full py-3 px-4 rounded-xl font-medium transition-all transform hover:scale-105 flex items-center justify-center space-x-2 ${
+                    className={`w-full py-3 sm:py-4 px-4 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 text-sm sm:text-base shadow-lg ${
                       item.sizes && item.sizes.length > 0 && !selectedSizes[item.id]
-                        ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-red to-orange text-white hover:shadow-lg'
+                        ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed border border-gray-600/30'
+                        : 'bg-gradient-to-r from-red to-orange text-white hover:shadow-xl hover:shadow-orange/30 hover:from-red-600 hover:to-orange-600 border border-orange/20'
                     }`}
                   >
-                    <Plus size={20} />
-                    <span>
+                    <Plus size={16} className="sm:w-5 sm:h-5" />
+                    <span className="font-semibold">
                       {item.sizes && item.sizes.length > 0 && !selectedSizes[item.id] 
                         ? 'Избери размер първо' 
                         : 'Добави в количката'

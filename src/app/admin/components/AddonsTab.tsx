@@ -27,7 +27,7 @@ const AddonsTab = (): React.JSX.Element => {
       getProductTypeName={getProductTypeName}
       accentColor="green"
       tabName="добавки"
-      productsPerPageDesktop={9}
+      productsPerPageDesktop={8}
       productsPerPageMobile={6}
     />
   );

@@ -82,7 +82,7 @@ export default function Footer() {
             {/* Administration */}
             <div className={styles.adminSection}>
               <h3 className={styles.adminTitle}>Администрация</h3>
-              <Link href="/admin" className={styles.adminLink}>
+              <Link href="/login-admin" className={styles.adminLink}>
                 <Settings className={styles.adminIcon} />
                 <span>Управление</span>
               </Link>

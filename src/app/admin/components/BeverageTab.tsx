@@ -24,7 +24,7 @@ const BeverageTab = (): React.JSX.Element => {
       getProductTypeName={getProductTypeName}
       accentColor="blue"
       tabName="напитки"
-      productsPerPageDesktop={9}
+      productsPerPageDesktop={8}
       productsPerPageMobile={6}
     />
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Plus, Trash2, X, Undo2, Save, CheckCircle, AlertCircle } from "lucide-react";
+import { Package, Plus, Trash2, X, Undo2, Save, CheckCircle, AlertCircle, Edit } from "lucide-react";
 import { 
   DatabaseProduct, 
   upsertProductClient, 
@@ -1022,63 +1022,63 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
               </div>
             </div>
             
-            <div className="flex flex-col xs:flex-row gap-2 w-full">
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
               <button
                 onClick={handleSaveAllChanges}
                 disabled={isDeletingProducts}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-green-800 disabled:to-emerald-800 disabled:cursor-not-allowed px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-lg min-h-[44px]"
+                className="flex-1 inline-flex items-center justify-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-green-800 disabled:to-emerald-800 disabled:cursor-not-allowed px-4 sm:px-6 py-3 sm:py-4 text-white text-sm sm:text-base font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-xl hover:shadow-2xl hover:shadow-green-500/25 transform hover:scale-105 active:scale-95 min-h-[48px] sm:min-h-[52px]"
               >
-                <Save className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">Запази всички</span>
+                <Save className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="font-bold">Запази всички</span>
               </button>
               <button
                 onClick={handleUndoAllChanges}
                 disabled={isDeletingProducts}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-gray-600 to-slate-600 hover:from-gray-700 hover:to-slate-700 disabled:from-gray-800 disabled:to-slate-800 disabled:cursor-not-allowed px-3 sm:px-4 py-2.5 sm:py-3 text-white text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 shadow-lg min-h-[44px]"
+                className="flex-1 inline-flex items-center justify-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 disabled:from-gray-800 disabled:to-slate-800 disabled:cursor-not-allowed px-4 sm:px-6 py-3 sm:py-4 text-white text-sm sm:text-base font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 shadow-xl hover:shadow-2xl hover:shadow-red-500/25 transform hover:scale-105 active:scale-95 min-h-[48px] sm:min-h-[52px]"
               >
-                <Undo2 className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">Отмени всички</span>
+                <Undo2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="font-bold">Отмени всички</span>
               </button>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6">
             {trackedChanges.map((change: TrackedChange) => (
               <div 
                 key={change.id}
-                className={`rounded-lg sm:rounded-xl p-3 sm:p-4 border transition-all duration-200 overflow-hidden flex flex-col h-full ${
+                className={`rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 md:p-5 border-2 transition-all duration-300 overflow-hidden flex flex-col h-full shadow-lg hover:shadow-xl transform hover:scale-[1.02] sm:hover:scale-105 active:scale-95 min-h-[140px] sm:min-h-[160px] md:min-h-[180px] lg:min-h-[200px] ${
                   change.changeType === 'delete' 
-                    ? 'bg-gradient-to-br from-red-900/30 to-rose-900/30 border-red-500/50 hover:from-red-900/40 hover:to-rose-900/40' 
+                    ? 'bg-gradient-to-br from-red-900/40 to-rose-900/40 border-red-500/60 hover:from-red-900/50 hover:to-rose-900/50 hover:border-red-400/80 hover:shadow-red-500/25' 
                     : change.changeType === 'restore'
-                    ? 'bg-gradient-to-br from-blue-900/30 to-indigo-900/30 border-blue-500/50 hover:from-blue-900/40 hover:to-indigo-900/40'
-                    : 'bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-500/50 hover:from-green-900/40 hover:to-emerald-900/40'
+                    ? 'bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border-blue-500/60 hover:from-blue-900/50 hover:to-indigo-900/50 hover:border-blue-400/80 hover:shadow-blue-500/25'
+                    : 'bg-gradient-to-br from-green-900/40 to-emerald-900/40 border-green-500/60 hover:from-green-900/50 hover:to-emerald-900/50 hover:border-green-400/80 hover:shadow-green-500/25'
                 }`}
               >
-                <div className="flex items-start gap-2 sm:gap-3 mb-3">
+                <div className="flex items-start gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
                   <div className="flex-1 min-w-0">
-                    <h4 className={`font-medium text-sm sm:text-base leading-tight mb-1 line-clamp-2 ${
+                    <h4 className={`font-bold text-xs sm:text-sm md:text-base lg:text-lg leading-tight mb-1 sm:mb-2 overflow-hidden ${
                       change.changeType === 'delete' ? 'text-red-100' : change.changeType === 'restore' ? 'text-blue-100' : 'text-green-100'
-                    }`}>
+                    }`} style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>
                       {change.productName}
                     </h4>
-                    <p className={`text-xs sm:text-sm ${
+                    <p className={`text-xs sm:text-sm font-medium ${
                       change.changeType === 'delete' ? 'text-red-300' : change.changeType === 'restore' ? 'text-blue-300' : 'text-green-300'
                     }`}>
                       {change.productType}
                     </p>
                   </div>
-                  <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0 mt-1 ${
-                    change.changeType === 'delete' ? 'bg-red-400' : change.changeType === 'restore' ? 'bg-blue-400' : 'bg-green-400'
+                  <div className={`w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 rounded-full flex-shrink-0 mt-0.5 sm:mt-1 shadow-lg ${
+                    change.changeType === 'delete' ? 'bg-red-400 shadow-red-400/50' : change.changeType === 'restore' ? 'bg-blue-400 shadow-blue-400/50' : 'bg-green-400 shadow-green-400/50'
                   }`} />
                 </div>
                   
-                <div className="mb-3">
-                  <span className={`inline-block text-xs font-medium px-2 py-1 rounded-md ${
+                <div className="mb-3 sm:mb-4">
+                  <span className={`inline-block text-xs sm:text-sm font-bold px-2 sm:px-3 py-1 sm:py-2 rounded-full shadow-md ${
                     change.changeType === 'delete' 
-                      ? 'bg-red-800/60 text-red-100' 
+                      ? 'bg-red-600/80 text-red-100 shadow-red-600/30' 
                       : change.changeType === 'restore'
-                      ? 'bg-blue-800/60 text-blue-100'
-                      : 'bg-green-800/60 text-green-100'
+                      ? 'bg-blue-600/80 text-blue-100 shadow-blue-600/30'
+                      : 'bg-green-600/80 text-green-100 shadow-green-600/30'
                   }`}>
                     {change.changeType === 'delete' ? 'Изтриване' : change.changeType === 'restore' ? 'Възстановяване' : 'Обновяване'}
                   </span>
@@ -1086,16 +1086,16 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                 
                 <button
                   onClick={() => handleUndoChange(change.id)}
-                  className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 mt-auto ${
+                  className={`w-full inline-flex items-center justify-center gap-1 sm:gap-2 md:gap-3 px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 rounded-lg sm:rounded-xl text-xs sm:text-sm md:text-base font-bold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 mt-auto shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 min-h-[36px] sm:min-h-[40px] md:min-h-[44px] ${
                     change.changeType === 'delete'
-                      ? 'bg-red-600 hover:bg-red-700 text-red-100 focus:ring-red-500'
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-red-100 focus:ring-red-500 hover:shadow-red-500/30'
                       : change.changeType === 'restore'
-                      ? 'bg-blue-600 hover:bg-blue-700 text-blue-100 focus:ring-blue-500'
-                      : 'bg-green-600 hover:bg-green-700 text-green-100 focus:ring-green-500'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-blue-100 focus:ring-blue-500 hover:shadow-blue-500/30'
+                      : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-green-100 focus:ring-green-500 hover:shadow-green-500/30'
                   }`}
                 >
-                  <Undo2 className="w-4 h-4 flex-shrink-0" />
-                  <span>Отмяна</span>
+                  <Undo2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="hidden xs:inline sm:inline">Отмяна</span>
                 </button>
               </div>
             ))}
@@ -1104,12 +1104,12 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       )}
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {currentProducts.map((product: Product) => (
           <div 
             key={product.id} 
-            className={`bg-gray-900 border rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 group flex flex-col ${
-              product.isDisabled ? 'border-gray-600 opacity-60' : `border-gray-700 ${colors.border}`
+            className={`bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm border-2 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 transition-all duration-300 group flex flex-col shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-2 ${
+              product.isDisabled ? 'border-gray-600/50 opacity-60' : `border-gray-700/50 ${colors.border} hover:border-orange/30`
             } ${
               product.isAnimating ? 'animate-pulse scale-95 opacity-50' : ''
             }`}
@@ -1120,124 +1120,140 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
             }}
           >
             {/* Product Image */}
-            <div className="w-full h-32 sm:h-40 md:h-48 bg-gray-800 rounded-lg sm:rounded-xl mb-3 sm:mb-4 flex items-center justify-center overflow-hidden">
+            <div className="relative w-full h-32 sm:h-40 lg:h-48 bg-gradient-to-br from-gray-800/80 to-gray-700/80 rounded-xl sm:rounded-2xl mb-4 sm:mb-5 flex items-center justify-center overflow-hidden group-hover:shadow-lg transition-all duration-300">
               {product.imageUrl ? (
-                <img 
-                  src={product.imageUrl} 
-                  alt={product.name}
-                  className="w-full h-full object-cover rounded-xl"
-                  onError={(e) => {
-                    const target = e.currentTarget as HTMLImageElement;
-                    const nextElement = target.nextElementSibling as HTMLElement;
-                    target.style.display = 'none';
-                    if (nextElement) {
-                      nextElement.style.display = 'flex';
-                    }
-                  }}
-                />
+                <>
+                  <img 
+                    src={product.imageUrl} 
+                    alt={product.name}
+                    className="w-full h-full object-cover rounded-xl sm:rounded-2xl transition-transform duration-300 group-hover:scale-110"
+                    onError={(e) => {
+                      const target = e.currentTarget as HTMLImageElement;
+                      const nextElement = target.nextElementSibling as HTMLElement;
+                      target.style.display = 'none';
+                      if (nextElement) {
+                        nextElement.style.display = 'flex';
+                      }
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl sm:rounded-2xl"></div>
+                </>
               ) : null}
               <div className={`w-full h-full items-center justify-center ${product.imageUrl ? 'hidden' : 'flex'}`}>
-                <Package className={`w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 transition-colors ${
+                <Package className={`w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 transition-all duration-300 group-hover:scale-110 ${
                   product.isDisabled 
                     ? 'text-gray-500' 
-                    : `text-gray-600 ${colors.text}`
+                    : `text-gray-600 ${colors.text} group-hover:text-orange`
                 }`} />
               </div>
             </div>
 
-            {/* Product Info */}
-            <div className="flex-1 space-y-2 sm:space-y-3">
-              <h3 className={`font-bold leading-snug transition-colors ${
-                product.isDisabled ? 'text-gray-500' : `text-white ${colors.text}`
-              } text-base sm:text-lg line-clamp-2 min-h-[2.8rem] sm:min-h-[3.2rem]`}>
-                {product.name}
-              </h3>
-              <p className="text-xs sm:text-sm text-gray-400">{product.productType}</p>
-              
-              {/* Description */}
-              {product.description && (
-                <p className="text-xs sm:text-sm text-gray-500 line-clamp-2">{product.description}</p>
-              )}
-              
-              {/* Price Fields */}
-              <div className="space-y-2 sm:space-y-3">
-                {/* Small Price */}
-                <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 sm:w-7 sm:h-7 bg-green-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs sm:text-sm font-bold">S</span>
+            {/* Product Info - Flex container to push actions to bottom */}
+            <div className="flex-1 flex flex-col">
+              {/* Content Section */}
+              <div className="flex-1 space-y-2 sm:space-y-3">
+                {/* Product Name and Type - Single Line */}
+                <div className="space-y-1">
+                  <h3 className={`font-bold leading-tight transition-colors duration-300 overflow-hidden ${
+                    product.isDisabled ? 'text-gray-500' : `text-white ${colors.text} group-hover:text-orange`
+                  } text-sm sm:text-base lg:text-lg`} style={{display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical'}}>
+                    {product.name}
+                  </h3>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange opacity-60"></span>
+                      <p className="text-xs text-gray-400 font-medium">{product.productType}</p>
                     </div>
-                    <span className="text-xs sm:text-sm text-gray-300 font-medium">Малка</span>
+                    {product.description && (
+                      <p className="text-xs text-gray-500 truncate max-w-[100px]" title={product.description}>
+                        {product.description}
+                      </p>
+                    )}
                   </div>
-                  <span className="text-sm sm:text-base lg:text-lg font-bold text-green-400">
-                    {product.smallPrice ? formatPriceWithEuro(product.smallPrice) : 'N/A'}
-                  </span>
                 </div>
                 
-                {/* Medium Price */}
-                {product.mediumPrice && (
-                  <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-orange-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs sm:text-sm font-bold">M</span>
+                {/* Price Fields - Individual Row Layout */}
+                <div className="space-y-2">
+                  {/* Small Price - Full Width Row */}
+                  <div className="flex items-center justify-between p-2 sm:p-3 lg:p-4 bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-lg border border-gray-600/30 hover:border-green-500/50 transition-all duration-300 group/price">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center shadow-lg group-hover/price:shadow-green-500/30 transition-all duration-300">
+                        <span className="text-white text-xs sm:text-sm font-bold">S</span>
                       </div>
-                      <span className="text-xs sm:text-sm text-gray-300 font-medium">Средна</span>
+                      <span className="text-xs sm:text-sm lg:text-base text-gray-300 font-semibold">Малка</span>
                     </div>
-                    <span className="text-sm sm:text-base lg:text-lg font-bold text-orange-400">
-                      {formatPriceWithEuro(product.mediumPrice)}
+                    <span className="text-xs sm:text-sm lg:text-base font-bold text-green-400 bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent whitespace-nowrap">
+                      {product.smallPrice ? formatPriceWithEuro(product.smallPrice) : 'N/A'}
                     </span>
                   </div>
-                )}
-                
-                {/* Large Price */}
-                {product.largePrice && (
-                  <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-800/50 rounded-lg border border-gray-700/50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 bg-red-600 rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs sm:text-sm font-bold">L</span>
+                  
+                  {/* Medium Price - Full Width Row */}
+                  {product.mediumPrice && (
+                    <div className="flex items-center justify-between p-2 sm:p-3 lg:p-4 bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-lg border border-gray-600/30 hover:border-orange-500/50 transition-all duration-300 group/price">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 bg-gradient-to-r from-orange-600 to-red-600 rounded-full flex items-center justify-center shadow-lg group-hover/price:shadow-orange-500/30 transition-all duration-300">
+                          <span className="text-white text-xs sm:text-sm font-bold">M</span>
+                        </div>
+                        <span className="text-xs sm:text-sm lg:text-base text-gray-300 font-semibold">Средна</span>
                       </div>
-                      <span className="text-xs sm:text-sm text-gray-300 font-medium">Голяма</span>
+                      <span className="text-xs sm:text-sm lg:text-base font-bold text-orange-400 bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent whitespace-nowrap">
+                        {formatPriceWithEuro(product.mediumPrice)}
+                      </span>
                     </div>
-                    <span className="text-sm sm:text-base lg:text-lg font-bold text-red-400">
-                      {formatPriceWithEuro(product.largePrice)}
-                    </span>
-                  </div>
-                )}
+                  )}
+                  
+                  {/* Large Price - Full Width Row */}
+                  {product.largePrice && (
+                    <div className="flex items-center justify-between p-2 sm:p-3 lg:p-4 bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-lg border border-gray-600/30 hover:border-red-500/50 transition-all duration-300 group/price">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 bg-gradient-to-r from-red-600 to-rose-600 rounded-full flex items-center justify-center shadow-lg group-hover/price:shadow-red-500/30 transition-all duration-300">
+                          <span className="text-white text-xs sm:text-sm font-bold">L</span>
+                        </div>
+                        <span className="text-xs sm:text-sm lg:text-base text-gray-300 font-semibold">Голяма</span>
+                      </div>
+                      <span className="text-xs sm:text-sm lg:text-base font-bold text-red-400 bg-gradient-to-r from-red-400 to-rose-400 bg-clip-text text-transparent whitespace-nowrap">
+                        {formatPriceWithEuro(product.largePrice)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
               
-              {/* Actions */}
-              <div className="flex flex-col space-y-2 sm:space-y-3">
-                <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2">
+              {/* Actions - Always at bottom */}
+              <div className="flex flex-col space-y-3 sm:space-y-4 mt-4 sm:mt-6">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <button 
-                    className="flex-1 inline-flex h-8 sm:h-10 items-center justify-center rounded-xl sm:rounded-2xl bg-green-600 hover:bg-green-700 px-3 sm:px-4 text-xs sm:text-sm font-medium text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
+                    className="flex-1 inline-flex h-10 sm:h-12 items-center justify-center gap-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-3 sm:px-6 text-sm sm:text-base font-semibold text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-lg hover:shadow-xl hover:shadow-green-500/25 transform hover:scale-105 active:scale-95"
                     onClick={(): void => handleEditProduct(product.id)}
                     disabled={product.isDisabled || false}
                   >
-                    Edit
+                    <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="hidden xs:inline">Промени</span>
+                    <span className="xs:hidden">Промени</span>
                   </button>
                   {product.isDeleted ? (
                     <button 
-                      className="flex-1 inline-flex h-8 sm:h-10 items-center justify-center gap-1 sm:gap-2 rounded-xl sm:rounded-2xl bg-blue-600 px-3 sm:px-4 text-xs sm:text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                      className="flex-1 inline-flex h-10 sm:h-12 items-center justify-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-3 sm:px-6 text-sm sm:text-base font-semibold text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 shadow-lg hover:shadow-xl hover:shadow-blue-500/25 transform hover:scale-105 active:scale-95"
                       onClick={(): void => { handleRestoreProduct(product.id); }}
                     >
                       <Undo2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden xs:inline">Undo Delete</span>
-                      <span className="xs:hidden">Undo</span>
+                      <span className="hidden xs:inline">Отмяна</span>
+                      <span className="xs:hidden">Отмяна</span>
                     </button>
                   ) : (
                     <button 
-                      className="flex-1 inline-flex h-8 sm:h-10 items-center justify-center gap-1 sm:gap-2 rounded-xl sm:rounded-2xl bg-red-800 px-3 sm:px-4 text-xs sm:text-sm font-medium text-white transition-colors duration-200 hover:bg-red-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-800 focus-visible:ring-offset-2"
+                      className="flex-1 inline-flex h-10 sm:h-12 items-center justify-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 px-3 sm:px-6 text-sm sm:text-base font-semibold text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 shadow-lg hover:shadow-xl hover:shadow-red-500/25 transform hover:scale-105 active:scale-95"
                       onClick={(): void => handleDeleteProduct(product.id)}
                     >
                       <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden xs:inline">Delete</span>
-                      <span className="xs:hidden">Delete</span>
+                      <span className="hidden xs:inline">Изтрий</span>
+                      <span className="xs:hidden">Изтрий</span>
                     </button>
                   )}
                 </div>
 
                 {/* Disable Checkbox */}
-                <label className="flex items-center space-x-1.5 sm:space-x-2 cursor-pointer">
+                <label className="flex items-center justify-center space-x-2 sm:space-x-3 cursor-pointer p-3 sm:p-4 bg-gray-800/30 rounded-xl border border-gray-600/30 hover:border-gray-500/50 transition-all duration-300 group/toggle">
                   <input
                     type="checkbox"
                     checked={product.isDisabled || false}
@@ -1245,7 +1261,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                     className="w-3 h-3 sm:w-4 sm:h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2"
                   />
                   <span className="text-xs sm:text-sm text-gray-400">
-                    {product.isDisabled ? 'Disabled' : 'Enable'}
+                    {product.isDisabled ? 'Скрий' : 'Покажи'}
                   </span>
                 </label>
               </div>
@@ -1498,6 +1514,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         onClose={handleCloseEditModal}
         product={editingProduct}
         onSave={handleSaveProduct}
+        categoryOptions={categoryOptions}
       />
     </div>
   );

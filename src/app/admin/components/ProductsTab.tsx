@@ -38,7 +38,7 @@ const ProductsTab: React.FC = (): React.JSX.Element => {
       getProductTypeName={getProductTypeName}
       accentColor="red"
       tabName="продукти"
-      productsPerPageDesktop={9}
+      productsPerPageDesktop={8}
       productsPerPageMobile={6}
     />
   );
