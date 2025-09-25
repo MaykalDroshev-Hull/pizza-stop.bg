@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 interface LoadingContextType {
   isLoading: boolean
@@ -14,6 +14,19 @@ const LoadingContext = createContext<LoadingContextType | undefined>(undefined)
 export function LoadingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true) // Start with loading true
   const [isInitialLoad, setIsInitialLoad] = useState(true) // Track initial page load
+
+  // Automatically stop initial loading after page loads
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isInitialLoad) {
+        console.log('🚀 LoadingContext: Auto-stopping initial loading')
+        setIsInitialLoad(false)
+        setIsLoading(false)
+      }
+    }, 1000) // Stop loading after 1 second
+
+    return () => clearTimeout(timer)
+  }, [isInitialLoad])
 
   const startLoading = () => {
     console.log('🚀 LoadingContext: startLoading() called')
