@@ -926,6 +926,7 @@ export default function MenuPage() {
             </button>
           </div>
         ) : (
+
           <div 
             className="grid gap-3" 
             style={{ 
@@ -1331,6 +1332,7 @@ export default function MenuPage() {
                       }
                       return null;
                     })()}
+
                     </div>
                   
                   {/* Footer - Sticky to bottom */}
@@ -1342,6 +1344,7 @@ export default function MenuPage() {
                       console.log('🔍 Item object:', item)
                       handleAddToCart(item)
                     }}
+
                     disabled={item.category !== 'drinks' && item.category !== 'burgers' && ((!item.sizes || item.sizes.length === 0) || (item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id]))}
                     className={`w-full py-2 md:py-3 px-3 md:px-4 rounded-xl font-medium transition-all flex items-center justify-center space-x-1 md:space-x-2 text-sm md:text-base relative z-10 ${
                       item.category !== 'drinks' && item.category !== 'burgers' && ((!item.sizes || item.sizes.length === 0) || (item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id]))
@@ -1360,6 +1363,7 @@ export default function MenuPage() {
                           : item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id] 
                           ? 'Избери размер' 
                           : 'Добави'
+
                       }
                     </span>
                   </button>
