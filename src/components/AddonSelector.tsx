@@ -48,7 +48,7 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
     return (
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-white mb-3">{title}</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
           {addons.map((addon) => {
             const isSelected = selectedAddonIds.includes(addon.AddonID)
             
@@ -60,13 +60,32 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
               <button
                 key={addon.AddonID}
                 onClick={() => handleAddonToggle(addon.AddonID)}
-                className={`w-full p-3 rounded-lg border text-sm transition-all text-center ${
+                className={`w-full rounded-lg border text-sm transition-all text-center sauce-button ${
                   isSelected
                     ? 'border-green-500 bg-green-500/20 text-green-400 shadow-lg shadow-green-500/25'
                     : 'border-white/12 text-muted hover:border-white/20 hover:bg-white/5'
                 }`}
+                style={{
+                  minHeight: '48px',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: '1.3',
+                  hyphens: 'auto',
+                  overflowWrap: 'anywhere',
+                  wordBreak: 'break-word'
+                }}
               >
-                <div className="font-medium">{addon.Name}</div>
+                <div className="font-medium" style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textAlign: 'center',
+                  fontSize: '14px'
+                }}>{addon.Name}</div>
                 <div className={`text-xs mt-1 ${textColor}`}>
                   {displayText}
                 </div>

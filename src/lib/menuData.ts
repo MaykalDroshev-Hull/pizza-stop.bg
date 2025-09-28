@@ -279,10 +279,25 @@ export async function fetchMenuData() {
       
       console.log(`🖼️ Product ${product.Product}: Using image ${selectedImage} (index ${imageIndex}/${imageArray.length})`)
 
+      // Determine base price - for burgers and drinks, use the first available price
+      let basePrice = product.SmallPrice
+      if (category === 'burgers' || category === 'drinks') {
+        // For burgers and drinks, use the first available price
+        if (product.SmallPrice && product.SmallPrice > 0) {
+          basePrice = product.SmallPrice
+        } else if (product.MediumPrice && product.MediumPrice > 0) {
+          basePrice = product.MediumPrice
+        } else if (product.LargePrice && product.LargePrice > 0) {
+          basePrice = product.LargePrice
+        } else {
+          basePrice = 0 // Fallback
+        }
+      }
+
       const menuItem: MenuItem = {
         id: product.ProductID,
         name: product.Product,
-        basePrice: product.SmallPrice,
+        basePrice: basePrice,
         image: selectedImage,
         category,
         rating: ratingMap[product.ProductTypeID] || 4.5,
