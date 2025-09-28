@@ -360,7 +360,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                 {item.addons.filter(addon => addon.AddonType === 'sauce').length > 0 && (
                   <div>
                     <h5 className="text-sm text-muted mb-2">Сосове:</h5>
-                    <div className="grid grid-cols-2 gap-3 place-items-center">
+                    <div className="grid grid-cols-4 sm:grid-cols-1 lg:grid-cols-4 gap-3 place-items-center">
                       {item.addons
                         .filter(addon => addon.AddonType === 'sauce')
                         .map(addon => (
@@ -431,7 +431,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                 {item.addons.filter(addon => addon.AddonType === 'vegetable').length > 0 && (
                   <div>
                     <h5 className="text-sm text-muted mb-2">Салати:</h5>
-                    <div className="grid grid-cols-2 gap-3 place-items-center">
+                    <div className="grid grid-cols-4 sm:grid-cols-1 lg:grid-cols-4 gap-3 place-items-center">
                       {item.addons
                         .filter(addon => addon.AddonType === 'vegetable')
                         .map(addon => (

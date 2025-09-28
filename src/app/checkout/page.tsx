@@ -10,9 +10,8 @@ declare global {
 }
 import { ArrowLeft, MapPin, User, Phone, CreditCard, Banknote, Clock, Calendar, LogIn, UserCheck, MessageSquare, RotateCcw, Database, Navigation, FileText, Map, CheckCircle, XCircle, Info, AlertTriangle, Lightbulb, Home, ShoppingCart, Pizza, Search, ClipboardList, Edit, Target, AlertCircle, HelpCircle, Truck, Store, Mail } from 'lucide-react'
 import { useCart } from '../../components/CartContext'
-import AddressSelectionModal from '../../components/AddressSelectionModal'
 import CartSummaryDisplay from '../../components/CartSummaryDisplay'
-import DrinksSuggestionModal from '../../components/DrinksSuggestionModal'
+import DrinksSuggestionBox from '../../components/DrinksSuggestionBox'
 import { isRestaurantOpen } from '../../utils/openingHours'
 import { useLoginID } from '../../components/LoginIDContext'
 import { encryptOrderId } from '../../utils/orderEncryption'
@@ -49,8 +48,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('online')
   const [orderTime, setOrderTime] = useState<OrderTime>({ type: null })
   const [orderType, setOrderType] = useState<OrderType>('guest')
-  const [showAddressModal, setShowAddressModal] = useState(false)
-  const [showDrinksModal, setShowDrinksModal] = useState(false)
+  const [showDrinksSuggestion, setShowDrinksSuggestion] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isCartLoading, setIsCartLoading] = useState(true)
   const [deliveryInstructions, setDeliveryInstructions] = useState('')
@@ -64,6 +62,18 @@ export default function CheckoutPage() {
   const [cachedProfileData, setCachedProfileData] = useState<any>(null)
   const [dateTimeError, setDateTimeError] = useState<string>('')
   const addressInputRef = useRef<HTMLInputElement>(null)
+  
+  // Map modal state (from dashboard)
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false)
+  const [mapModalLoaded, setMapModalLoaded] = useState(false)
+  const [mapLoaded, setMapLoaded] = useState(false)
+  const [isValidatingAddress, setIsValidatingAddress] = useState(false)
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  const mapModalRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<google.maps.Map | null>(null)
+  const markerRef = useRef<google.maps.Marker | null>(null)
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
 
   // Function to get working hours for a specific day
   const getWorkingHoursForDay = (date: Date) => {
@@ -92,10 +102,11 @@ export default function CheckoutPage() {
     return dayNames[date.getDay()]
   }
 
+  // Load Google Maps script
   useEffect(() => {
-    // Load Google Maps script for autocomplete
     const loadGoogleMaps = async () => {
       if (window.google && window.google.maps && window.google.maps.places && window.google.maps.geometry) {
+        setMapLoaded(true)
         initializeAutocomplete()
         return
       }
@@ -119,6 +130,181 @@ export default function CheckoutPage() {
     loadGoogleMaps()
   }, [])
 
+  // Initialize map modal when opened
+  useEffect(() => {
+    if (isMapModalOpen && mapLoaded && mapModalRef.current && !mapModalLoaded) {
+      const initMap = () => {
+        if (!window.google?.maps) return
+
+        const map = new window.google.maps.Map(mapModalRef.current!, {
+          center: { lat: 43.1333, lng: 24.7167 }, // Lovech center
+          zoom: 13,
+          mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+          styles: []
+        })
+
+        mapInstanceRef.current = map
+
+        // Wait for map to be ready before adding overlays and listeners
+        window.google.maps.event.addListenerOnce(map, 'idle', async () => {
+          // Automatically get user location when map opens
+          try {
+            const userLocation = await getUserLocation()
+            
+            // Center map on user location with 25 meter radius zoom
+            map.setCenter(userLocation)
+            map.setZoom(18)
+            
+            // Add marker at user location
+            markerRef.current = new window.google.maps.Marker({
+              position: userLocation,
+              map: map,
+              draggable: true,
+              title: 'Вашата локация'
+            })
+
+            // Add marker drag listener
+            markerRef.current.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+              if (event.latLng) {
+                const lat = event.latLng.lat()
+                const lng = event.latLng.lng()
+                validateAddressZone({ lat, lng })
+              }
+            })
+
+            // Validate zone for user location
+            validateAddressZone(userLocation)
+          } catch (error) {
+            console.error('Error getting user location:', error)
+          }
+          
+          // Add delivery zone overlays
+          const lovechArea = [
+            { lat: 43.12525, lng: 24.71518 },
+            { lat: 43.12970, lng: 24.70579 },
+            { lat: 43.13005, lng: 24.69994 },
+            { lat: 43.12483, lng: 24.68928 },
+            { lat: 43.12299, lng: 24.67855 },
+            { lat: 43.13595, lng: 24.67501 },
+            { lat: 43.14063, lng: 24.67991 },
+            { lat: 43.14337, lng: 24.67877 },
+            { lat: 43.14687, lng: 24.67553 },
+            { lat: 43.15432, lng: 24.68221 },
+            { lat: 43.15486, lng: 24.68312 },
+            { lat: 43.15629, lng: 24.69245 },
+            { lat: 43.15968, lng: 24.70306 },
+            { lat: 43.16907, lng: 24.72538 },
+            { lat: 43.15901, lng: 24.74022 },
+            { lat: 43.15548, lng: 24.73935 },
+            { lat: 43.14960, lng: 24.73785 },
+            { lat: 43.13553, lng: 24.73599 },
+            { lat: 43.13952, lng: 24.72210 },
+            { lat: 43.12939, lng: 24.72549 }
+          ]
+
+          const extendedArea = [
+            { lat: 43.19740, lng: 24.67377 },
+            { lat: 43.19530, lng: 24.68420 },
+            { lat: 43.18795, lng: 24.69091 },
+            { lat: 43.18184, lng: 24.69271 },
+            { lat: 43.16906, lng: 24.70673 },
+            { lat: 43.18185, lng: 24.73747 },
+            { lat: 43.19690, lng: 24.78520 },
+            { lat: 43.19429, lng: 24.78849 },
+            { lat: 43.19177, lng: 24.79354 },
+            { lat: 43.18216, lng: 24.77405 },
+            { lat: 43.15513, lng: 24.78379 },
+            { lat: 43.14733, lng: 24.78212 },
+            { lat: 43.14837, lng: 24.76925 },
+            { lat: 43.14629, lng: 24.74900 },
+            { lat: 43.13578, lng: 24.74945 },
+            { lat: 43.12876, lng: 24.76489 },
+            { lat: 43.12203, lng: 24.75945 },
+            { lat: 43.11969, lng: 24.76062 },
+            { lat: 43.10933, lng: 24.75319 },
+            { lat: 43.10442, lng: 24.75046 },
+            { lat: 43.09460, lng: 24.75211 },
+            { lat: 43.09237, lng: 24.74715 },
+            { lat: 43.09868, lng: 24.73602 },
+            { lat: 43.10296, lng: 24.72085 },
+            { lat: 43.10702, lng: 24.70585 },
+            { lat: 43.11009, lng: 24.70742 },
+            { lat: 43.11222, lng: 24.71048 },
+            { lat: 43.12163, lng: 24.70547 },
+            { lat: 43.12097, lng: 24.67849 },
+            { lat: 43.14318, lng: 24.67233 },
+            { lat: 43.15453, lng: 24.68183 },
+            { lat: 43.15655, lng: 24.68643 },
+            { lat: 43.16302, lng: 24.69263 },
+            { lat: 43.17894, lng: 24.67871 },
+            { lat: 43.17927, lng: 24.65107 },
+            { lat: 43.18665, lng: 24.64179 },
+            { lat: 43.19006, lng: 24.64309 },
+            { lat: 43.19788, lng: 24.64881 }
+          ]
+
+          // Yellow zone (Lovech city area)
+          new window.google.maps.Polygon({
+            paths: lovechArea,
+            strokeColor: '#fbbf24',
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: '#fbbf24',
+            fillOpacity: 0.2
+          }).setMap(map)
+
+          // Blue zone (Extended area)
+          new window.google.maps.Polygon({
+            paths: extendedArea,
+            strokeColor: '#3b82f6',
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: '#3b82f6',
+            fillOpacity: 0.2
+          }).setMap(map)
+
+          // Add click listener to place marker
+          map.addListener('click', (event: google.maps.MapMouseEvent) => {
+            if (event.latLng) {
+              const lat = event.latLng.lat()
+              const lng = event.latLng.lng()
+              
+              // Remove existing marker
+              if (markerRef.current) {
+                markerRef.current.setMap(null)
+              }
+              
+              // Add new marker
+              markerRef.current = new window.google.maps.Marker({
+                position: { lat, lng },
+                map: map,
+                draggable: true,
+                title: 'Избран адрес'
+              })
+
+              // Add marker drag listener
+              markerRef.current.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+                if (event.latLng) {
+                  const lat = event.latLng.lat()
+                  const lng = event.latLng.lng()
+                  validateAddressZone({ lat, lng })
+                }
+              })
+
+              // Validate zone for clicked location
+              validateAddressZone({ lat, lng })
+            }
+          })
+
+          setMapModalLoaded(true)
+        })
+      }
+
+      // Small delay to ensure modal is rendered
+      setTimeout(initMap, 100)
+    }
+  }, [isMapModalOpen, mapLoaded, mapModalLoaded])
+
   // Check for "order again" data on component mount and refresh cart
   useEffect(() => {
     // Refresh cart from localStorage first (for "order again" functionality)
@@ -141,14 +327,14 @@ export default function CheckoutPage() {
     }
   }, [refreshFromStorage])
 
-  // Check for drinks in cart and show suggestion modal
+  // Check for drinks in cart and show suggestion box
   useEffect(() => {
     if (items.length > 0) {
       const hasDrinks = items.some(item => item.category === 'drinks')
       if (!hasDrinks) {
-        // Show drinks suggestion modal after a short delay
+        // Show drinks suggestion box after a short delay
         setTimeout(() => {
-          setShowDrinksModal(true)
+          setShowDrinksSuggestion(true)
         }, 1000)
       }
     }
@@ -368,6 +554,108 @@ export default function CheckoutPage() {
 
   const handleAddressUpdate = (LocationText: string) => {
     setCustomerInfo(prev => ({ ...prev, LocationText }))
+  }
+
+  // Get user location function (from dashboard)
+  const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Геолокацията не се поддържа от вашия браузър.'))
+        return
+      }
+
+      setIsGettingLocation(true)
+      setLocationError(null)
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+          setIsGettingLocation(false)
+          resolve(location)
+        },
+        (error) => {
+          setIsGettingLocation(false)
+          let errorMessage = 'Грешка при определяне на локацията.'
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Достъпът до геолокацията е отказан. Моля, разрешете достъпа в настройките на браузъра.'
+              break
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Информацията за локацията не е налична.'
+              break
+            case error.TIMEOUT:
+              errorMessage = 'Времето за определяне на локацията изтече.'
+              break
+          }
+          
+          setLocationError(errorMessage)
+          reject(new Error(errorMessage))
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      )
+    })
+  }
+
+  // Map modal handlers
+  const handleMapModalClose = () => {
+    setIsMapModalOpen(false)
+    setMapModalLoaded(false)
+    setLocationError(null)
+    if (markerRef.current) {
+      markerRef.current.setMap(null)
+      markerRef.current = null
+    }
+  }
+
+  const handleMapLocationSelect = async () => {
+    if (!markerRef.current) return
+
+    const position = markerRef.current.getPosition()
+    if (!position) return
+
+    const coordinates = {
+      lat: position.lat(),
+      lng: position.lng()
+    }
+
+    try {
+      // Reverse geocode to get address
+      const geocoder = new window.google.maps.Geocoder()
+      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+        geocoder.geocode({ location: coordinates }, (results, status) => {
+          if (status === 'OK' && results) {
+            resolve(results)
+          } else {
+            reject(new Error('Geocoding failed'))
+          }
+        })
+      })
+
+      if (result && result[0]) {
+        const address = result[0].formatted_address
+        setCustomerInfo(prev => ({
+          ...prev,
+          LocationText: address,
+          LocationCoordinates: JSON.stringify(coordinates)
+        }))
+        
+        // Validate zone
+        validateAddressZone(coordinates)
+        setAddressConfirmed(true)
+      }
+    } catch (error) {
+      console.error('Error reverse geocoding:', error)
+    }
+
+    handleMapModalClose()
   }
 
 
@@ -854,27 +1142,34 @@ export default function CheckoutPage() {
     try{
     e.preventDefault()
     
+    // Set loading state immediately
+    setIsLoading(true)
+    
     // Validate minimum order amount
     if (totalPrice < 15) {
       alert('❌ Минималната сума за поръчка е 15 лв.')
+      setIsLoading(false)
       return
     }
      
      // Validate address zone (only for delivery orders)
      if (!isCollection && addressZone === 'outside') {
        alert('❌ Доставката не е възможна на този адрес. Моля, изберете адрес в зоната за доставка.')
+       setIsLoading(false)
        return
      }
      
      // Validate delivery cost (only for delivery orders)
      if (!isCollection && deliveryCost === null) {
        alert('❌ Не може да се изчисли цената за доставка. Моля, проверете адреса.')
+       setIsLoading(false)
        return
      }
      
      // Validate payment method
      if (paymentMethodId === null) {
        alert('❌ Моля, изберете начин на плащане.')
+       setIsLoading(false)
        return
      }
      
@@ -886,6 +1181,7 @@ export default function CheckoutPage() {
        // Check if scheduled time is in the future
        if (scheduledTime <= now) {
          alert('❌ Моля, изберете бъдещо време за поръчката')
+         setIsLoading(false)
          return
        }
        
@@ -895,6 +1191,7 @@ export default function CheckoutPage() {
        
       if (hoursDiff > 120) {
         alert('❌ Поръчките могат да се правят максимум 5 дни напред')
+        setIsLoading(false)
         return
       }
        
@@ -902,6 +1199,7 @@ export default function CheckoutPage() {
        const hour = scheduledTime.getHours()
        if (hour < 11 || hour >= 23) {
          alert('❌ Моля, изберете време между 11:00 и 23:00')
+         setIsLoading(false)
          return
        }
      }
@@ -985,7 +1283,7 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red/5 via-orange/5 to-yellow/5">
       {/* Header */}
-      <div className="bg-card border-b border-white/12 sticky top-0 z-30">
+      <div className="bg-card border-b border-white/12">
         <div className="container py-4">
           <div className="flex items-center space-x-4">
             <a href="/order" className="p-2 rounded-lg border border-white/12 text-muted hover:text-text transition-colors">
@@ -1003,6 +1301,13 @@ export default function CheckoutPage() {
          <div className="max-w-6xl mx-auto space-y-8">
            
            
+           {/* Drinks Suggestion Box */}
+           {showDrinksSuggestion && (
+             <DrinksSuggestionBox
+               onClose={() => setShowDrinksSuggestion(false)}
+             />
+           )}
+
            {/* Cart Items Summary */}
            <div className="bg-card border border-white/12 rounded-2xl p-6">
              <h2 className="text-xl font-bold text-text mb-4">Артикули в количката</h2>
@@ -1610,7 +1915,7 @@ export default function CheckoutPage() {
                <CreditCard size={20} className="inline mr-2" />
                Начин на плащане *
              </h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {isCollection ? (
                  // Collection payment methods (1: Card at Restaurant, 2: Cash at Restaurant)
                  <>
@@ -1812,7 +2117,7 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setShowAddressModal(true)
+                      setIsMapModalOpen(true)
                       // Reset confirmation state when opening modal
                       setAddressConfirmed(false)
                     }}
@@ -2032,34 +2337,86 @@ export default function CheckoutPage() {
                  {/* Submit Button */}
                  <button
                    type="submit"
-                   disabled={!isFormValid}
+                   disabled={!isFormValid || isLoading}
                    className="w-full bg-gradient-to-r from-red to-orange text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                  >
-                   Потвърди поръчката
+                   {isLoading ? (
+                     <>
+                       <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin inline mr-3"></div>
+                       Обработване на поръчката...
+                     </>
+                   ) : (
+                     'Потвърди поръчката'
+                   )}
                  </button>
              </div>
            </form>
         </div>
       </div>
 
-      {/* Address Selection Modal */}
-      {showAddressModal && (
-        <AddressSelectionModal
-          isOpen={showAddressModal}
-          onClose={() => setShowAddressModal(false)}
-          address={customerInfo.LocationText}
-          onCoordinatesSelect={handleCoordinatesSelect}
-          onExactLocationSelect={handleExactLocationSelect}
-          onAddressUpdate={handleAddressUpdate}
-          onAddressConfirm={confirmAddress}
-        />
+      {/* Map Modal */}
+      {isMapModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-white/12 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/12">
+              <h3 className="text-xl font-bold text-text">Изберете адрес на картата</h3>
+              <button 
+                onClick={handleMapModalClose}
+                className="text-muted hover:text-text transition-colors p-2"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Map Content */}
+            <div className="flex-1 flex flex-col min-h-0">
+              {locationError && (
+                <div className="flex items-center gap-2 bg-red/10 border border-red text-red p-3 m-4 rounded-xl">
+                  <XCircle size={16} />
+                  <span className="text-sm">{locationError}</span>
+                </div>
+              )}
+              
+              <div 
+                ref={mapModalRef} 
+                className="flex-1 min-h-[400px] w-full"
+              />
+              
+              {/* Footer */}
+              <div className="p-6 border-t border-white/12 flex items-center justify-between gap-4">
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-yellow-400 rounded"></div>
+                    <span className="text-sm text-text">Зона 1 (3 лв.)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                    <span className="text-sm text-text">Зона 2 (7 лв.)</span>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3">
+                  <button 
+                    onClick={handleMapModalClose}
+                    className="px-6 py-3 border border-white/12 text-text rounded-xl hover:bg-white/6 transition-colors"
+                  >
+                    Отказ
+                  </button>
+                  <button 
+                    onClick={handleMapLocationSelect}
+                    disabled={!markerRef.current || addressZone === 'outside'}
+                    className="px-6 py-3 bg-gradient-to-r from-red to-orange text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
+                  >
+                    Потвърди адрес
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Drinks Suggestion Modal */}
-      <DrinksSuggestionModal
-        isOpen={showDrinksModal}
-        onClose={() => setShowDrinksModal(false)}
-      />
     </div>
   )
 }

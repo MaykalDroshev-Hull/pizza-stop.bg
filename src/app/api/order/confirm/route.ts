@@ -168,7 +168,9 @@ export async function POST(request: NextRequest) {
       RfPaymentMethodID: paymentMethodId,
       IsPaid: false, // Orders start as unpaid
       ExpectedDT: expectedDT.toISOString(),
-      OrderType: isCollection ? 1 : 2 // 1 = Restaurant collection, 2 = Delivery
+      OrderType: isCollection ? 1 : 2, // 1 = Restaurant collection, 2 = Delivery
+      DeliveryPrice: isCollection ? 0 : deliveryCost, // Add delivery charge
+      TotalAmount: totalPrice + (isCollection ? 0 : deliveryCost) // Add total amount for the order
     }
 
     console.log('📋 Creating order with data:', orderData)
@@ -194,6 +196,14 @@ export async function POST(request: NextRequest) {
       const orderItemsData = []
       
       for (const item of orderItems) {
+        // Calculate addon prices
+        let addonTotal = 0
+        if (item.addons && Array.isArray(item.addons)) {
+          addonTotal = item.addons.reduce((sum: number, addon: any) => {
+            return sum + (addon.price || 0)
+          }, 0)
+        }
+        
         // Check if this is a 50/50 pizza (category: 'pizza-5050')
         if (item.category === 'pizza-5050') {
           console.log('🍕 Processing 50/50 pizza:', item.name)
@@ -251,7 +261,8 @@ export async function POST(request: NextRequest) {
               
               if (compositeError) {
                 console.error('❌ Error creating CompositeProduct:', compositeError)
-                // Fallback to regular product entry
+                // Fallback to regular product entry with addon calculation
+                const itemTotal = (item.price + addonTotal) * item.quantity
                 orderItemsData.push({
                   OrderID: order.OrderID,
                   ProductID: null, // No single product ID for 50/50
@@ -259,14 +270,15 @@ export async function POST(request: NextRequest) {
                   ProductSize: item.size || 'Medium',
                   Quantity: item.quantity,
                   UnitPrice: item.price,
-                  TotalPrice: item.price * item.quantity,
+                  TotalPrice: itemTotal,
                   Addons: item.addons ? JSON.stringify(item.addons) : null,
                   Comment: item.comment || null,
                   CompositeProductID: null
                 })
               } else {
                 console.log('✅ CompositeProduct created with ID:', compositeProduct.CompositeProductID)
-                // Add to order items with CompositeProductID
+                // Add to order items with CompositeProductID and addon calculation
+                const itemTotal = (item.price + addonTotal) * item.quantity
                 orderItemsData.push({
                   OrderID: order.OrderID,
                   ProductID: null, // No single product ID for composite products
@@ -274,7 +286,7 @@ export async function POST(request: NextRequest) {
                   ProductSize: item.size || 'Medium',
                   Quantity: item.quantity,
                   UnitPrice: item.price,
-                  TotalPrice: item.price * item.quantity,
+                  TotalPrice: itemTotal,
                   Addons: item.addons ? JSON.stringify(item.addons) : null,
                   Comment: item.comment || null,
                   CompositeProductID: compositeProduct.CompositeProductID
@@ -282,7 +294,8 @@ export async function POST(request: NextRequest) {
               }
             } else {
               console.error('❌ Could not find pizza products for 50/50:', { leftPizzaName, rightPizzaName })
-              // Fallback to regular product entry
+              // Fallback to regular product entry with addon calculation
+              const itemTotal = (item.price + addonTotal) * item.quantity
               orderItemsData.push({
                 OrderID: order.OrderID,
                 ProductID: null,
@@ -290,7 +303,7 @@ export async function POST(request: NextRequest) {
                 ProductSize: item.size || 'Medium',
                 Quantity: item.quantity,
                 UnitPrice: item.price,
-                TotalPrice: item.price * item.quantity,
+                TotalPrice: itemTotal,
                 Addons: item.addons ? JSON.stringify(item.addons) : null,
                 Comment: item.comment || null,
                 CompositeProductID: null
@@ -298,7 +311,8 @@ export async function POST(request: NextRequest) {
             }
           } else {
             console.error('❌ Could not parse 50/50 pizza comment:', item.comment)
-            // Fallback to regular product entry
+            // Fallback to regular product entry with addon calculation
+            const itemTotal = (item.price + addonTotal) * item.quantity
             orderItemsData.push({
               OrderID: order.OrderID,
               ProductID: null,
@@ -306,14 +320,15 @@ export async function POST(request: NextRequest) {
               ProductSize: item.size || 'Medium',
               Quantity: item.quantity,
               UnitPrice: item.price,
-              TotalPrice: item.price * item.quantity,
+              TotalPrice: itemTotal,
               Addons: item.addons ? JSON.stringify(item.addons) : null,
               Comment: item.comment || null,
               CompositeProductID: null
             })
           }
         } else {
-          // Regular product
+          // Regular product with addon calculation
+          const itemTotal = (item.price + addonTotal) * item.quantity
           orderItemsData.push({
             OrderID: order.OrderID,
             ProductID: item.id,
@@ -321,7 +336,7 @@ export async function POST(request: NextRequest) {
             ProductSize: item.size || 'Medium',
             Quantity: item.quantity,
             UnitPrice: item.price,
-            TotalPrice: item.price * item.quantity,
+            TotalPrice: itemTotal,
             Addons: item.addons ? JSON.stringify(item.addons) : null,
             Comment: item.comment || null,
             CompositeProductID: null

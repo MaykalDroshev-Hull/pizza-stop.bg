@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import CartIcon from './CartIcon'
 import { User, Phone, Clock, MapPin, LogOut } from 'lucide-react'
-import { isRestaurantOpen } from '../utils/openingHours'
+import { isRestaurantOpen, getCurrentDayWorkingHours } from '../utils/openingHours'
 
 // Door Sign Component
 function DoorSign() {
@@ -17,7 +17,17 @@ function DoorSign() {
           <div className="hanger-strings"></div>
         </div>
         <span className="sign-text">
-          {isOpen ? 'ОТВОРЕНО' : 'ЗАТВОРЕНО'}
+          {isOpen ? (
+            <>
+              <span className="hidden sm:inline">ОТВОРЕНО</span>
+              <span className="sm:hidden">ОТВ.</span>
+            </>
+          ) : (
+            <>
+              <span className="hidden sm:inline">ЗАТВОРЕНО</span>
+              <span className="sm:hidden">ЗАТВ.</span>
+            </>
+          )}
         </span>
       </div>
     </div>
@@ -26,12 +36,14 @@ function DoorSign() {
 
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(isRestaurantOpen())
+  const [workingHours, setWorkingHours] = useState(getCurrentDayWorkingHours())
   const [user, setUser] = useState(null)
   
-  // Update open/closed status every minute
+  // Update open/closed status and working hours every minute
   useEffect(() => {
     const updateStatus = () => {
       setIsOpen(isRestaurantOpen())
+      setWorkingHours(getCurrentDayWorkingHours())
     }
     
     // Update immediately
@@ -76,11 +88,11 @@ export default function NavBar() {
           <div className="contact-info">
             <div className="contact-item">
               <Phone size={16} className="contact-icon" />
-              <a href="tel:+35968670070">068 670070</a>
+              <a href="tel:+35968670070">068 670 070</a>
             </div>
             <div className="contact-item">
               <Clock size={16} className="contact-icon" />
-              <span>11:00-23:00</span>
+              <span>{workingHours}</span>
             </div>
             <div className="contact-item">
               <MapPin size={16} className="contact-icon" />
@@ -88,7 +100,17 @@ export default function NavBar() {
             </div>
           </div>
           <a className="btn" href="/order">
-            {isOpen ? 'ПОРЪЧАЙ СЕГА' : 'ПОРЪЧАЙ ЗА \r\n ПО-КЪСНО'}
+            {isOpen ? (
+              <>
+                <span className="hidden sm:inline">ПОРЪЧАЙ СЕГА</span>
+                <span className="sm:hidden">ПОРЪЧАЙ</span>
+              </>
+            ) : (
+              <>
+                <span className="hidden sm:inline">ПОРЪЧАЙ ЗА ПО-КЪСНО</span>
+                <span className="sm:hidden">ПОРЪЧАЙ</span>
+              </>
+            )}
           </a>
           {user ? (
             <div className="user-menu">
