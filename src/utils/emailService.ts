@@ -56,6 +56,29 @@ interface OrderReadyTimeEmailOptions {
   }
 }
 
+interface DeliveryETAEmailOptions {
+  to: string
+  name: string
+  orderId: string
+  etaMinutes: number
+  estimatedArrivalTime: string
+  orderDetails: {
+    items: Array<{
+      name: string
+      size?: string
+      quantity: number
+      price: number
+      addons?: Array<{ name: string; price?: number }>
+      comment?: string
+    }>
+    totalAmount: number
+    orderTime: string
+    orderType: string
+    paymentMethod: string
+    location: string
+  }
+}
+
 export class EmailService {
   private transporter: nodemailer.Transporter
 
@@ -665,6 +688,277 @@ export class EmailService {
     } catch (error) {
       console.error('Error sending order confirmation email:', error)
       throw new Error('Failed to send order confirmation email')
+    }
+  }
+
+  async sendDeliveryETAEmail({ to, name, orderId, etaMinutes, estimatedArrivalTime, orderDetails }: DeliveryETAEmailOptions): Promise<void> {
+    const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
+    
+    // Generate items HTML
+    const itemsHtml = orderDetails.items.map(item => `
+      <div style="margin-bottom: 15px; padding: 16px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="flex: 1;">
+            <div style="font-weight: 600; color: #333; margin-bottom: 4px;">${item.name}</div>
+            ${item.size ? `<div style="font-size: 14px; color: #666; margin-bottom: 4px;">Размер: ${item.size}</div>` : ''}
+            ${item.addons && item.addons.length > 0 ? `
+              <div style="font-size: 14px; color: #666;">
+                Добавки: ${item.addons.map(addon => addon.name).join(', ')}
+              </div>
+            ` : ''}
+            ${item.comment ? `<div style="font-size: 14px; color: #666; font-style: italic; margin-top: 4px;">${item.comment}</div>` : ''}
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: 600; color: #333;">${item.quantity}x</div>
+            <div style="font-weight: 700; color: #ff7f11; font-size: 16px;">${item.price.toFixed(2)} лв.</div>
+          </div>
+        </div>
+      </div>
+    `).join('')
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="bg">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Вашата поръчка е на път - Pizza Stop</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #f8f9fa;
+            }
+            .email-container {
+              background-color: white;
+              border-radius: 12px;
+              padding: 40px;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+          .logo {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .logo img {
+            width: 80px;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          }
+          .eta-title {
+            background: linear-gradient(90deg, #e11d48, #ff7f11);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 28px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .eta-subtitle {
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #555;
+          }
+          .eta-highlight {
+            background: linear-gradient(90deg, #e11d48, #ff7f11);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+          }
+          .eta-box {
+            background: linear-gradient(135deg, rgba(225, 29, 72, 0.1), rgba(255, 127, 17, 0.1));
+            border: 2px solid rgba(255, 127, 17, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+            text-align: center;
+          }
+          .eta-time {
+            font-size: 32px;
+            font-weight: 800;
+            color: #ff7f11;
+            margin-bottom: 8px;
+          }
+          .eta-label {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 4px;
+          }
+          .eta-arrival {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+          }
+          .order-info {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+          }
+          .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+          }
+          .info-label {
+            color: #666;
+          }
+          .info-value {
+            color: #333;
+            font-weight: 500;
+          }
+          .items-section {
+            margin: 24px 0;
+          }
+          .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 16px;
+            text-align: center;
+          }
+          .total-section {
+            background: linear-gradient(135deg, rgba(225, 29, 72, 0.1), rgba(255, 127, 17, 0.1));
+            border: 1px solid rgba(255, 127, 17, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+            text-align: center;
+          }
+          .total-amount {
+            font-size: 24px;
+            font-weight: 800;
+            color: #ff7f11;
+            margin-bottom: 4px;
+          }
+          .total-label {
+            font-size: 14px;
+            color: #666;
+          }
+          .contact-info {
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 24px 0;
+            text-align: center;
+          }
+          .contact-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #3b82f6;
+            margin-bottom: 8px;
+          }
+          .contact-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 4px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            color: #666;
+            font-size: 14px;
+          }
+          .highlight {
+            background: linear-gradient(90deg, #e11d48, #ff7f11);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+          <div class="logo">
+            <img src="${logoUrl}" alt="Pizza Stop Logo" />
+          </div>
+
+          <h1 class="eta-title">Вашата поръчка е на път! 🚗</h1>
+
+          <p class="eta-subtitle">
+            Здравейте, <span class="highlight">${name}</span>!<br>
+            Вашата поръчка #${orderId} е взета от шофьора и е на път към вас.
+          </p>
+
+          <div class="eta-box">
+            <div class="eta-time">${etaMinutes} мин</div>
+            <div class="eta-label">Очаквано време за доставка</div>
+            <div class="eta-arrival">Приблизително пристигане: ${estimatedArrivalTime}</div>
+          </div>
+
+          <div class="order-info">
+            <div class="info-row">
+              <span class="info-label">Номер на поръчка:</span>
+              <span class="info-value">#${orderId}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Време на поръчка:</span>
+              <span class="info-value">${orderDetails.orderTime}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Тип поръчка:</span>
+              <span class="info-value">${orderDetails.orderType}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Начин на плащане:</span>
+              <span class="info-value">${orderDetails.paymentMethod}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Адрес:</span>
+              <span class="info-value">${orderDetails.location}</span>
+            </div>
+          </div>
+
+          <div class="items-section">
+            <h3 class="section-title">Вашата поръчка</h3>
+            ${itemsHtml}
+          </div>
+
+          <div class="total-section">
+            <div class="total-amount">${orderDetails.totalAmount.toFixed(2)} лв.</div>
+            <div class="total-label">Обща сума</div>
+          </div>
+
+          <div class="contact-info">
+            <div class="contact-title">📞 Нужда от помощ?</div>
+            <div class="contact-text">Телефон: 068 670070</div>
+            <div class="contact-text">Email: info@pizza-stop.bg</div>
+          </div>
+
+          <div class="footer">
+            <p>Благодарим ви, че избрахте <span class="highlight">Pizza Stop</span>!</p>
+            <p>Насладете се на вкусната храна! 🍕</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    try {
+      await this.transporter.sendMail({
+        from: process.env.NEXT_PUBLIC_EMAIL,
+        to,
+        subject: `Вашата поръчка е на път - ETA: ${etaMinutes} минути | Pizza Stop`,
+        html: htmlContent,
+      })
+      
+      console.log(`✅ Delivery ETA email sent successfully to ${to} for order ${orderId}`)
+    } catch (error) {
+      console.error('Error sending delivery ETA email:', error)
+      throw new Error('Failed to send delivery ETA email')
     }
   }
 

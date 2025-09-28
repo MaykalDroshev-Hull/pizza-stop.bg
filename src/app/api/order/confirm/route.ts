@@ -191,17 +191,143 @@ export async function POST(request: NextRequest) {
     if (orderItems && orderItems.length > 0) {
       console.log('📦 Saving order items:', orderItems.length)
       
-      const orderItemsData = orderItems.map((item: any) => ({
-        OrderID: order.OrderID,
-        ProductID: item.id,
-        ProductName: item.name,
-        ProductSize: item.size || 'Medium',
-        Quantity: item.quantity,
-        UnitPrice: item.price,
-        TotalPrice: item.price * item.quantity,
-        Addons: item.addons ? JSON.stringify(item.addons) : null,
-        Comment: item.comment || null
-      }))
+      const orderItemsData = []
+      
+      for (const item of orderItems) {
+        // Check if this is a 50/50 pizza (category: 'pizza-5050')
+        if (item.category === 'pizza-5050') {
+          console.log('🍕 Processing 50/50 pizza:', item.name)
+          
+          // Extract pizza halves from the comment
+          const commentMatch = item.comment?.match(/50\/50 пица: (.+?) \/ (.+?):/)
+          if (commentMatch) {
+            const leftPizzaName = commentMatch[1].trim()
+            const rightPizzaName = commentMatch[2].trim()
+            
+            // Find the actual pizza products in the database
+            const { data: leftPizza } = await supabase
+              .from('Product')
+              .select('ProductID, Product')
+              .eq('Product', leftPizzaName)
+              .single()
+            
+            const { data: rightPizza } = await supabase
+              .from('Product')
+              .select('ProductID, Product')
+              .eq('Product', rightPizzaName)
+              .single()
+            
+            if (leftPizza && rightPizza) {
+              // Create CompositeProduct record
+              const parts = [
+                {
+                  ProductID: leftPizza.ProductID,
+                  Name: leftPizza.Product,
+                  Portion: "left",
+                  UnitPrice: item.price / 2 // Approximate price per half
+                },
+                {
+                  ProductID: rightPizza.ProductID,
+                  Name: rightPizza.Product,
+                  Portion: "right",
+                  UnitPrice: item.price / 2 // Approximate price per half
+                }
+              ]
+              
+              const compositeProductData = {
+                Size: item.size || 'Голяма',
+                PricingMethod: 'max-half',
+                BaseUnitPrice: item.price,
+                Parts: parts,
+                Addons: item.addons ? item.addons : null,
+                comment: item.comment
+              }
+              
+              const { data: compositeProduct, error: compositeError } = await supabase
+                .from('CompositeProduct')
+                .insert(compositeProductData)
+                .select('CompositeProductID')
+                .single()
+              
+              if (compositeError) {
+                console.error('❌ Error creating CompositeProduct:', compositeError)
+                // Fallback to regular product entry
+                orderItemsData.push({
+                  OrderID: order.OrderID,
+                  ProductID: null, // No single product ID for 50/50
+                  ProductName: item.name,
+                  ProductSize: item.size || 'Medium',
+                  Quantity: item.quantity,
+                  UnitPrice: item.price,
+                  TotalPrice: item.price * item.quantity,
+                  Addons: item.addons ? JSON.stringify(item.addons) : null,
+                  Comment: item.comment || null,
+                  CompositeProductID: null
+                })
+              } else {
+                console.log('✅ CompositeProduct created with ID:', compositeProduct.CompositeProductID)
+                // Add to order items with CompositeProductID
+                orderItemsData.push({
+                  OrderID: order.OrderID,
+                  ProductID: null, // No single product ID for composite products
+                  ProductName: item.name,
+                  ProductSize: item.size || 'Medium',
+                  Quantity: item.quantity,
+                  UnitPrice: item.price,
+                  TotalPrice: item.price * item.quantity,
+                  Addons: item.addons ? JSON.stringify(item.addons) : null,
+                  Comment: item.comment || null,
+                  CompositeProductID: compositeProduct.CompositeProductID
+                })
+              }
+            } else {
+              console.error('❌ Could not find pizza products for 50/50:', { leftPizzaName, rightPizzaName })
+              // Fallback to regular product entry
+              orderItemsData.push({
+                OrderID: order.OrderID,
+                ProductID: null,
+                ProductName: item.name,
+                ProductSize: item.size || 'Medium',
+                Quantity: item.quantity,
+                UnitPrice: item.price,
+                TotalPrice: item.price * item.quantity,
+                Addons: item.addons ? JSON.stringify(item.addons) : null,
+                Comment: item.comment || null,
+                CompositeProductID: null
+              })
+            }
+          } else {
+            console.error('❌ Could not parse 50/50 pizza comment:', item.comment)
+            // Fallback to regular product entry
+            orderItemsData.push({
+              OrderID: order.OrderID,
+              ProductID: null,
+              ProductName: item.name,
+              ProductSize: item.size || 'Medium',
+              Quantity: item.quantity,
+              UnitPrice: item.price,
+              TotalPrice: item.price * item.quantity,
+              Addons: item.addons ? JSON.stringify(item.addons) : null,
+              Comment: item.comment || null,
+              CompositeProductID: null
+            })
+          }
+        } else {
+          // Regular product
+          orderItemsData.push({
+            OrderID: order.OrderID,
+            ProductID: item.id,
+            ProductName: item.name,
+            ProductSize: item.size || 'Medium',
+            Quantity: item.quantity,
+            UnitPrice: item.price,
+            TotalPrice: item.price * item.quantity,
+            Addons: item.addons ? JSON.stringify(item.addons) : null,
+            Comment: item.comment || null,
+            CompositeProductID: null
+          })
+        }
+      }
 
       const { error: itemsError } = await supabase
         .from('LkOrderProduct')

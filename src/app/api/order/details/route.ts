@@ -58,10 +58,21 @@ export async function GET(request: NextRequest) {
       paymentMethod = paymentData || null
     }
 
-    // 3) Order items
+    // 3) Order items with CompositeProduct data
     const { data: orderItems, error: itemsError } = await supabase
       .from('LkOrderProduct')
-      .select('*')
+      .select(`
+        *,
+        CompositeProduct (
+          CompositeProductID,
+          Size,
+          PricingMethod,
+          BaseUnitPrice,
+          Parts,
+          Addons,
+          comment
+        )
+      `)
       .eq('OrderID', orderId)
 
     if (itemsError) {
@@ -88,10 +99,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const itemsWithParsedAddons = orderItems?.map((item) => ({
-      ...item,
-      Addons: item.Addons ? JSON.parse(item.Addons) : null
-    })) || []
+    const itemsWithParsedAddons = orderItems?.map((item) => {
+      const parsedItem = {
+        ...item,
+        Addons: item.Addons ? JSON.parse(item.Addons) : null
+      }
+      
+      // If this is a composite product, parse the Parts data
+      if (item.CompositeProduct) {
+        parsedItem.CompositeProduct = {
+          ...item.CompositeProduct,
+          Parts: item.CompositeProduct.Parts ? JSON.parse(item.CompositeProduct.Parts) : null,
+          Addons: item.CompositeProduct.Addons ? JSON.parse(item.CompositeProduct.Addons) : null
+        }
+      }
+      
+      return parsedItem
+    }) || []
 
     return NextResponse.json({
       success: true,

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { updateOrderStatusInDB, testDatabaseConnection, ORDER_STATUS, KitchenOrder, LkOrderProducts } from '../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
+import ETASelectionModal from '../../components/ETASelectionModal';
 // AdminLogin moved to separate page at /admin-delivery-login
 
 interface DeliveryOrder {
@@ -138,6 +139,11 @@ const DeliveryDashboard = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedOrderForMap, setSelectedOrderForMap] = useState<DeliveryOrder | null>(null);
   
+  // ETA Modal State
+  const [showETAModal, setShowETAModal] = useState(false);
+  const [selectedOrderForETA, setSelectedOrderForETA] = useState<DeliveryOrder | null>(null);
+  const [isETALoading, setIsETALoading] = useState(false);
+  
   const [stats, setStats] = useState({
     todaysDeliveries: 12,
     todaysEarnings: 156.50,
@@ -234,6 +240,7 @@ const DeliveryDashboard = () => {
         .order('OrderDT', { ascending: false });
 
       console.log('Delivered orders query result:', { deliveredOrders, deliveredError, ORDER_STATUS_DELIVERED: ORDER_STATUS.DELIVERED });
+      console.log('🔍 Active orders query result:', { orders, ordersError, ORDER_STATUS_WITH_DRIVER: ORDER_STATUS.WITH_DRIVER, ORDER_STATUS_IN_DELIVERY: ORDER_STATUS.IN_DELIVERY });
 
       if (ordersError) {
         console.error('Error fetching orders:', ordersError);
@@ -551,6 +558,70 @@ const DeliveryDashboard = () => {
     setSelectedOrder(null);
   };
 
+  // Handle ETA selection from modal
+  const handleETASelection = async (etaMinutes: number) => {
+    if (!selectedOrderForETA) return;
+
+    setIsETALoading(true);
+    
+    try {
+      console.log(`🚗 Setting ETA for order ${selectedOrderForETA.id} to ${etaMinutes} minutes`);
+      console.log('🔍 Order details:', selectedOrderForETA);
+      
+      const requestBody = {
+        orderId: selectedOrderForETA.id,
+        etaMinutes,
+        driverId: 'driver-1' // You can get this from authentication context
+      };
+      
+      console.log('🔍 Request body:', requestBody);
+      
+      const response = await fetch('/api/delivery/update-eta', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update ETA');
+      }
+
+      const result = await response.json();
+      console.log('✅ ETA updated successfully:', result);
+
+      // Update local order state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === selectedOrderForETA.id 
+            ? { ...order, status: 'en_route' as const }
+            : order
+        )
+      );
+
+      // Close modal and reset state
+      setShowETAModal(false);
+      setSelectedOrderForETA(null);
+      
+      // Show success message
+      alert(`✅ ETA зададен успешно! Клиентът ще получи имейл с очакваното време: ${etaMinutes} минути`);
+      
+    } catch (error) {
+      console.error('❌ Error updating ETA:', error);
+      alert(`❌ Грешка при задаване на ETA: ${error instanceof Error ? error.message : 'Неизвестна грешка'}`);
+    } finally {
+      setIsETALoading(false);
+    }
+  };
+
+  // Handle pickup button click - show ETA modal
+  const handlePickupClick = (order: DeliveryOrder) => {
+    setSelectedOrderForETA(order);
+    setShowETAModal(true);
+  };
+
   const getStatusColor = (status: string, priority: string) => {
     if (priority === 'rush') return 'border-yellow-500 bg-yellow-900';
     if (priority === 'vip') return 'border-purple-500 bg-purple-900';
@@ -795,7 +866,7 @@ const DeliveryDashboard = () => {
         <div className="flex space-x-2">
           {order.status === 'ready' && (
             <button
-              onClick={() => updateOrderStatus(order.id, 'en_route')}
+              onClick={() => handlePickupClick(order)}
               className="flex-1 bg-blue-600 text-white font-bold py-2 px-3 rounded text-sm hover:bg-blue-700 transition-colors"
             >
               📦 Взех поръчката
@@ -1550,6 +1621,18 @@ const DeliveryDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* ETA Selection Modal */}
+      <ETASelectionModal
+        isOpen={showETAModal}
+        onClose={() => {
+          setShowETAModal(false);
+          setSelectedOrderForETA(null);
+        }}
+        onConfirmETA={handleETASelection}
+        isLoading={isETALoading}
+        orderId={selectedOrderForETA?.id}
+      />
     </div>
   );
 };
