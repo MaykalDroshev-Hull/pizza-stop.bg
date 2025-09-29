@@ -444,8 +444,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         smallPrice: savedProduct.SmallPrice,
         mediumPrice: savedProduct.MediumPrice,
         largePrice: savedProduct.LargePrice,
-        productTypeId: savedProduct.ProductTypeID,
-        productType: getProductTypeName(savedProduct.ProductTypeID || 0),
+        productTypeId: updatedProduct.productTypeId, // Use the updated value from the form
+        productType: getProductTypeName(updatedProduct.productTypeId || 0), // Use the updated value
         isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
       
@@ -603,8 +603,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         smallPrice: savedProduct.SmallPrice,
         mediumPrice: savedProduct.MediumPrice,
         largePrice: savedProduct.LargePrice,
-        productTypeId: savedProduct.ProductTypeID,
-        productType: getProductTypeName(savedProduct.ProductTypeID || 0),
+        productTypeId: parseInt(newProduct.productTypeId), // Use the form value
+        productType: getProductTypeName(parseInt(newProduct.productTypeId)), // Use the form value
         isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
       

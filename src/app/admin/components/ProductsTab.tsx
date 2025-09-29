@@ -15,14 +15,17 @@ const categoryOptions = [
 const getProductTypeName = (productTypeId: number): string => {
   switch (productTypeId) {
     case 1:
+      return 'Пици';
     case 2:
+      return 'Бургери';
     case 3:
+      return 'Дюнери';
     case 7:
-      return 'Пица';
+      return 'Десерти';
     case 4:
       return 'Напитки';
     case 5: 
-    return'Сосове';
+      return 'Сосове';
     case 6:
       return 'Добавки';
     default:
