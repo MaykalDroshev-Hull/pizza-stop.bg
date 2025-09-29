@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Get customer details
     console.log('🚀 ETA API: Fetching customer details for LoginID:', order.LoginID)
-    let customer = null
+    let customer: any = null
     if (order.LoginID) {
       const { data: customerData, error: customerError } = await supabase
         .from('Login')

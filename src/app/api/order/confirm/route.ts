@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
     if (orderItems && orderItems.length > 0) {
       console.log('📦 Saving order items:', orderItems.length)
       
-      const orderItemsData = []
+      const orderItemsData: any[] = []
       
       for (const item of orderItems) {
         // Calculate addon prices
