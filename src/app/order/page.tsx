@@ -1038,6 +1038,7 @@ export default function MenuPage() {
             </button>
           </div>
         ) : (
+
           <div 
             className="grid gap-3" 
             style={{ 
@@ -1450,6 +1451,7 @@ export default function MenuPage() {
                       }
                       return null;
                     })()}
+
                     </div>
                   
                   {/* Footer - Sticky to bottom */}
@@ -1461,30 +1463,7 @@ export default function MenuPage() {
                       console.log('🔍 Item object:', item)
                       handleAddToCart(item)
                     }}
-                    disabled={(() => {
-                      // Drinks, burgers, and sauces are always enabled (no size selection required)
-                      if (item.category === 'drinks' || item.category === 'burgers' || item.category === 'sauces') {
-                        return false;
-                      }
-                      
-                      // For other categories, check if size selection is required
-                      if (!item.sizes || item.sizes.length === 0) {
-                        // No sizes available - disable button
-                        return true;
-                      }
-                      
-                      // Special cases for items with only one size (no selection needed)
-                      if (item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) {
-                        return false; // Standard size pizza
-                      }
-                      
-                      if (item.category === 'doners' && item.sizes.length <= 1) {
-                        return false; // Single size doner
-                      }
-                      
-                      // For items with multiple sizes, require size selection
-                      return !selectedSizes[item.id];
-                    })()}
+                    disabled={item.category !== 'drinks' && item.category !== 'burgers' && ((!item.sizes || item.sizes.length === 0) || (item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id]))}
                     className={`w-full py-2 md:py-3 px-3 md:px-4 rounded-xl font-medium transition-all flex items-center justify-center space-x-1 md:space-x-2 text-sm md:text-base relative z-10 ${
                       (() => {
                         // Drinks, burgers, and sauces are always enabled (no size selection required)
@@ -1520,33 +1499,16 @@ export default function MenuPage() {
                   >
                     <Plus size={16} className="md:w-5 md:h-5" />
                     <span className="truncate">
-                      {(() => {
-                        // Drinks, burgers, and sauces are always "Добави"
-                        if (item.category === 'drinks' || item.category === 'burgers' || item.category === 'sauces') {
-                          return 'Добави';
-                        }
-                        
-                        // For other categories, check if size selection is required
-                        if (!item.sizes || item.sizes.length === 0) {
-                          return 'Няма размери';
-                        }
-                        
-                        // Special cases for items with only one size (no selection needed)
-                        if (item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) {
-                          return 'Добави'; // Standard size pizza
-                        }
-                        
-                        if (item.category === 'doners' && item.sizes.length <= 1) {
-                          return 'Добави'; // Single size doner
-                        }
-                        
-                        if (item.category === 'sauces' && item.sizes.length <= 1) {
-                          return 'Добави'; // Single size sauce
-                        }
-                        
-                        // For items with multiple sizes, require size selection
-                        return !selectedSizes[item.id] ? 'Избери размер' : 'Добави';
-                      })()}
+                      {item.category === 'drinks'
+                        ? 'Добави'
+                        : item.category === 'burgers'
+                        ? 'Добави'
+                        : (!item.sizes || item.sizes.length === 0)
+                        ? 'Няма размери'
+                          : item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id] 
+                          ? 'Избери размер' 
+                          : 'Добави'
+                      }
                     </span>
                   </button>
                   </div>
