@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 import { emailService } from '@/utils/emailService'
+import { ValidationService } from '@/utils/validation'
+import { ErrorResponseBuilder } from '@/utils/errorResponses'
+import { Logger } from '@/utils/logger'
+import { ResourceValidator } from '@/utils/resourceValidator'
+import { handleValidationError, handleEmailError, handleDatabaseError } from '@/utils/globalErrorHandler'
 
 // Create Supabase client with service role key for admin operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -15,83 +20,38 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 })
 
 export async function POST(request: NextRequest) {
+  const endpoint = '/api/auth/register';
+  
   try {
+    Logger.logRequest('POST', endpoint);
+    
     const { name, email, phone, password } = await request.json()
 
-    // Validate input - all fields are mandatory
-    if (!name || !email || !phone || !password) {
-      return NextResponse.json(
-        { 
-          error: 'Всички полета са задължителни',
-          details: {
-            name: !name ? 'Името е задължително' : null,
-            email: !email ? 'Имейлът е задължителен' : null,
-            phone: !phone ? 'Телефонът е задължителен' : null,
-            password: !password ? 'Паролата е задължителна' : null
-          }
-        },
-        { status: 400 }
-      )
-    }
+    // Validate all fields using centralized validation
+    const validationResults = [
+      ValidationService.validateName(name),
+      ValidationService.validateEmail(email),
+      ValidationService.validatePhone(phone),
+      ValidationService.validatePassword(password)
+    ];
 
-    // Validate name (minimum 2 characters, only letters and spaces)
-    const nameRegex = /^[а-яА-Яa-zA-Z\s]{2,50}$/
-    if (!nameRegex.test(name.trim())) {
-      return NextResponse.json(
-        { error: 'Името трябва да е между 2 и 50 символа и да съдържа само букви' },
-        { status: 400 }
-      )
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Невалиден формат на имейл адреса' },
-        { status: 400 }
-      )
-    }
-
-    // Validate phone (Bulgarian format: +359XXXXXXXXX or 0XXXXXXXXX)
-    const phoneRegex = /^(\+359|0)[0-9]{9}$/
-    if (!phoneRegex.test(phone)) {
-      return NextResponse.json(
-        { error: 'Невалиден формат на телефонния номер. Използвайте формат: +359XXXXXXXXX или 0XXXXXXXXX' },
-        { status: 400 }
-      )
-    }
-
-    // Validate password strength (minimum 8 characters, at least one letter and one number)
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'Паролата трябва да е поне 8 символа дълга' },
-        { status: 400 }
-      )
-    }
-
-    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
-      return NextResponse.json(
-        { error: 'Паролата трябва да съдържа поне една буква и една цифра' },
-        { status: 400 }
-      )
+    const allErrors = validationResults.flatMap(result => result.errors);
+    
+    if (allErrors.length > 0) {
+      Logger.logValidationError(endpoint, allErrors, { name, email, phone });
+      return handleValidationError(allErrors, endpoint);
     }
 
     // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single()
-
-    if (existingUser) {
-      return NextResponse.json(
-        { 
-          error: 'Имейл адресът вече се използва',
-          suggestion: 'Ако вече имате акаунт, моля влезте в системата',
-          action: 'login'
-        },
-        { status: 409 }
-      )
+    const validator = new ResourceValidator();
+    const emailCheck = await validator.validateEmailExists(email);
+    
+    if (emailCheck.exists) {
+      Logger.warn('Registration attempt with existing email', { email }, endpoint);
+      return ErrorResponseBuilder.conflict('Имейл адресът вече се използва', {
+        suggestion: 'Ако вече имате акаунт, моля влезте в системата',
+        action: 'login'
+      });
     }
 
     // Hash password with bcrypt
@@ -114,20 +74,14 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Supabase insert error:', insertError)
+      Logger.logDatabaseError(endpoint, insertError, 'createUser');
       
       // Check for duplicate email error
       if (insertError.code === '23505' && insertError.details?.includes('email')) {
-        return NextResponse.json(
-          { error: 'Този имейл вече съществува' },
-          { status: 400 }
-        )
+        return ErrorResponseBuilder.conflict('Този имейл вече съществува');
       }
       
-      return NextResponse.json(
-        { error: 'Грешка при създаване на потребител' },
-        { status: 500 }
-      )
+      return handleDatabaseError(insertError, 'createUser', endpoint);
     }
 
     // Send welcome email
@@ -136,10 +90,13 @@ export async function POST(request: NextRequest) {
         to: email,
         name: name
       })
+      Logger.info('Welcome email sent successfully', { email }, endpoint);
     } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError)
+      Logger.logEmailError(endpoint, emailError, 'welcome', newUser.LoginID);
       // Don't fail registration if email fails, just log it
     }
+
+    Logger.info('User registered successfully', { userId: newUser.LoginID, email }, endpoint);
 
     // Return success response (without password)
     return NextResponse.json({
@@ -154,10 +111,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
 
   } catch (error) {
-    console.error('Registration error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    Logger.error('Registration error', { error: error instanceof Error ? error.message : error }, endpoint);
+    return ErrorResponseBuilder.internalServerError('Грешка при регистрация');
   }
 }

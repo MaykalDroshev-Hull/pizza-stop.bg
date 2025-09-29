@@ -193,11 +193,22 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
       return [];
     }
 
-    // Get products for each order
+    // Get products for each order with CompositeProduct data
     const orderIds = orders.map(order => order.OrderID);
     const { data: orderProducts, error: productsError } = await supabase
       .from('LkOrderProduct')
-      .select('*')
+      .select(`
+        *,
+        CompositeProduct (
+          CompositeProductID,
+          Size,
+          PricingMethod,
+          BaseUnitPrice,
+          Parts,
+          Addons,
+          comment
+        )
+      `)
       .in('OrderID', orderIds);
 
     if (productsError) {
@@ -367,10 +378,20 @@ export interface Order {
   IsPaid: boolean
 }
 
+export interface CompositeProduct {
+  CompositeProductID: number
+  Size: string
+  PricingMethod: string
+  BaseUnitPrice: number
+  Parts: any
+  Addons: any
+  comment: string | null
+}
+
 export interface LkOrderProducts {
   LkOrderProductID: number
   OrderID: number
-  ProductID: number
+  ProductID: number | null
   ProductName: string
   ProductSize: string | null
   Quantity: number
@@ -378,6 +399,8 @@ export interface LkOrderProducts {
   TotalPrice: number
   Addons: string | null
   Comment: string | null
+  CompositeProductID: number | null
+  CompositeProduct?: CompositeProduct | null
 }
 
 // Combined order data for kitchen board

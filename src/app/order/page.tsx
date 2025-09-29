@@ -135,7 +135,7 @@ export default function MenuPage() {
       category: 'pizza-5050',
       size: fiftyFiftySelection.size,
       addons: fiftyFiftySelection.selectedAddons,
-      comment: `50/50 пица: ${fiftyFiftySelection.size} (~2000г | 60см)${(fiftyFiftySelection.selectedAddons || []).length > 0 ? ` | ${(fiftyFiftySelection.selectedAddons || []).length} добавки` : ''}`,
+      comment: `50/50 пица: ${fiftyFiftySelection.leftHalf?.name} / ${fiftyFiftySelection.rightHalf?.name}: ${fiftyFiftySelection.size} (~2000г | 60см)${(fiftyFiftySelection.selectedAddons || []).length > 0 ? ` | ${(fiftyFiftySelection.selectedAddons || []).length} добавки` : ''}`,
       quantity: 1
     }
 
@@ -353,7 +353,7 @@ export default function MenuPage() {
       <div className="w-full max-w-7xl mx-auto py-4 sm:py-8 px-4">
         {activeCategory === 'pizza-5050' ? (
           /* 50/50 Pizza Special UI */
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">🍕</div>
               <h2 className="text-3xl font-bold text-text mb-2">Пица 50/50</h2>
@@ -383,11 +383,11 @@ export default function MenuPage() {
             </div>
 
             {/* Step Labels */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-8">
-              <div className="text-sm text-muted">Размер</div>
-              <div className="text-sm text-muted">Лява половина</div>
-              <div className="text-sm text-muted md:block hidden">Дясна половина</div>
-              <div className="text-sm text-muted md:block hidden">Добавки & Финализиране</div>
+            <div className="flex justify-between items-center mb-8 px-8">
+              <div className="text-sm text-muted text-center flex-1">Размер</div>
+              <div className="text-sm text-muted text-center flex-1">Лява половина</div>
+              <div className="text-sm text-muted text-center flex-1 hidden sm:block">Дясна половина</div>
+              <div className="text-sm text-muted text-center flex-1 hidden sm:block">Добавки</div>
             </div>
 
             {/* 50/50 Content */}
@@ -785,7 +785,7 @@ export default function MenuPage() {
                   </div>
 
                   {/* Addons Selection */}
-                  <div className="max-w-3xl mx-auto mb-8">
+                  <div className="mb-8 -mx-4 px-4">
                     {menuData.pizza?.[0]?.addons && menuData.pizza[0].addons.length > 0 ? (
                       <div>
                         <h4 className="font-medium text-text mb-4">Добавки:</h4>
@@ -793,22 +793,17 @@ export default function MenuPage() {
                           Първите 3 соса са безплатни, първите 3 салати са безплатни. След избора на 3-ти сос или 3-ти салат ще се покажат цените за останалите от същия тип.
                         </p>
                         {/* Sauces */}
-                        <div className="mb-6">
-                          <h4 className="text-sm text-muted mb-2">Сосове:</h4>
-                          <div className="grid grid-cols-2 gap-3 place-items-center">
-                            {menuData.pizza[0].addons
-                              .filter((addon: any) => addon.AddonType === 'sauce')
-                              .map((addon: any, index: number) => {
-                                const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
-                                // Per-type logic: 3 free sauces, 3 free salads
-                                const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
-                                const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
-                                const isFree = positionInType < 3
-                                
-                                return (
+                        {menuData.pizza[0].addons.filter((addon: any) => addon.AddonType === 'sauce').length > 0 && (
+                          <div>
+                            <h5 className="text-sm text-muted mb-2">Сосове:</h5>
+                            <div className="grid gap-3 place-items-center grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
+                              {menuData.pizza[0].addons
+                                .filter((addon: any) => addon.AddonType === 'sauce')
+                                .map((addon: any) => (
                                   <button
                                     key={addon.AddonID}
                                     onClick={() => {
+                                      const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
                                       setFiftyFiftySelection(prev => ({
                                         ...prev,
                                         selectedAddons: isSelected
@@ -816,41 +811,97 @@ export default function MenuPage() {
                                           : [...prev.selectedAddons, addon]
                                       }))
                                     }}
-                                    className={`w-full p-3 rounded-lg border text-sm transition-all text-center ${
-                                      isSelected
+                                    className={`w-full rounded-lg border text-sm transition-all text-center sauce-button ${
+                                      (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
                                         ? 'border-green-500 bg-green-500/20 text-green-400'
-                                        : 'border-white/12 text-muted hover:border-white/20 hover:bg-white/5'
+                                        : 'border-white/12 text-muted hover:border-white/20'
                                     }`}
+                                    style={{
+                                      minHeight: '48px',
+                                      padding: '8px 12px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1.3',
+                                      hyphens: 'auto',
+                                      overflowWrap: 'anywhere',
+                                      wordBreak: 'break-word'
+                                    }}
                                   >
-                                    <div className="font-medium">{addon.Name}</div>
+                                    <div className="font-medium" style={{
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'hidden',
+                                      textAlign: 'center',
+                                      fontSize: '14px'
+                                    }}>{addon.Name}</div>
                                     <div className={`text-xs mt-1 ${
-                                      isSelected ? 'text-green-300' : 'text-green-400'
+                                      (() => {
+                                        // Per-type logic: 3 free sauces, 3 free salads
+                                        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
+                                        const isSelected = (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
+                                        
+                                        if (typeSelected.length < 3) {
+                                          // Before 3 of this type are selected - all green
+                                          return isSelected ? 'text-green-300' : 'text-green-400'
+                                        } else {
+                                          // After 3 of this type are selected
+                                          if (isSelected) {
+                                            const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
+                                            return positionInType >= 3 ? 'text-red-400' : 'text-green-300'
+                                          } else {
+                                            return 'text-red-400'
+                                          }
+                                        }
+                                      })()
                                     }`}>
-                                      {isFree ? 'Безплатно' : `${addon.Price.toFixed(2)} лв.`}
+                                      {(() => {
+                                        // Per-type logic: 3 free sauces, 3 free salads
+                                        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
+                                        const isSelected = (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
+                                        
+                                        if (typeSelected.length < 3) {
+                                          // Before 3 of this type are selected - all show as free
+                                          return 'Безплатно'
+                                        } else {
+                                          // After 3 of this type are selected
+                                          if (isSelected) {
+                                            // Check position among selected addons of this type
+                                            const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
+                                            if (positionInType >= 3) {
+                                              // 4th and beyond of this type are paid
+                                              return `${addon.Price.toFixed(2)} лв.`
+                                            } else {
+                                              // First 3 of this type remain free
+                                              return 'Безплатно'
+                                            }
+                                          } else {
+                                            // Unselected ones show price after 3 of this type are selected
+                                            return `${addon.Price.toFixed(2)} лв.`
+                                          }
+                                        }
+                                      })()}
                                     </div>
                                   </button>
-                                )
-                              })}
+                                ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
 
                         {/* Vegetables */}
-                        <div className="mb-6">
-                          <h4 className="text-sm text-muted mb-2">Салати:</h4>
-                          <div className="grid grid-cols-2 gap-3 place-items-center">
-                            {menuData.pizza[0].addons
-                              .filter((addon: any) => addon.AddonType === 'vegetable')
-                              .map((addon: any, index: number) => {
-                                const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
-                                // Per-type logic: 3 free sauces, 3 free salads
-                                const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
-                                const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
-                                const isFree = positionInType < 3
-                                
-                                return (
+                        {menuData.pizza[0].addons.filter((addon: any) => addon.AddonType === 'vegetable').length > 0 && (
+                          <div>
+                            <h5 className="text-sm text-muted mb-2">Салати:</h5>
+                            <div className="grid gap-3 place-items-center grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
+                              {menuData.pizza[0].addons
+                                .filter((addon: any) => addon.AddonType === 'vegetable')
+                                .map((addon: any) => (
                                   <button
                                     key={addon.AddonID}
                                     onClick={() => {
+                                      const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
                                       setFiftyFiftySelection(prev => ({
                                         ...prev,
                                         selectedAddons: isSelected
@@ -858,23 +909,84 @@ export default function MenuPage() {
                                           : [...prev.selectedAddons, addon]
                                       }))
                                     }}
-                                    className={`w-full p-3 rounded-lg border text-sm transition-all text-center ${
-                                      isSelected
+                                    className={`w-full rounded-lg border text-sm transition-all text-center sauce-button ${
+                                      (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
                                         ? 'border-green-500 bg-green-500/20 text-green-400'
-                                        : 'border-white/12 text-muted hover:border-white/20 hover:bg-white/5'
+                                        : 'border-white/12 text-muted hover:border-white/20'
                                     }`}
+                                    style={{
+                                      minHeight: '48px',
+                                      padding: '8px 12px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1.3',
+                                      hyphens: 'auto',
+                                      overflowWrap: 'anywhere',
+                                      wordBreak: 'break-word'
+                                    }}
                                   >
-                                    <div className="font-medium">{addon.Name}</div>
+                                    <div className="font-medium" style={{
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
+                                      overflow: 'hidden',
+                                      textAlign: 'center',
+                                      fontSize: '14px'
+                                    }}>{addon.Name}</div>
                                     <div className={`text-xs mt-1 ${
-                                      isSelected ? 'text-green-300' : 'text-green-400'
+                                      (() => {
+                                        // Per-type logic: 3 free sauces, 3 free salads
+                                        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
+                                        const isSelected = (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
+                                        
+                                        if (typeSelected.length < 3) {
+                                          // Before 3 of this type are selected - all green
+                                          return isSelected ? 'text-green-300' : 'text-green-400'
+                                        } else {
+                                          // After 3 of this type are selected
+                                          if (isSelected) {
+                                            const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
+                                            return positionInType >= 3 ? 'text-red-400' : 'text-green-300'
+                                          } else {
+                                            return 'text-red-400'
+                                          }
+                                        }
+                                      })()
                                     }`}>
-                                      {isFree ? 'Безплатно' : `${addon.Price.toFixed(2)} лв.`}
+                                      {(() => {
+                                        // Per-type logic: 3 free sauces, 3 free salads
+                                        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
+                                        const isSelected = (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
+                                        
+                                        if (typeSelected.length < 3) {
+                                          // Before 3 of this type are selected - all show as free
+                                          return 'Безплатно'
+                                        } else {
+                                          // After 3 of this type are selected
+                                          if (isSelected) {
+                                            // Check position among selected addons of this type
+                                            const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
+                                            if (positionInType >= 3) {
+                                              // 4th and beyond of this type are paid
+                                              return `${addon.Price.toFixed(2)} лв.`
+                                            } else {
+                                              // First 3 of this type remain free
+                                              return 'Безплатно'
+                                            }
+                                          } else {
+                                            // Unselected ones show price after 3 of this type are selected
+                                            return `${addon.Price.toFixed(2)} лв.`
+                                          }
+                                        }
+                                      })()}
                                     </div>
                                   </button>
-                                )
-                              })}
+                                ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
 
                         {/* Addon pricing info */}
                         <div className="bg-blue/10 border border-blue/30 rounded-lg p-4 mb-6">
@@ -882,7 +994,7 @@ export default function MenuPage() {
                             💡 <strong>Първите 3 соса са безплатни, първите 3 салати са безплатни.</strong> След избора на 3-ти сос или 3-ти салат ще се покажат цените за останалите от същия тип.
                           </div>
                           <div className="text-xs text-muted mt-1">
-                            Избрани добавки: {(fiftyFiftySelection.selectedAddons || []).length}
+                            Първите 3 соса са безплатни, първите 3 салати са безплатни. При избор на повече се доплаща 1.50 лв.
                           </div>
                         </div>
                       </div>
@@ -995,6 +1107,13 @@ export default function MenuPage() {
                             return (selectedSizes[item.id].price || 0).toFixed(2);
                           }
                           
+                          // For burgers and drinks, use basePrice first
+                          if (item.category === 'burgers' || item.category === 'drinks') {
+                            if (item.basePrice && item.basePrice > 0) {
+                              return item.basePrice.toFixed(2);
+                            }
+                          }
+                          
                           // Otherwise, show the first available price from database
                           // Priority: Small -> Medium -> Large
                           if (item.smallPrice && item.smallPrice > 0) {
@@ -1005,8 +1124,8 @@ export default function MenuPage() {
                             return item.largePrice.toFixed(2);
                           }
                           
-                          // Fallback to basePrice, mediumPrice, or smallPrice
-                          return item.basePrice?.toFixed(2) || item.mediumPrice?.toFixed(2) || item.smallPrice?.toFixed(2) || '0.00';
+                          // Fallback to basePrice
+                          return item.basePrice?.toFixed(2) || '0.00';
                         })()} лв.
                     </span>
                     <div className="flex items-center text-xs md:text-sm text-muted">
@@ -1344,12 +1463,38 @@ export default function MenuPage() {
                       console.log('🔍 Item object:', item)
                       handleAddToCart(item)
                     }}
-
                     disabled={item.category !== 'drinks' && item.category !== 'burgers' && ((!item.sizes || item.sizes.length === 0) || (item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id]))}
                     className={`w-full py-2 md:py-3 px-3 md:px-4 rounded-xl font-medium transition-all flex items-center justify-center space-x-1 md:space-x-2 text-sm md:text-base relative z-10 ${
-                      item.category !== 'drinks' && item.category !== 'burgers' && ((!item.sizes || item.sizes.length === 0) || (item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id]))
-                        ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-red to-orange text-white hover:shadow-lg cursor-pointer'
+                      (() => {
+                        // Drinks, burgers, and sauces are always enabled (no size selection required)
+                        if (item.category === 'drinks' || item.category === 'burgers' || item.category === 'sauces') {
+                          return 'bg-gradient-to-r from-red to-orange text-white hover:shadow-lg cursor-pointer';
+                        }
+                        
+                        // For other categories, check if size selection is required
+                        if (!item.sizes || item.sizes.length === 0) {
+                          // No sizes available - disabled button
+                          return 'bg-gray-500 text-gray-300 cursor-not-allowed';
+                        }
+                        
+                        // Special cases for items with only one size (no selection needed)
+                        if (item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) {
+                          return 'bg-gradient-to-r from-red to-orange text-white hover:shadow-lg cursor-pointer'; // Standard size pizza
+                        }
+                        
+                        if (item.category === 'doners' && item.sizes.length <= 1) {
+                          return 'bg-gradient-to-r from-red to-orange text-white hover:shadow-lg cursor-pointer'; // Single size doner
+                        }
+                        
+                        if (item.category === 'sauces' && item.sizes.length <= 1) {
+                          return 'bg-gradient-to-r from-red to-orange text-white hover:shadow-lg cursor-pointer'; // Single size sauce
+                        }
+                        
+                        // For items with multiple sizes, require size selection
+                        return !selectedSizes[item.id] 
+                          ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-red to-orange text-white hover:shadow-lg cursor-pointer';
+                      })()
                     }`}
                   >
                     <Plus size={16} className="md:w-5 md:h-5" />
@@ -1363,7 +1508,6 @@ export default function MenuPage() {
                           : item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id] 
                           ? 'Избери размер' 
                           : 'Добави'
-
                       }
                     </span>
                   </button>

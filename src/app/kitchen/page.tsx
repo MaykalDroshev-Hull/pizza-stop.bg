@@ -83,7 +83,23 @@ const KitchenCommandCenter = () => {
       items: kitchenOrder.Products.map(product => {
         let customizations: string[] = [];
         
-        if (product.Addons) {
+        // Handle CompositeProduct (50/50 pizza) customizations
+        if (product.CompositeProduct) {
+          // Add pizza halves information
+          if (product.CompositeProduct.Parts && Array.isArray(product.CompositeProduct.Parts)) {
+            product.CompositeProduct.Parts.forEach((part: any) => {
+              customizations.push(`${part.Portion === 'left' ? 'Лява половина' : 'Дясна половина'}: ${part.Name}`);
+            });
+          }
+          
+          // Add composite product addons
+          if (product.CompositeProduct.Addons && Array.isArray(product.CompositeProduct.Addons)) {
+            product.CompositeProduct.Addons.forEach((addon: any) => {
+              customizations.push(addon.Name || addon.name || addon);
+            });
+          }
+        } else if (product.Addons) {
+          // Handle regular product addons
           try {
             // Try to parse as JSON array first
             const addonsData = JSON.parse(product.Addons);
@@ -99,8 +115,18 @@ const KitchenCommandCenter = () => {
           }
         }
         
+        // Format product name for display
+        let displayName = product.ProductName;
+        if (product.CompositeProduct) {
+          // For 50/50 pizzas, show the composite product name with size
+          displayName = `${product.ProductName}${product.ProductSize ? ` (${product.ProductSize})` : ''}`;
+        } else {
+          // For regular products
+          displayName = `${product.ProductName}${product.ProductSize ? ` (${product.ProductSize})` : ''}`;
+        }
+        
         return {
-          name: `${product.ProductName}${product.ProductSize ? ` (${product.ProductSize})` : ''}`,
+          name: displayName,
           quantity: product.Quantity,
           price: product.UnitPrice,
           customizations,
