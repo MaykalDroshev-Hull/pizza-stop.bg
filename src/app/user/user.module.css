@@ -688,10 +688,37 @@
   color: #ef4444;
   padding: 12px;
   border-radius: 8px;
+  margin-top: 16px;
   margin-bottom: 20px;
   text-align: center;
   font-size: 14px;
   font-weight: 500;
+}
+
+.errorList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.errorList li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.errorList li:before {
+  content: "•";
+  color: #ef4444;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.errorList li:last-child {
+  margin-bottom: 0;
 }
 
 .successMessage {
@@ -700,6 +727,7 @@
   color: #22c55e;
   padding: 12px;
   border-radius: 8px;
+  margin-top: 16px;
   margin-bottom: 20px;
   text-align: center;
   font-size: 14px;

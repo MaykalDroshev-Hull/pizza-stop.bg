@@ -2,8 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle, Clock, MapPin, Phone, CreditCard, Home, ArrowLeft, RefreshCw } from 'lucide-react'
+import { CheckCircle, Clock, MapPin, Phone, CreditCard, Home, ArrowLeft, RefreshCw, UserPlus } from 'lucide-react'
 import { decryptOrderId } from '../../utils/orderEncryption'
+import { useCart } from '../../components/CartContext'
+import { useLoginID } from '../../components/LoginIDContext'
 
 interface OrderItem {
   ProductID: number
@@ -20,6 +22,7 @@ interface OrderDetails {
   orderId: string
   customerName: string
   customerPhone: string
+  customerEmail?: string
   orderLocation: string
   orderTime: string
   paymentMethod: string
@@ -37,6 +40,8 @@ interface OrderDetails {
 function OrderSuccessContent() {
   const searchParams = useSearchParams()
   const encryptedOrderId = searchParams.get('orderId')
+  const { clearCart } = useCart()
+  const { user, isAuthenticated } = useLoginID()
   
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -60,6 +65,8 @@ function OrderSuccessContent() {
       }
 
       try {
+        // Clear the cart after successful order
+        clearCart()
         const res = await fetch(`/api/order/details?orderId=${decryptedOrderId}`, { cache: 'no-store' })
         if (!res.ok) {
           const err = await res.json().catch(() => ({}))
@@ -93,6 +100,7 @@ function OrderSuccessContent() {
           orderId: String(order.OrderID),
           customerName: order.Login?.Name || '',
           customerPhone: order.Login?.phone || '',
+          customerEmail: order.Login?.email || '',
           orderLocation: order.OrderLocation || order.Login?.LocationText || '',
           orderTime,
           paymentMethod: order.PaymentMethod?.PaymentMethodName || '—',
@@ -294,15 +302,6 @@ function OrderSuccessContent() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-md:justify-start max-md:w-80 md:w-full">
             {/* Left Column */}
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green/10 rounded-full flex items-center justify-center">
-                  <CheckCircle size={20} className="text-green" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted">Статус</p>
-                  <p className="font-medium text-text">{orderDetails.status}</p>
-                </div>
-              </div>
 
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-orange/10 rounded-full flex items-center justify-center">
@@ -470,13 +469,35 @@ function OrderSuccessContent() {
             Към началната страница
           </button>
           
-          <button
-            onClick={handleBackToOrders}
-            className="flex-1 bg-white/6 border border-white/12 text-text py-3 px-6 rounded-xl font-medium hover:bg-white/10 transition-colors flex items-center justify-center gap-2 max-md:py-4"
-          >
-            <CheckCircle size={20} />
-            Моите поръчки
-          </button>
+          {isAuthenticated && user ? (
+            <button
+              onClick={handleBackToOrders}
+              className="flex-1 bg-white/6 border border-white/12 text-text py-3 px-6 rounded-xl font-medium hover:bg-white/10 transition-colors flex items-center justify-center gap-2 max-md:py-4"
+            >
+              <CheckCircle size={20} />
+              Моите поръчки
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                // Redirect to registration page with email, name, and phone pre-filled
+                const email = orderDetails?.customerEmail || ''
+                const name = orderDetails?.customerName || ''
+                const phone = orderDetails?.customerPhone || ''
+                
+                const params = new URLSearchParams()
+                if (email) params.append('email', email)
+                if (name) params.append('name', name)
+                if (phone) params.append('phone', phone)
+                
+                window.location.href = `/user${params.toString() ? `?${params.toString()}` : ''}`
+              }}
+              className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-xl font-medium hover:scale-105 transition-transform flex items-center justify-center gap-2 max-md:py-4"
+            >
+              <UserPlus size={20} />
+              Създайте акаунт
+            </button>
+          )}
         </div>
 
         {/* Contact Information */}

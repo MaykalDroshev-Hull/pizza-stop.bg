@@ -16,10 +16,10 @@ import {
   Edit3,
   Navigation,
   CheckCircle,
-  XCircle
+  XCircle,
+  AlertCircle
 } from 'lucide-react'
 import { isRestaurantOpen } from '@/utils/openingHours'
-import { encryptOrderId } from '@/utils/orderEncryption'
 import styles from './dashboard.module.css'
 import { useLoginID } from '@/components/LoginIDContext'
 import { useLoading } from '@/components/LoadingContext'
@@ -60,7 +60,7 @@ interface Order {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useLoginID()
+  const { user, isAuthenticated, isLoading: authLoading, logout, updateUser } = useLoginID()
   const { startLoading, stopLoading } = useLoading()
   const [activeTab, setActiveTab] = useState('orders')
   const [error, setError] = useState('')
@@ -84,6 +84,19 @@ export default function DashboardPage() {
   const [hasFetchedData, setHasFetchedData] = useState(false)
   const [isOpen, setIsOpen] = useState(isRestaurantOpen())
   const successMessageRef = useRef<HTMLDivElement>(null)
+  
+  // Profile edit states
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  })
+  const [emailValidation, setEmailValidation] = useState({
+    isValid: true,
+    errors: [] as string[],
+    showTooltip: false
+  })
   
   // Address validation state
   const [addressZone, setAddressZone] = useState<'yellow' | 'blue' | 'outside' | null>(null)
@@ -357,6 +370,17 @@ export default function DashboardPage() {
     }
   }, [user, hasFetchedData]) // Run when user changes and data hasn't been fetched
 
+  // Initialize profile data when user changes
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || ''
+      })
+    }
+  }, [user])
+
   // Update restaurant open/closed status every minute
   useEffect(() => {
     const updateStatus = () => {
@@ -464,6 +488,206 @@ export default function DashboardPage() {
   const handleLogout = () => {
     logout()
     router.push('/user')
+  }
+
+  // Email validation function (same as in user page)
+  const validateEmail = (email: string) => {
+    const errors: string[] = []
+    
+    if (!email) {
+      return { isValid: true, errors: [] }
+    }
+
+    // Check for exactly one @ symbol
+    const atCount = (email.match(/@/g) || []).length
+    if (atCount === 0) {
+      errors.push('Имейлът трябва да съдържа символ @')
+    } else if (atCount > 1) {
+      errors.push('Имейлът може да съдържа само един символ @')
+    }
+
+    if (atCount === 1) {
+      const [localPart, domainPart] = email.split('@')
+      
+      // Local part validation
+      if (!localPart) {
+        errors.push('Частта преди @ не може да бъде празна')
+      } else {
+        // Check for consecutive dots
+        if (localPart.includes('..')) {
+          errors.push('Не са позволени последователни точки (..)')
+        }
+        
+        // Check if starts or ends with dot
+        if (localPart.startsWith('.') || localPart.endsWith('.')) {
+          errors.push('Частта преди @ не може да започва или завършва с точка')
+        }
+        
+        // Check allowed characters in local part
+        const localPartRegex = /^[a-zA-Z0-9._+-]+$/
+        if (!localPartRegex.test(localPart)) {
+          errors.push('Частта преди @ може да съдържа само букви, цифри, точки, долни черти, тирета и плюсове')
+        }
+      }
+      
+      // Domain part validation
+      if (!domainPart) {
+        errors.push('Частта след @ не може да бъде празна')
+      } else {
+        // Check for at least one dot
+        if (!domainPart.includes('.')) {
+          errors.push('Домейнът трябва да съдържа поне една точка')
+        }
+        
+        // Check for consecutive dots
+        if (domainPart.includes('..')) {
+          errors.push('Не са позволени последователни точки (..) в домейна')
+        }
+        
+        // Check if starts or ends with dot
+        if (domainPart.startsWith('.') || domainPart.endsWith('.')) {
+          errors.push('Домейнът не може да започва или завършва с точка')
+        }
+        
+        // Check allowed characters in domain
+        const domainRegex = /^[a-zA-Z0-9.-]+$/
+        if (!domainRegex.test(domainPart)) {
+          errors.push('Домейнът може да съдържа само букви, цифри, тирета и точки')
+        }
+        
+        // Check domain labels don't start/end with -
+        const domainLabels = domainPart.split('.')
+        for (const label of domainLabels) {
+          if (label.startsWith('-') || label.endsWith('-')) {
+            errors.push('Частите на домейна не могат да започват или завършват с тире')
+            break
+          }
+        }
+        
+        // Check top-level domain is at least 2 characters
+        const topLevelDomain = domainLabels[domainLabels.length - 1]
+        if (topLevelDomain && topLevelDomain.length < 2) {
+          errors.push('Домейнът от най-високо ниво трябва да бъде поне 2 символа дълъг')
+        }
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    }
+  }
+
+  // Phone validation function
+  const validatePhone = (phone: string) => {
+    if (!phone) return { isValid: true, error: '' }
+    
+    // Bulgarian phone number validation
+    const phoneRegex = /^(\+359|0)[0-9]{9}$/
+    if (!phoneRegex.test(phone)) {
+      return { 
+        isValid: false, 
+        error: 'Моля, въведете валиден български телефонен номер (напр. 0888123456 или +359888123456)' 
+      }
+    }
+    
+    return { isValid: true, error: '' }
+  }
+
+  // Handle profile data changes
+  const handleProfileChange = (field: string, value: string) => {
+    setProfileData(prev => ({ ...prev, [field]: value }))
+    
+    if (field === 'email') {
+      const validation = validateEmail(value)
+      setEmailValidation({ ...validation, showTooltip: false })
+    }
+  }
+
+  // Handle profile edit start
+  const handleEditProfile = () => {
+    setIsEditingProfile(true)
+    setError('')
+    setUpdateSuccess('')
+  }
+
+  // Handle profile edit cancel
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false)
+    setError('')
+    setUpdateSuccess('')
+    // Reset to original user data
+    if (user) {
+      setProfileData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || ''
+      })
+    }
+    setEmailValidation({ isValid: true, errors: [], showTooltip: false })
+  }
+
+  // Handle profile update
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Validate email
+    if (profileData.email) {
+      const emailValidation = validateEmail(profileData.email)
+      if (!emailValidation.isValid) {
+        setError('Моля, въведете валиден имейл адрес')
+        setEmailValidation({ ...emailValidation, showTooltip: true })
+        setTimeout(() => {
+          setEmailValidation(prev => ({ ...prev, showTooltip: false }))
+        }, 3000)
+        return
+      }
+    }
+    
+    // Validate phone
+    const phoneValidation = validatePhone(profileData.phone)
+    if (!phoneValidation.isValid) {
+      setError(phoneValidation.error)
+      return
+    }
+    
+    setIsUpdating(true)
+    setError('')
+    setUpdateSuccess('')
+    
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id,
+          name: profileData.name,
+          email: profileData.email,
+          phone: profileData.phone
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Грешка при обновяване на профила')
+      }
+      
+      setUpdateSuccess('Профилът е обновен успешно!')
+      setIsEditingProfile(false)
+      
+      // Update user context with new data
+      updateUser({
+        name: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone
+      })
+      
+    } catch (err: any) {
+      setError(err.message || 'Грешка при обновяване на профила')
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
   // Point-in-polygon function to check if coordinates are within a polygon
@@ -1047,7 +1271,6 @@ export default function DashboardPage() {
                               }
                             </p>
                           )}
-                          <p className={styles.orderStatus}>{order.Status}</p>
                         </div>
                         <div className={styles.orderTotal}>
                           {order.TotalAmount.toFixed(2)} лв.
@@ -1083,16 +1306,6 @@ export default function DashboardPage() {
                       </div>
                       <div className={styles.orderActions}>
                         <button 
-                          onClick={() => {
-                            const encryptedOrderId = encryptOrderId(order.OrderID)
-                            router.push(`/order-tracking?orderId=${encryptedOrderId}`)
-                          }}
-                          className={styles.followOrderBtn}
-                        >
-                          <Clock size={16} />
-                          Следи поръчката
-                        </button>
-                        <button 
                           onClick={() => handleOrderAgain(order)}
                           className={styles.orderAgainBtn}
                         >
@@ -1127,26 +1340,122 @@ export default function DashboardPage() {
             <section className={styles.profileSection}>
               <div className={styles.sectionHeader}>
                 <User className={styles.sectionIcon} size={24} />
-                                 <h2>Лична информация</h2>
+                <h2>Лична информация</h2>
+                {!isEditingProfile && (
+                  <button 
+                    onClick={handleEditProfile}
+                    className={styles.editButton}
+                  >
+                    <Edit3 size={16} />
+                    Редактирай
+                  </button>
+                )}
               </div>
-              <div className={styles.profileInfo}>
-                <div className={styles.infoRow}>
-                                     <label>Име:</label>
-                  <span>{user.name}</span>
+              
+              {!isEditingProfile ? (
+                <div className={styles.profileInfo}>
+                  <div className={styles.infoRow}>
+                    <label>Име:</label>
+                    <span>{user.name}</span>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <label>Имейл:</label>
+                    <span>{user.email}</span>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <label>Телефон:</label>
+                    <span>{user.phone || 'Не е предоставен'}</span>
+                  </div>
+                  <div className={styles.infoRow}>
+                    <label>Член от:</label>
+                    <span>{user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Не е налична'}</span>
+                  </div>
                 </div>
-                <div className={styles.infoRow}>
-                                     <label>Имейл:</label>
-                  <span>{user.email}</span>
-                </div>
-                <div className={styles.infoRow}>
-                                     <label>Телефон:</label>
-                                     <span>{user.phone || 'Не е предоставен'}</span>
-                </div>
-                <div className={styles.infoRow}>
-                                     <label>Член от:</label>
-                  <span>{user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Не е налична'}</span>
-                </div>
-              </div>
+              ) : (
+                <form onSubmit={handleProfileUpdate} className={styles.form}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="profileName">Име</label>
+                    <input
+                      type="text"
+                      id="profileName"
+                      value={profileData.name}
+                      onChange={(e) => handleProfileChange('name', e.target.value)}
+                      required
+                    />
+                  </div>
+                  
+                  <div className={styles.formGroup}>
+                    <label htmlFor="profileEmail">Имейл</label>
+                      <input
+                        type="email"
+                        id="profileEmail"
+                        value={profileData.email}
+                        onChange={(e) => handleProfileChange('email', e.target.value)}
+                        onFocus={() => {
+                          if (!emailValidation.isValid && profileData.email) {
+                            setEmailValidation(prev => ({ ...prev, showTooltip: true }))
+                          }
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => {
+                            setEmailValidation(prev => ({ ...prev, showTooltip: false }))
+                          }, 100)
+                        }}
+                        className={!emailValidation.isValid && profileData.email ? styles.invalidInput : ''}
+                        required
+                      />
+                      {!emailValidation.isValid && profileData.email && (
+                        <AlertCircle 
+                          className={styles.validationIcon} 
+                          size={18} 
+                          onMouseEnter={() => setEmailValidation(prev => ({ ...prev, showTooltip: true }))}
+                          onMouseLeave={() => setEmailValidation(prev => ({ ...prev, showTooltip: false }))}
+                        />
+                      )}
+                      {emailValidation.showTooltip && !emailValidation.isValid && emailValidation.errors.length > 0 && (
+                        <div className={styles.validationTooltip}>
+                          <div className={styles.tooltipContent}>
+                            {emailValidation.errors.map((error, index) => (
+                              <div key={index} className={styles.tooltipError}>
+                                {error}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                  
+                  <div className={styles.formGroup}>
+                    <label htmlFor="profilePhone">Телефон</label>
+                    <input
+                      type="tel"
+                      id="profilePhone"
+                      value={profileData.phone}
+                      onChange={(e) => handleProfileChange('phone', e.target.value)}
+                      placeholder="0888123456 или +359888123456"
+                      required
+                    />
+                  </div>
+                  
+                  <div className={styles.formActions}>
+                    <button 
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className={styles.cancelButton}
+                      disabled={isUpdating}
+                    >
+                      Отказ
+                    </button>
+                    <button 
+                      type="submit" 
+                      className={styles.primaryBtn}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? 'Запазване...' : 'Запази промените'}
+                    </button>
+                  </div>
+                </form>
+              )}
             </section>
           </div>
         )}
