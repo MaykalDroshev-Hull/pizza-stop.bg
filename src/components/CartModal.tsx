@@ -182,7 +182,6 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
             </div>
             <div className="min-w-0">
               <h3 className="font-bold text-lg text-text truncate">{item.name}</h3>
-              <p className="text-muted text-sm">{item.category}</p>
             </div>
           </div>
 
@@ -353,14 +352,14 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
             <div>
               <h4 className="font-medium text-text mb-4">Добавки:</h4>
               <p className="text-sm text-muted mb-4">
-                Първите 3 соса са безплатни, първите 3 салати са безплатни. След избора на 3-ти сос или 3-ти салат ще се покажат цените за останалите от същия тип.
+                💡 Първите 3 соса са безплатни, първите 3 салати са безплатни. След избора на 3-ти сос или 3-та салата ще се покажат цените за останалите от същия тип.
               </p>
               <div className="space-y-4">
                 {/* Sauces */}
                 {item.addons.filter(addon => addon.AddonType === 'sauce').length > 0 && (
                   <div>
                     <h5 className="text-sm text-muted mb-2">Сосове:</h5>
-                    <div className="grid grid-cols-4 sm:grid-cols-1 lg:grid-cols-4 gap-3 place-items-center">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {item.addons
                         .filter(addon => addon.AddonType === 'sauce')
                         .map(addon => (
@@ -373,25 +372,20 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                                 : 'border-white/12 text-muted hover:border-white/20'
                             }`}
                             style={{
-                              minHeight: '48px',
+                              height: '60px',
                               padding: '8px 12px',
                               display: 'flex',
                               flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              lineHeight: '1.3',
-                              hyphens: 'auto',
-                              overflowWrap: 'anywhere',
-                              wordBreak: 'break-word'
+                              lineHeight: '1.2'
                             }}
+                            title={addon.Name}
                           >
-                            <div className="font-medium" style={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
+                            <div className="font-medium truncate w-full text-center text-sm" style={{
                               overflow: 'hidden',
-                              textAlign: 'center',
-                              fontSize: '14px'
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
                             }}>{addon.Name}</div>
                             <div className={`text-xs mt-1 ${
                               (() => {
@@ -450,7 +444,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                 {item.addons.filter(addon => addon.AddonType === 'vegetable').length > 0 && (
                   <div>
                     <h5 className="text-sm text-muted mb-2">Салати:</h5>
-                    <div className="grid grid-cols-4 sm:grid-cols-1 lg:grid-cols-4 gap-3 place-items-center">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {item.addons
                         .filter(addon => addon.AddonType === 'vegetable')
                         .map(addon => (
@@ -463,25 +457,20 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                                 : 'border-white/12 text-muted hover:border-white/20'
                             }`}
                             style={{
-                              minHeight: '48px',
+                              height: '60px',
                               padding: '8px 12px',
                               display: 'flex',
                               flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              lineHeight: '1.3',
-                              hyphens: 'auto',
-                              overflowWrap: 'anywhere',
-                              wordBreak: 'break-word'
+                              lineHeight: '1.2'
                             }}
+                            title={addon.Name}
                           >
-                            <div className="font-medium" style={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
+                            <div className="font-medium truncate w-full text-center text-sm" style={{
                               overflow: 'hidden',
-                              textAlign: 'center',
-                              fontSize: '14px'
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
                             }}>{addon.Name}</div>
                             <div className={`text-xs mt-1 ${
                               (() => {

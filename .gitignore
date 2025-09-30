@@ -44,6 +44,7 @@ coverage/
 # Misc
 .DS_Store
 *.pem
+prompt.txt
 
 # Debug
 npm-debug.log*
