@@ -316,7 +316,23 @@ export default function UserPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
+        // Check if the error response contains multiple validation errors
+        if (data && typeof data === 'object' && data.details) {
+          // Extract individual errors from the details object
+          const errorMessages = Object.keys(data.details)
+            .filter(key => key.startsWith('error_'))
+            .map(key => data.details[key])
+            .filter(Boolean)
+          
+          if (errorMessages.length > 0) {
+            setError(errorMessages)
+          } else {
+            setError(data.error || 'Грешка при регистрация')
+          }
+        } else {
+          throw new Error(data.error || 'Registration failed')
+        }
+        return
       }
 
       setSuccess('Успешна регистрация!')
@@ -339,22 +355,7 @@ export default function UserPage() {
       setTimeout(() => setIsLogin(true), 2000)
       
     } catch (err: any) {
-      // Check if the error response contains multiple validation errors
-      if (err.message === 'Множество валидационни грешки' && data && typeof data === 'object' && data.details) {
-        // Extract individual errors from the details object
-        const errorMessages = Object.keys(data.details)
-          .filter(key => key.startsWith('error_'))
-          .map(key => data.details[key])
-          .filter(Boolean)
-        
-        if (errorMessages.length > 0) {
-          setError(errorMessages)
-        } else {
-          setError(err.message || 'Грешка при регистрация')
-        }
-      } else {
-        setError(err.message || 'Грешка при регистрация')
-      }
+      setError(err.message || 'Грешка при регистрация')
     } finally {
       stopLoading()
     }
