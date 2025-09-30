@@ -394,6 +394,29 @@ export async function POST(request: NextRequest) {
 
       await emailService.sendOrderConfirmationEmail(emailData)
       console.log('✅ Order confirmation email sent successfully')
+      
+      // For pickup orders, also send ready time email
+      if (isCollection) {
+        try {
+          console.log('📧 Sending pickup ready time email...')
+          
+          // Calculate ready time (e.g., 30 minutes for pickup)
+          const readyTimeMinutes = 30
+          
+          await emailService.sendOrderReadyTimeEmail({
+            to: customerInfo.email,
+            name: customerInfo.name,
+            orderId: order.OrderID.toString(),
+            readyTimeMinutes,
+            orderDetails: emailData.orderDetails
+          })
+          
+          console.log('✅ Pickup ready time email sent successfully')
+        } catch (readyTimeEmailError) {
+          console.error('❌ Error sending pickup ready time email:', readyTimeEmailError)
+          // Don't fail the order if email can't be sent, just log the error
+        }
+      }
     } catch (emailError) {
       console.error('❌ Error sending order confirmation email:', emailError)
       // Don't fail the order if email can't be sent, just log the error

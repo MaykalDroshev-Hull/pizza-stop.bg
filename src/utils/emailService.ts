@@ -901,7 +901,7 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: process.env.NEXT_PUBLIC_EMAIL,
+        from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
         to,
         subject: `Вашата поръчка е на път - ETA: ${etaMinutes} минути | Pizza Stop`,
         html: htmlContent,

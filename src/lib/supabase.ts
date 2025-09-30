@@ -79,6 +79,7 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
       OrderLocation,
       OrderLocationCoordinates,
       OrderStatusID,
+      OrderType,
       RfPaymentMethodID,
       IsPaid
     `)
@@ -137,6 +138,7 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
         OrderLocation: order.OrderLocation,
         OrderLocationCoordinates: order.OrderLocationCoordinates,
         OrderStatusID: order.OrderStatusID,
+        OrderType: order.OrderType,
         IsPaid: order.IsPaid,
         CustomerName: customer?.Name || 'Unknown',
         CustomerPhone: customer?.phone || '',
@@ -165,6 +167,7 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
         OrderLocation,
         OrderLocationCoordinates,
         OrderStatusID,
+        OrderType,
         RfPaymentMethodID,
         IsPaid
       `)
@@ -230,6 +233,7 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
         OrderLocation: order.OrderLocation,
         OrderLocationCoordinates: order.OrderLocationCoordinates,
         OrderStatusID: order.OrderStatusID,
+        OrderType: order.OrderType,
         IsPaid: order.IsPaid,
         CustomerName: customer?.Name || 'Unknown',
         CustomerPhone: customer?.phone || '',
@@ -412,6 +416,7 @@ export interface KitchenOrder {
   OrderLocation: string | null
   OrderLocationCoordinates: string | null
   OrderStatusID: number
+  OrderType: number // 1 = Restaurant collection, 2 = Delivery
   IsPaid: boolean
   CustomerName: string
   CustomerPhone: string

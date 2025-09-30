@@ -241,13 +241,33 @@ export default function MenuPage() {
         menuData[activeCategory] || []
 
   const handleAddToCart = (item: any) => {
-    console.log('🔍 handleAddToCart called with:', item.name, item.category)
-    console.log('🔍 Item sizes:', item.sizes)
-    console.log('🔍 Item category:', item.category)
+    
+    // For sauces with single size, add directly to cart (same logic as CartModal)
+    if (item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) {
+      // Use default size for sauces that don't require size selection
+      let finalSize = 'Стандартен размер'
+      if (item.sizes && item.sizes.length > 0) {
+        finalSize = item.sizes[0].name
+      }
+      
+      // Get base price (same logic as CartModal)
+      const basePrice = item.price || item.basePrice || 0
+      
+      const cartItem = {
+        ...item,
+        price: basePrice,
+        size: finalSize,
+        addons: [],
+        comment: '',
+        quantity: 1
+      }
+
+      addItem(cartItem)
+      return
+    }
     
     // For items with size options, ensure a size is selected
     if (item.sizes && Array.isArray(item.sizes) && item.sizes.length > 0 && item.category !== 'drinks' && item.category !== 'burgers') {
-      console.log('🔍 Opening modal for item with sizes')
       if (!selectedSizes[item.id]) {
         // Auto-select first size if none selected
         const firstSize = typeof item.sizes[0] === 'string' 
@@ -262,9 +282,7 @@ export default function MenuPage() {
       setSelectedSize(selectedSizes[item.id]) // Set the selected size for the modal
       setIsModalOpen(true)
     } else {
-      console.log('🔍 Item has no sizes or is drinks/burgers')
       // For drinks and burgers, open modal for customization
-      console.log('🔍 Opening modal for drinks/burgers/other items')
       setSelectedItem(item)
       setIsModalOpen(true)
     }
@@ -736,9 +754,6 @@ export default function MenuPage() {
                       <div className="text-3xl font-bold text-orange">
                         {fiftyFiftySelection.finalPrice.toFixed(2)} лв.
                       </div>
-                      <div className="text-xs text-muted mt-2">
-                        Цена на по-скъпата пица
-                      </div>
                     </div>
                     
                     {/* Action Buttons */}
@@ -790,13 +805,13 @@ export default function MenuPage() {
                       <div>
                         <h4 className="font-medium text-text mb-4">Добавки:</h4>
                         <p className="text-sm text-muted mb-4">
-                          Първите 3 соса са безплатни, първите 3 салати са безплатни. След избора на 3-ти сос или 3-ти салат ще се покажат цените за останалите от същия тип.
+                          💡 Първите 3 соса са безплатни, първите 3 салати са безплатни. След избора на 3-ти сос или 3-та салата ще се покажат цените за останалите от същия тип.
                         </p>
                         {/* Sauces */}
                         {menuData.pizza[0].addons.filter((addon: any) => addon.AddonType === 'sauce').length > 0 && (
                           <div>
                             <h5 className="text-sm text-muted mb-2">Сосове:</h5>
-                            <div className="grid gap-3 place-items-center grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
+                            <div className="grid gap-3 place-items-center grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                               {menuData.pizza[0].addons
                                 .filter((addon: any) => addon.AddonType === 'sauce')
                                 .map((addon: any) => (
@@ -817,25 +832,20 @@ export default function MenuPage() {
                                         : 'border-white/12 text-muted hover:border-white/20'
                                     }`}
                                     style={{
-                                      minHeight: '48px',
+                                      height: '60px',
                                       padding: '8px 12px',
                                       display: 'flex',
                                       flexDirection: 'column',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      lineHeight: '1.3',
-                                      hyphens: 'auto',
-                                      overflowWrap: 'anywhere',
-                                      wordBreak: 'break-word'
+                                      lineHeight: '1.2'
                                     }}
+                                    title={addon.Name}
                                   >
-                                    <div className="font-medium" style={{
-                                      display: '-webkit-box',
-                                      WebkitLineClamp: 2,
-                                      WebkitBoxOrient: 'vertical',
+                                    <div className="font-medium truncate w-full text-center text-sm" style={{
                                       overflow: 'hidden',
-                                      textAlign: 'center',
-                                      fontSize: '14px'
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
                                     }}>{addon.Name}</div>
                                     <div className={`text-xs mt-1 ${
                                       (() => {
@@ -894,7 +904,7 @@ export default function MenuPage() {
                         {menuData.pizza[0].addons.filter((addon: any) => addon.AddonType === 'vegetable').length > 0 && (
                           <div>
                             <h5 className="text-sm text-muted mb-2">Салати:</h5>
-                            <div className="grid gap-3 place-items-center grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
+                            <div className="grid gap-3 place-items-center grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                               {menuData.pizza[0].addons
                                 .filter((addon: any) => addon.AddonType === 'vegetable')
                                 .map((addon: any) => (
@@ -915,25 +925,20 @@ export default function MenuPage() {
                                         : 'border-white/12 text-muted hover:border-white/20'
                                     }`}
                                     style={{
-                                      minHeight: '48px',
+                                      height: '60px',
                                       padding: '8px 12px',
                                       display: 'flex',
                                       flexDirection: 'column',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      lineHeight: '1.3',
-                                      hyphens: 'auto',
-                                      overflowWrap: 'anywhere',
-                                      wordBreak: 'break-word'
+                                      lineHeight: '1.2'
                                     }}
+                                    title={addon.Name}
                                   >
-                                    <div className="font-medium" style={{
-                                      display: '-webkit-box',
-                                      WebkitLineClamp: 2,
-                                      WebkitBoxOrient: 'vertical',
+                                    <div className="font-medium truncate w-full text-center text-sm" style={{
                                       overflow: 'hidden',
-                                      textAlign: 'center',
-                                      fontSize: '14px'
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
                                     }}>{addon.Name}</div>
                                     <div className={`text-xs mt-1 ${
                                       (() => {
@@ -987,16 +992,6 @@ export default function MenuPage() {
                             </div>
                           </div>
                         )}
-
-                        {/* Addon pricing info */}
-                        <div className="bg-blue/10 border border-blue/30 rounded-lg p-4 mb-6">
-                          <div className="text-sm text-blue">
-                            💡 <strong>Първите 3 соса са безплатни, първите 3 салати са безплатни.</strong> След избора на 3-ти сос или 3-ти салат ще се покажат цените за останалите от същия тип.
-                          </div>
-                          <div className="text-xs text-muted mt-1">
-                            Първите 3 соса са безплатни, първите 3 салати са безплатни. При избор на повече се доплаща 1.50 лв.
-                          </div>
-                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-8">
@@ -1458,12 +1453,19 @@ export default function MenuPage() {
                   <div className="mt-auto">
                   <button
                     onClick={(event) => {
-                      console.log('🔍 BUTTON CLICKED:', item.name, item.category)
-                      console.log('🔍 Button element:', event?.target)
-                      console.log('🔍 Item object:', item)
+                      event.preventDefault()
+                      event.stopPropagation()
                       handleAddToCart(item)
                     }}
-                    disabled={item.category !== 'drinks' && item.category !== 'burgers' && ((!item.sizes || item.sizes.length === 0) || (item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id]))}
+                    disabled={(() => {
+                      // Sauces, drinks, and burgers should never be disabled
+                      if (item.category === 'sauces' || item.category === 'drinks' || item.category === 'burgers') {
+                        return false
+                      }
+                      
+                      // For other categories, check if size selection is required
+                      return (!item.sizes || item.sizes.length === 0) || (item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id])
+                    })()}
                     className={`w-full py-2 md:py-3 px-3 md:px-4 rounded-xl font-medium transition-all flex items-center justify-center space-x-1 md:space-x-2 text-sm md:text-base relative z-10 ${
                       (() => {
                         // Drinks, burgers, and sauces are always enabled (no size selection required)
@@ -1499,16 +1501,40 @@ export default function MenuPage() {
                   >
                     <Plus size={16} className="md:w-5 md:h-5" />
                     <span className="truncate">
-                      {item.category === 'drinks'
-                        ? 'Добави'
-                        : item.category === 'burgers'
-                        ? 'Добави'
-                        : (!item.sizes || item.sizes.length === 0)
-                        ? 'Няма размери'
-                          : item.sizes && item.sizes.length > 0 && !(item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) && !(item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) && !(item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) && !selectedSizes[item.id] 
-                          ? 'Избери размер' 
-                          : 'Добави'
-                      }
+                      {(() => {
+                        // Drinks and burgers always show "Добави"
+                        if (item.category === 'drinks' || item.category === 'burgers') {
+                          return 'Добави'
+                        }
+                        
+                        // Sauces with single size show "Добави"
+                        if (item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) {
+                          return 'Добави'
+                        }
+                        
+                        // Pizzas with only small size show "Добави"
+                        if (item.category === 'pizza' && item.smallPrice && !item.mediumPrice && !item.largePrice) {
+                          return 'Добави'
+                        }
+                        
+                        // Doners with single size show "Добави"
+                        if (item.category === 'doners' && (!item.sizes || item.sizes.length <= 1)) {
+                          return 'Добави'
+                        }
+                        
+                        // Items with no sizes show "Няма размери"
+                        if (!item.sizes || item.sizes.length === 0) {
+                          return 'Няма размери'
+                        }
+                        
+                        // Items with multiple sizes require size selection
+                        if (!selectedSizes[item.id]) {
+                          return 'Избери размер'
+                        }
+                        
+                        // Default case
+                        return 'Добави'
+                      })()}
                     </span>
                   </button>
                   </div>

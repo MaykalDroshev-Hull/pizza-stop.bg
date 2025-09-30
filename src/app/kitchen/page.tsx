@@ -29,6 +29,7 @@ interface Order {
   specialInstructions: string;
   isPaid: boolean;
   orderStatusId: number;
+  orderType: number; // 1 = Restaurant collection, 2 = Delivery
 }
 
 const KitchenCommandCenter = () => {
@@ -143,7 +144,8 @@ const KitchenCommandCenter = () => {
       estimatedTime: 15, // Default estimate
       specialInstructions: kitchenOrder.SpecialInstructions || '',
       isPaid: kitchenOrder.IsPaid,
-      orderStatusId: kitchenOrder.OrderStatusID
+      orderStatusId: kitchenOrder.OrderStatusID,
+      orderType: kitchenOrder.OrderType
     };
   };
 
@@ -994,6 +996,14 @@ const KitchenCommandCenter = () => {
     });
   };
 
+  const markPickupAsTaken = (order: Order) => {
+    setConfirmDialog({
+      show: true,
+      order,
+      action: 'mark_pickup_taken'
+    });
+  };
+
   const bulkSendToDriver = async (orders: Order[]) => {
     try {
       // Send all orders to driver without individual confirmations
@@ -1099,6 +1109,27 @@ const KitchenCommandCenter = () => {
       } catch (error) {
         console.error('Error sending order to driver:', error);
         addNotification(`Error sending order #${order.id} to delivery page`, 'urgent');
+      }
+    } else if (action === 'mark_pickup_taken') {
+      try {
+        // Update database to DELIVERED status (OrderStatusID = 6) for pickup orders
+        const success = await updateOrderStatusInDB(order.id, ORDER_STATUS.DELIVERED);
+        
+        if (success) {
+          // Remove order from local state immediately (it will appear in history)
+          setOrders(prevOrders => 
+            prevOrders.filter(o => o.id !== order.id)
+          );
+          console.log(`Successfully marked pickup order ${order.id} as taken with OrderStatusID = ${ORDER_STATUS.DELIVERED}`);
+          addNotification(`Поръчка #${order.id} маркирана като взета`, 'info');
+          playNotificationSound('complete');
+        } else {
+          console.error(`Failed to mark pickup order ${order.id} as taken in database`);
+          addNotification(`Failed to mark order #${order.id} as taken`, 'warning');
+        }
+      } catch (error) {
+        console.error('Error marking pickup order as taken:', error);
+        addNotification(`Error marking order #${order.id} as taken`, 'urgent');
       }
     } else if (action === 'completed') {
       try {
@@ -1476,11 +1507,11 @@ const KitchenCommandCenter = () => {
               <span className={`${emojiSizeClasses[cardSize]}`}>🔄</span>
           </button>
             <button
-              onClick={() => sendToDriver(order)}
+              onClick={() => order.orderType === 1 ? markPickupAsTaken(order) : sendToDriver(order)}
               className={`bg-gray-500 hover:bg-gray-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
-              title="Препрати към доставка"
+              title={order.orderType === 1 ? "Маркирай като взета" : "Препрати към доставка"}
             >
-              <span className={`${emojiSizeClasses[cardSize]}`}>🚚</span>
+              <span className={`${emojiSizeClasses[cardSize]}`}>{order.orderType === 1 ? "✅" : "🚚"}</span>
             </button>
           </div>
         </div>
@@ -1938,6 +1969,8 @@ const KitchenCommandCenter = () => {
                 ? `Върни поръчка #${confirmDialog.order?.id} към работни поръчки?`
                 : confirmDialog.action === 'send_to_driver'
                 ? `Препрати поръчка #${confirmDialog.order?.id} към доставка?`
+                : confirmDialog.action === 'mark_pickup_taken'
+                ? `Маркирай поръчка #${confirmDialog.order?.id} като взета?`
                 : `Отбележи поръчка #${confirmDialog.order?.id} като завършена?`
               }
             </p>

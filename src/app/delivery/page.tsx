@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   MapPin, 
   Phone, 
@@ -140,6 +140,10 @@ const DeliveryDashboard = () => {
   const [selectedOrderForMap, setSelectedOrderForMap] = useState<DeliveryOrder | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   
+  // History auto-scroll state
+  const [hasUserScrolled, setHasUserScrolled] = useState(false);
+  const historyScrollRef = useRef<HTMLDivElement>(null);
+  
   // ETA Modal State
   const [showETAModal, setShowETAModal] = useState(false);
   const [selectedOrderForETA, setSelectedOrderForETA] = useState<DeliveryOrder | null>(null);
@@ -166,6 +170,39 @@ const DeliveryDashboard = () => {
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
   const [deliveryHistory, setDeliveryHistory] = useState<DeliveryOrder[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Auto-scroll to bottom of history (mobile only)
+  const scrollToBottom = useCallback(() => {
+    if (isMobile && historyScrollRef.current && !hasUserScrolled) {
+      historyScrollRef.current.scrollTop = historyScrollRef.current.scrollHeight;
+    }
+  }, [isMobile, hasUserScrolled]);
+
+  // Handle scroll events to detect manual scrolling
+  const handleHistoryScroll = useCallback(() => {
+    if (!isMobile || !historyScrollRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = historyScrollRef.current;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
+    
+    // If user scrolls away from bottom, mark as manually scrolled
+    if (!isAtBottom) {
+      setHasUserScrolled(true);
+    } else {
+      // If user scrolls back to bottom, reset the flag
+      setHasUserScrolled(false);
+    }
+  }, [isMobile]);
+
+  // Auto-scroll when history view opens or when new items are added
+  useEffect(() => {
+    if (currentView === 'history') {
+      // Reset scroll flag when switching to history view
+      setHasUserScrolled(false);
+      // Auto-scroll after a short delay to ensure DOM is updated
+      setTimeout(scrollToBottom, 100);
+    }
+  }, [currentView, scrollToBottom]);
 
   // Mobile detection and maps deeplink function
   useEffect(() => {
@@ -257,7 +294,7 @@ const DeliveryDashboard = () => {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
       
-      // Fetch active orders with status 4 or 5
+      // Fetch active orders with status 4 or 5, excluding pickup orders (OrderType = 1)
       const { data: orders, error: ordersError } = await supabase
         .from('Order')
         .select(`
@@ -269,12 +306,14 @@ const DeliveryDashboard = () => {
           OrderLocation,
           OrderLocationCoordinates,
           OrderStatusID,
-          IsPaid
+          IsPaid,
+          OrderType
         `)
         .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
+        .neq('OrderType', 1) // Exclude pickup orders (OrderType = 1)
         .order('OrderDT', { ascending: false });
 
-      // Fetch delivered orders (status 6) for history
+      // Fetch delivered orders (status 6) for history, excluding pickup orders
       const { data: deliveredOrders, error: deliveredError } = await supabase
         .from('Order')
         .select(`
@@ -286,9 +325,11 @@ const DeliveryDashboard = () => {
           OrderLocation,
           OrderLocationCoordinates,
           OrderStatusID,
-          IsPaid
+          IsPaid,
+          OrderType
         `)
         .eq('OrderStatusID', ORDER_STATUS.DELIVERED)
+        .neq('OrderType', 1) // Exclude pickup orders (OrderType = 1)
         .order('OrderDT', { ascending: false });
 
       console.log('Delivered orders query result:', { deliveredOrders, deliveredError, ORDER_STATUS_DELIVERED: ORDER_STATUS.DELIVERED });
@@ -344,6 +385,7 @@ const DeliveryDashboard = () => {
               OrderLocation: order.OrderLocation,
               OrderLocationCoordinates: order.OrderLocationCoordinates,
               OrderStatusID: order.OrderStatusID,
+              OrderType: order.OrderType,
               IsPaid: order.IsPaid,
               CustomerName: customer?.Name || 'Unknown',
               CustomerPhone: customer?.phone || '',
@@ -401,6 +443,7 @@ const DeliveryDashboard = () => {
               OrderLocation: order.OrderLocation,
               OrderLocationCoordinates: order.OrderLocationCoordinates,
               OrderStatusID: order.OrderStatusID,
+              OrderType: order.OrderType,
               IsPaid: order.IsPaid,
               CustomerName: customer?.Name || 'Unknown',
               CustomerPhone: customer?.phone || '',
@@ -768,6 +811,13 @@ const DeliveryDashboard = () => {
       return sortOrder === 'asc' ? comparison : -comparison;
     });
   }, [deliveryHistory, timeFilter, customDateRange, searchTerm, sortBy, sortOrder]);
+
+  // Auto-scroll when new history items are added
+  useEffect(() => {
+    if (currentView === 'history') {
+      setTimeout(scrollToBottom, 100);
+    }
+  }, [getFilteredHistory.length, currentView, scrollToBottom]);
 
   const getTopProducts = useMemo(() => {
     const productCounts: { [key: string]: { count: number; revenue: number; name: string } } = {};
@@ -1472,29 +1522,82 @@ const DeliveryDashboard = () => {
                   Дневна статистика
                 </h3>
                 {getAnalytics.dailyData.length > 0 ? (
-                  <div className="flex items-end gap-2 h-32">
-                    {getAnalytics.dailyData.slice(-7).map((day, index) => {
-                      const maxOrders = Math.max(...getAnalytics.dailyData.map(d => d.orders));
-                      const height = maxOrders > 0 ? (day.orders / maxOrders) * 100 : 0;
-                      return (
-                        <div key={day.date} className="flex-1 flex flex-col items-center">
-                          <div 
-                            className="bg-blue-500 rounded-t w-full transition-all duration-300 hover:bg-blue-400"
-                            style={{ height: `${height}%` }}
-                            title={`${day.date}: ${day.orders} поръчки, ${day.revenue.toFixed(2)} лв`}
-                          ></div>
-                          <div className="text-xs text-gray-400 mt-2">
-                            {new Date(day.date).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit' })}
+                  <div className="relative">
+                    {/* Chart Container */}
+                    <div className="flex items-end gap-2 h-32 relative">
+                      {/* Line Chart Overlay */}
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <polyline
+                          fill="none"
+                          stroke="#ff7f11"
+                          strokeWidth="0.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={getAnalytics.dailyData.slice(-7).map((day, index) => {
+                            const maxOrders = Math.max(...getAnalytics.dailyData.map(d => d.orders));
+                            const height = maxOrders > 0 ? (day.orders / maxOrders) * 80 : 0; // Scale to 80% of height
+                            const x = (index / Math.max(1, getAnalytics.dailyData.slice(-7).length - 1)) * 100;
+                            const y = 90 - height; // Start from bottom (90) and go up
+                            return `${x},${y}`;
+                          }).join(' ')}
+                        />
+                        {/* Data Points */}
+                        {getAnalytics.dailyData.slice(-7).map((day, index) => {
+                          const maxOrders = Math.max(...getAnalytics.dailyData.map(d => d.orders));
+                          const height = maxOrders > 0 ? (day.orders / maxOrders) * 80 : 0;
+                          const x = (index / Math.max(1, getAnalytics.dailyData.slice(-7).length - 1)) * 100;
+                          const y = 90 - height;
+                          return (
+                            <circle
+                              key={`point-${day.date}`}
+                              cx={x}
+                              cy={y}
+                              r="1"
+                              fill="#ff7f11"
+                              stroke="#fff"
+                              strokeWidth="0.3"
+                            />
+                          );
+                        })}
+                      </svg>
+                      
+                      {/* Bar Chart */}
+                      {getAnalytics.dailyData.slice(-7).map((day, index) => {
+                        const maxOrders = Math.max(...getAnalytics.dailyData.map(d => d.orders));
+                        const height = maxOrders > 0 ? (day.orders / maxOrders) * 100 : 0;
+                        return (
+                          <div key={day.date} className="flex-1 flex flex-col items-center relative">
+                            <div 
+                              className="bg-blue-500/60 rounded-t w-full transition-all duration-300 hover:bg-blue-400/80"
+                              style={{ height: `${height}%` }}
+                              title={`${day.date}: ${day.orders} поръчки, ${day.revenue.toFixed(2)} лв`}
+                            ></div>
+                            <div className="text-xs text-gray-400 mt-2">
+                              {new Date(day.date).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit' })}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Chart Legend */}
+                    <div className="flex items-center justify-center gap-4 mt-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500/60 rounded"></div>
+                        <span className="text-gray-300">Поръчки</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-0.5 bg-orange-500"></div>
+                        <span className="text-gray-300">Тренд</span>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-32 text-gray-400">
                     <div className="text-center">
                       <BarChart3 size={32} className="mx-auto mb-2 opacity-50" />
-                      <p>Няма данни за показване</p>
+                      <p>Няма данни за избрания период</p>
+                      <p className="text-sm mt-1">Опитайте с друг филтър или период</p>
                     </div>
                   </div>
                 )}
@@ -1531,7 +1634,11 @@ const DeliveryDashboard = () => {
             )}
 
             {/* Order History List */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div 
+              ref={historyScrollRef}
+              className="flex-1 overflow-y-auto p-4"
+              onScroll={handleHistoryScroll}
+            >
               {getFilteredHistory.length > 0 ? (
                 <div className="space-y-3">
                   {getFilteredHistory.map((order, index) => (
