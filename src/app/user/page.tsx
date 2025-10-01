@@ -12,17 +12,36 @@ export default function UserPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<string | string[]>('')
   const [success, setSuccess] = useState('')
   const [returnUrl, setReturnUrl] = useState<string | null>(null)
 
-  // Get return URL from query parameters on mount
+  // Get return URL and pre-fill data from query parameters on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
       const returnUrlParam = urlParams.get('returnUrl')
+      const emailParam = urlParams.get('email')
+      const nameParam = urlParams.get('name')
+      const phoneParam = urlParams.get('phone')
+      
       if (returnUrlParam) {
         setReturnUrl(decodeURIComponent(returnUrlParam))
+      }
+      
+      // If email parameter is present, switch to registration form and pre-fill data
+      if (emailParam) {
+        const decodedEmail = decodeURIComponent(emailParam)
+        const decodedName = nameParam ? decodeURIComponent(nameParam) : ''
+        const decodedPhone = phoneParam ? decodeURIComponent(phoneParam) : ''
+        
+        setIsLogin(false) // Switch to registration form
+        setRegisterData(prev => ({
+          ...prev,
+          email: decodedEmail,
+          name: decodedName,
+          phone: decodedPhone
+        }))
       }
     }
   }, [])
@@ -201,25 +220,6 @@ export default function UserPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Clear any browser validation messages
-    const form = e.currentTarget as HTMLFormElement
-    form.reportValidity = () => true
-    
-    // Check email validation before proceeding
-    if (loginData.email) {
-      const emailValidation = validateEmail(loginData.email)
-      if (!emailValidation.isValid) {
-        setError('Моля, въведете валиден имейл адрес')
-        // Show tooltip briefly - force it to show
-        setEmailValidation({ ...emailValidation, showTooltip: true })
-        // Clear any existing timeout
-        setTimeout(() => {
-          setEmailValidation(prev => ({ ...prev, showTooltip: false }))
-        }, 3000)
-        return
-      }
-    }
-    
     startLoading()
     setError('')
     setSuccess('')
@@ -296,6 +296,12 @@ export default function UserPage() {
       }
     }
     
+    // Validate password length
+    if (registerData.password.length < 6) {
+      setError('Паролата трябва да е поне 6 символа дълга')
+      return
+    }
+    
     startLoading()
     setError('')
     setSuccess('')
@@ -310,7 +316,23 @@ export default function UserPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
+        // Check if the error response contains multiple validation errors
+        if (data && typeof data === 'object' && data.details) {
+          // Extract individual errors from the details object
+          const errorMessages = Object.keys(data.details)
+            .filter(key => key.startsWith('error_'))
+            .map(key => data.details[key])
+            .filter(Boolean)
+          
+          if (errorMessages.length > 0) {
+            setError(errorMessages)
+          } else {
+            setError(data.error || 'Грешка при регистрация')
+          }
+        } else {
+          throw new Error(data.error || 'Registration failed')
+        }
+        return
       }
 
       setSuccess('Успешна регистрация!')
@@ -462,9 +484,6 @@ export default function UserPage() {
           <h2 className={`${styles.title} ${styles.animation}`} style={{ '--i': 17, '--j': 0 } as React.CSSProperties}>
             Регистрация
           </h2>
-
-          {error && <div className={styles.errorMessage}>{error}</div>}
-          {success && !isLogin && <div className={styles.successMessage}>{success}</div>}
           
           <form onSubmit={handleRegister}>
             <div className={`${styles.inputBox} ${styles.animation}`} style={{ '--i': 18, '--j': 1 } as React.CSSProperties}>
@@ -564,6 +583,21 @@ export default function UserPage() {
             >
               {isLoading ? 'Регистрация...' : 'Регистрация'}
             </button>
+
+            {error && (
+              <div className={styles.errorMessage}>
+                {Array.isArray(error) ? (
+                  <ul className={styles.errorList}>
+                    {error.map((err, index) => (
+                      <li key={index}>{err}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  error
+                )}
+              </div>
+            )}
+            {success && !isLogin && <div className={styles.successMessage}>{success}</div>}
 
             <div className={`${styles.linkTxt} ${styles.animation}`} style={{ '--i': 23, '--j': 6 } as React.CSSProperties}>
               <p>Вече имате акаунт? <button type="button" className={styles.linkBtn} onClick={toggleForm}>Вход</button></p>

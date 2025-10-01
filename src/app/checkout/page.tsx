@@ -35,7 +35,7 @@ type PaymentMethod = 'online' | 'card' | 'cash'
 type OrderType = 'guest' | 'user'
 
 export default function CheckoutPage() {
-  const { items, totalPrice, clearCart, getItemTotalPrice, refreshFromStorage } = useCart()
+  const { items, totalPrice, getItemTotalPrice, refreshFromStorage } = useCart()
   const { user, isAuthenticated, updateUser } = useLoginID()
   
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
@@ -70,6 +70,7 @@ export default function CheckoutPage() {
   const [isValidatingAddress, setIsValidatingAddress] = useState(false)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
+  const [hasMarker, setHasMarker] = useState(false)
   const mapModalRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<google.maps.Map | null>(null)
   const markerRef = useRef<google.maps.Marker | null>(null)
@@ -162,6 +163,7 @@ export default function CheckoutPage() {
               draggable: true,
               title: 'Вашата локация'
             })
+            setHasMarker(true)
 
             // Add marker drag listener
             markerRef.current.addListener('dragend', (event: google.maps.MapMouseEvent) => {
@@ -281,6 +283,7 @@ export default function CheckoutPage() {
                 draggable: true,
                 title: 'Избран адрес'
               })
+              setHasMarker(true)
 
               // Add marker drag listener
               markerRef.current.addListener('dragend', (event: google.maps.MapMouseEvent) => {
@@ -512,11 +515,15 @@ export default function CheckoutPage() {
         
         console.log('📍 Coordinates from autocomplete:', coordinates)
         
+        // Update both LocationText and LocationCoordinates with the selected address
         setCustomerInfo(prev => ({
           ...prev,
-          address: place.formatted_address || '',
-          coordinates
+          LocationText: place.formatted_address || '',
+          LocationCoordinates: JSON.stringify(coordinates)
         }))
+        
+        // Validate the address zone
+        validateAddressZone(coordinates)
       } else {
         console.log('❌ No geometry/location found in place:', place)
       }
@@ -609,6 +616,7 @@ export default function CheckoutPage() {
     setIsMapModalOpen(false)
     setMapModalLoaded(false)
     setLocationError(null)
+    setHasMarker(false)
     if (markerRef.current) {
       markerRef.current.setMap(null)
       markerRef.current = null
@@ -616,21 +624,38 @@ export default function CheckoutPage() {
   }
 
   const handleMapLocationSelect = async () => {
-    if (!markerRef.current) return
+    console.log('🗺️ handleMapLocationSelect called')
+    console.log('📍 markerRef.current:', markerRef.current)
+    
+    if (!markerRef.current) {
+      console.log('❌ No marker found, returning')
+      return
+    }
 
     const position = markerRef.current.getPosition()
-    if (!position) return
+    console.log('📌 Position:', position)
+    
+    if (!position) {
+      console.log('❌ No position found, returning')
+      return
+    }
 
     const coordinates = {
       lat: position.lat(),
       lng: position.lng()
     }
+    console.log('🌍 Coordinates:', coordinates)
 
     try {
       // Reverse geocode to get address
       const geocoder = new window.google.maps.Geocoder()
+      console.log('🔄 Starting geocoding...')
+      
       const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
         geocoder.geocode({ location: coordinates }, (results, status) => {
+          console.log('📡 Geocode status:', status)
+          console.log('📡 Geocode results:', results)
+          
           if (status === 'OK' && results) {
             resolve(results)
           } else {
@@ -641,20 +666,29 @@ export default function CheckoutPage() {
 
       if (result && result[0]) {
         const address = result[0].formatted_address
+        console.log('✅ Address found:', address)
+        
         setCustomerInfo(prev => ({
           ...prev,
           LocationText: address,
           LocationCoordinates: JSON.stringify(coordinates)
         }))
         
+        console.log('✅ Customer info updated')
+        
         // Validate zone
         validateAddressZone(coordinates)
         setAddressConfirmed(true)
+        
+        console.log('✅ Address validated and confirmed')
+      } else {
+        console.log('❌ No results from geocoding')
       }
     } catch (error) {
-      console.error('Error reverse geocoding:', error)
+      console.error('❌ Error reverse geocoding:', error)
     }
 
+    console.log('🚪 Closing modal...')
     handleMapModalClose()
   }
 
@@ -1139,11 +1173,12 @@ export default function CheckoutPage() {
     ) // Delivery orders need full address validation
 
   const handleSubmit = async (e: React.FormEvent) => {
-    try{
+      // Set loading state immediately
+      setIsLoading(true)
     e.preventDefault()
+  
     
-    // Set loading state immediately
-    setIsLoading(true)
+    try{
     
     // Validate minimum order amount
     if (totalPrice < 15) {
@@ -1263,21 +1298,19 @@ export default function CheckoutPage() {
      
      const result = await response.json()
      
-     if (response.ok) {
-       // Clear the cart after successful order
-       clearCart()
-       
-       // Redirect to order success page with encrypted order ID
-       const encryptedOrderId = encryptOrderId(result.orderId.toString())
-       window.location.href = `/order-success?orderId=${encryptedOrderId}`
-     } else {
-       throw new Error(result.error || 'Failed to confirm order')
-     }
+    if (response.ok) {
+      // Redirect to order success page with encrypted order ID
+      const encryptedOrderId = encryptOrderId(result.orderId.toString())
+      // Don't stop loading, keep it running during redirect
+      window.location.href = `/order-success?orderId=${encryptedOrderId}`
+    } else {
+      setIsLoading(false)
+      throw new Error(result.error || 'Failed to confirm order')
+    }
    } catch (error) {
      console.error('Order submission error:', error)
-     alert('❌ Възникна грешка при потвърждаване на поръчката.')
-   } finally {
      setIsLoading(false)
+     alert('❌ Възникна грешка при потвърждаване на поръчката.')
    }
 }
   return (
@@ -2405,7 +2438,7 @@ export default function CheckoutPage() {
                   </button>
                   <button 
                     onClick={handleMapLocationSelect}
-                    disabled={!markerRef.current || addressZone === 'outside'}
+                    disabled={!hasMarker || addressZone === 'outside'}
                     className="px-6 py-3 bg-gradient-to-r from-red to-orange text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
                   >
                     Потвърди адрес
