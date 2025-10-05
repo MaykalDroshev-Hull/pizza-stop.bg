@@ -41,11 +41,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user exists
+    // Check if real user exists (exclude guest accounts)
     const { data: user, error: fetchError } = await supabase
       .from('Login')
       .select('LoginID, Name, email')
       .eq('email', email)
+      .neq('Password', 'guest_password') // Only real accounts
       .single()
 
     if (fetchError || !user) {

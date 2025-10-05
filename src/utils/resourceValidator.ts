@@ -128,10 +128,13 @@ export class ResourceValidator {
   async validateEmailExists(email: string): Promise<{ exists: boolean; user?: any; error?: string }> {
     try {
       const normalizedEmail = email.toLowerCase().trim();
+      
+      // Check for real accounts first (exclude guest accounts)
       const { data, error } = await this.supabase
         .from('Login')
         .select('LoginID, Name, email')
         .eq('email', normalizedEmail)
+        .neq('Password', 'guest_password') // Only real accounts
         .single();
       
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned

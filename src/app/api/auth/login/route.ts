@@ -35,12 +35,30 @@ export async function POST(request: NextRequest) {
     // Convert email to lowercase for consistent database queries
     const normalizedEmail = email.toLowerCase().trim()
 
-    // Find user by email
-    const { data: user, error: fetchError } = await supabase
+    // First, try to find a real account (hashed password)
+    let { data: user, error: fetchError } = await supabase
       .from('Login')
       .select('LoginID, Name, email, phone, Password, LocationText, LocationCoordinates, addressInstructions, created_at')
       .eq('email', normalizedEmail)
+      .neq('Password', 'guest_password') // Exclude guest accounts
       .single()
+    
+    // If no real account found, check if there are guest accounts (for better error messaging)
+    if (fetchError && fetchError.code === 'PGRST116') { // No rows found
+      const { data: guestAccounts } = await supabase
+        .from('Login')
+        .select('LoginID')
+        .eq('email', normalizedEmail)
+        .eq('Password', 'guest_password')
+        .limit(1);
+      
+      if (guestAccounts && guestAccounts.length > 0) {
+        return NextResponse.json(
+          { error: 'Този имейл е регистриран като гост акаунт. Моля, създайте реална парола чрез "Забравена парола" или се регистрирайте отново.' },
+          { status: 401 }
+        )
+      }
+    }
       
     if (fetchError || !user) {
       return NextResponse.json(
