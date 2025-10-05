@@ -86,8 +86,8 @@ export class EmailService {
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.NEXT_PUBLIC_EMAIL,
-        pass: process.env.NEXT_PUBLIC_EMAIL_PASS,
+        user: process.env.EMAIL,
+        pass: process.env.EMAIL_PASS,
       },
     })
   }
@@ -202,7 +202,7 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
       to,
       subject: 'Добре дошли в Pizza Stop! 🍕',
       html: htmlContent,
@@ -341,7 +341,7 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
       to,
       subject: 'Възстановяване на парола - Pizza Stop 🔐',
       html: htmlContent,
@@ -628,7 +628,7 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
       to,
       subject: `Потвърждение за поръчка #${orderId} - Pizza Stop 🍕`,
       html: htmlContent,
@@ -901,7 +901,7 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+        from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
         to,
         subject: `Вашата поръчка е на път - ETA: ${etaMinutes} минути | Pizza Stop`,
         html: htmlContent,
@@ -1132,7 +1132,7 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
       to,
       subject: `Поръчката започва да се приготвя - #${orderId} - Pizza Stop 🍕`,
       html: htmlContent,

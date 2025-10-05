@@ -5,7 +5,7 @@ import { Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 interface AdminLoginProps {
   title: string
-  onLogin: (username: string, password: string) => boolean
+  onLogin: (username: string, password: string) => Promise<boolean>
   redirectPath?: string
 }
 
@@ -22,7 +22,7 @@ export default function AdminLogin({ title, onLogin, redirectPath }: AdminLoginP
     setIsLoading(true)
 
     try {
-      const success = onLogin(username, password)
+      const success = await onLogin(username, password)
       
       if (success) {
         // Store login state in sessionStorage with correct key

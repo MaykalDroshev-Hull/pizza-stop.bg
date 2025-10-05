@@ -61,13 +61,22 @@ const LoginPage: React.FC = (): React.JSX.Element => {
     setError(null);
 
     try {
-      // Simulate network delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Call secure API endpoint for authentication
+      const response = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          password: formData.password,
+          type: 'admin'
+        }),
+      });
 
-      const adminUsername = process.env.NEXT_PUBLIC_ADMIN;
-      const adminPassword = process.env.NEXT_PUBLIC_PASSWORD;
+      const result = await response.json();
 
-      if (formData.username === adminUsername && formData.password === adminPassword) {
+      if (response.ok && result.success) {
         // Store authentication state
         localStorage.setItem('admin_authenticated', 'true');
         localStorage.setItem('admin_login_time', new Date().toISOString());
