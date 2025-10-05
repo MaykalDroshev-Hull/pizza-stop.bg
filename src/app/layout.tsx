@@ -7,6 +7,7 @@ import NavBar from '../components/NavBar'
 import { CartProvider } from '../components/CartContext'
 import { LoginIDProvider } from '../components/LoginIDContext'
 import ConditionalFooter from '../components/ConditionalFooter'
+import ConditionalNavBar from '../components/ConditionalNavBar'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -88,7 +89,7 @@ export default function RootLayout({
             <LoginIDProvider>
               <CartProvider>
                 <div className="min-h-screen bg-bg text-text">
-                  <NavBar />
+                  <ConditionalNavBar />
                   <main className="flex-1">
                     {children}
                   </main>
