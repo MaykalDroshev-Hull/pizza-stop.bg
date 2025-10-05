@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       .eq('Password', 'guest_password')
       .order('created_at', { ascending: false }); // Get most recent guest account first
     
-    let userToUpdate = null;
+    let userToUpdate: any = null;
     if (guestAccounts && guestAccounts.length > 0) {
       // Use the most recent guest account data
       userToUpdate = guestAccounts[0];
