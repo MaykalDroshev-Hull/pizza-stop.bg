@@ -60,6 +60,92 @@ export default function PrinterPage() {
   const [productModalData, setProductModalData] = useState<ProductModalData | null>(null);
   const [showClearModal, setShowClearModal] = useState(false);
   const [menuData, setMenuData] = useState<{ [key: string]: any[] }>({});
+  
+  // 50/50 Pizza state
+  const [fiftyFiftySelection, setFiftyFiftySelection] = useState<{
+    size: string | null;
+    leftHalf: any | null;
+    rightHalf: any | null;
+    finalPrice: number;
+    selectedAddons: any[];
+    step: number;
+  }>({
+    size: null,
+    leftHalf: null,
+    rightHalf: null,
+    finalPrice: 0,
+    selectedAddons: [],
+    step: 1 // 1: size, 2: left half, 3: right half, 4: addons
+  });
+
+  // 50/50 Pizza helper functions
+  const getPriceForSize = (pizza: any, sizeName: string | null) => {
+    if (!pizza || !sizeName) return 0
+    
+    switch (sizeName) {
+      case 'Малка':
+        return pizza.smallPrice || 0
+      case 'Средна':
+        return pizza.mediumPrice || 0
+      case 'Голяма':
+        return pizza.largePrice || 0
+      default:
+        return pizza.smallPrice || 0
+    }
+  }
+
+  const calculateFiftyFiftyPrice = (leftPizza: any, rightPizza: any, sizeName: string | null) => {
+    if (!leftPizza || !rightPizza || !sizeName) return 0
+    
+    const leftPrice = getPriceForSize(leftPizza, sizeName)
+    const rightPrice = getPriceForSize(rightPizza, sizeName)
+    return Math.max(leftPrice, rightPrice)
+  }
+
+  const resetFiftyFiftySelection = () => {
+    setFiftyFiftySelection({
+      size: null,
+      leftHalf: null,
+      rightHalf: null,
+      finalPrice: 0,
+      selectedAddons: [],
+      step: 1
+    })
+  }
+
+  const addFiftyFiftyToCart = () => {
+    if (!fiftyFiftySelection.leftHalf || !fiftyFiftySelection.rightHalf || !fiftyFiftySelection.size) {
+      console.error('50/50 pizza incomplete selection')
+      return
+    }
+
+    // Calculate addon cost (first 3 of each type free)
+    const addonCost = (fiftyFiftySelection.selectedAddons || [])
+      .map((addon: any) => {
+        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
+        const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
+        return positionInType < 3 ? 0 : addon.Price
+      })
+      .reduce((sum: number, price: number) => sum + price, 0)
+
+    const leftHalfName = fiftyFiftySelection.leftHalf?.name || 'Unknown'
+    const rightHalfName = fiftyFiftySelection.rightHalf?.name || 'Unknown'
+    
+    const cartItem = {
+      id: Date.now(),
+      name: `${leftHalfName} / ${rightHalfName}`,
+      price: fiftyFiftySelection.finalPrice + addonCost,
+      category: 'pizza-5050',
+      size: fiftyFiftySelection.size,
+      addons: fiftyFiftySelection.selectedAddons,
+      comment: `50/50 пица: ${fiftyFiftySelection.leftHalf?.name} / ${fiftyFiftySelection.rightHalf?.name}: ${fiftyFiftySelection.size} (~2000г | 60см)${(fiftyFiftySelection.selectedAddons || []).length > 0 ? ` | ${(fiftyFiftySelection.selectedAddons || []).length} добавки` : ''}`,
+      quantity: 1
+    }
+
+    setSelectedProducts(prev => [...prev, cartItem])
+    resetFiftyFiftySelection()
+    console.log('50/50 пица добавена в кошницата:', cartItem)
+  }
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +204,10 @@ export default function PrinterPage() {
           break;
         case 'pizza-5050':
           categoryProducts = menuData.pizza || []; // 50/50 uses same pizza data
-          break;
+          setProducts(categoryProducts);
+          setCurrentView("pizza-5050");
+          setLoading(false);
+          return; // Exit early for 50/50
         case 'doners':
           categoryProducts = menuData.doners || [];
           break;
@@ -274,6 +363,9 @@ export default function PrinterPage() {
     if (currentView === "products") {
       setCurrentView("categories");
       // Don't clear selectedProducts - keep the order list
+    } else if (currentView === "pizza-5050") {
+      setCurrentView("categories");
+      resetFiftyFiftySelection();
     } else if (currentView === "categories") {
       setCurrentView("login");
     }
@@ -725,6 +817,395 @@ export default function PrinterPage() {
         </div>
 
         {/* Right Side - Cart */}
+        <div className="w-96 bg-gray-900 border-l border-gray-700 flex flex-col">
+          {/* Cart Header */}
+          <div className="p-4 border-b border-gray-700">
+            <h2 className="text-2xl font-bold text-white">Поръчка</h2>
+          </div>
+
+          {/* Cart Items */}
+          <div className="flex-1 p-4 overflow-y-auto">
+            {selectedProducts.length === 0 ? (
+              <p className="text-gray-400 text-center">Няма избрани продукти</p>
+            ) : (
+              <div className="space-y-3">
+                {selectedProducts.map((product, index) => (
+                  <div key={`${product.id}-${index}`} className="bg-gray-800 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-white font-medium text-lg">{product.name}</span>
+                      <button
+                        onClick={() => handleRemoveProduct(index)}
+                        className="text-red-500 hover:text-red-400 text-xl"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="text-gray-400 text-sm mb-1">
+                      {product.size && product.size !== 'Standard' && (
+                        <span>Размер: {product.size} | </span>
+                      )}
+                      Брой: {product.quantity} x {product.price.toFixed(2)} лв
+                    </div>
+                    {product.comment && (
+                      <div className="text-gray-400 text-sm mb-1">
+                        Коментар: {product.comment}
+                      </div>
+                    )}
+                    {product.addons && product.addons.length > 0 && (
+                      <div className="text-gray-400 text-sm mb-1">
+                        Добавки: {product.addons.map((addon: any) => addon.name || addon.Name).join(', ')}
+                      </div>
+                    )}
+                    <div className="text-red-500 font-bold text-lg">
+                      {(product.price * product.quantity).toFixed(2)} лв
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Cart Footer */}
+          {selectedProducts.length > 0 && (
+            <div className="p-4 border-t border-gray-700">
+              <div className="flex items-center justify-between text-white mb-4">
+                <span className="font-bold text-xl">Общо:</span>
+                <span className="text-red-500 font-bold text-2xl">
+                  {calculateTotal().toFixed(2)} лв
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    console.log('Clear button clicked');
+                    setShowClearModal(true);
+                  }}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-lg py-3 transition-colors duration-200"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={handleReady}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-lg py-3 transition-colors duration-200"
+                >
+                  Ready
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 50/50 Pizza View
+  if (currentView === "pizza-5050") {
+    return (
+      <div className="min-h-screen bg-black w-full flex">
+        {/* Left Side - 50/50 Selection */}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-800">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={goBack}
+                className="p-4 bg-gray-800 hover:bg-gray-700 rounded-2xl transition-colors duration-200"
+              >
+                <ArrowLeft className="w-8 h-8 text-white" />
+              </button>
+              <h1 className="text-4xl font-bold text-white">Пица 50/50</h1>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Изход</span>
+            </button>
+          </div>
+
+          {/* 50/50 Content */}
+          <div className="flex-1 p-4 overflow-y-auto">
+            {/* Step 1: Size Selection */}
+            {fiftyFiftySelection.step === 1 && (
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-6">Избери размер на пицата</h3>
+                <div className="grid grid-cols-1 gap-4 max-w-md">
+                  <button
+                    onClick={() => {
+                      setFiftyFiftySelection(prev => ({
+                        ...prev,
+                        size: 'Голяма',
+                        step: 2
+                      }))
+                    }}
+                    className="p-6 bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-red-500 transition-all"
+                  >
+                    <div className="text-xl font-bold text-white mb-2">Голяма</div>
+                    <div className="text-sm text-gray-400">~2000г | 60см</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Left Half Selection */}
+            {fiftyFiftySelection.step === 2 && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <button
+                    onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 1 }))}
+                    className="text-white hover:text-red-500 transition-colors"
+                  >
+                    ← Назад
+                  </button>
+                  <h3 className="text-2xl font-bold text-white">Избери лявата половина</h3>
+                  <div className="w-20"></div>
+                </div>
+                
+                <div className="mb-4">
+                  <div className="inline-block px-4 py-2 bg-red-900 border border-red-500 text-red-400">
+                    Размер: {fiftyFiftySelection.size} (~2000г | 60см)
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2">
+                  {products.map((pizza) => (
+                    <button
+                      key={pizza.id}
+                      onClick={() => {
+                        setFiftyFiftySelection(prev => ({
+                          ...prev,
+                          leftHalf: pizza,
+                          step: 3
+                        }))
+                      }}
+                      className={`p-4 transition-all ${
+                        fiftyFiftySelection.leftHalf?.id === pizza.id 
+                          ? 'bg-green-900 border-2 border-green-500' 
+                          : 'bg-gray-900 border border-gray-700 hover:border-red-500'
+                      }`}
+                    >
+                      <div className="text-white font-medium text-center text-sm mb-2 leading-tight line-clamp-2">
+                        {pizza.name}
+                      </div>
+                      <div className="text-red-500 font-bold text-lg text-center">
+                        {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.
+                      </div>
+                      {fiftyFiftySelection.leftHalf?.id === pizza.id && (
+                        <div className="text-green-400 text-xs text-center mt-2">✓ ЛЯВА</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Right Half Selection */}
+            {fiftyFiftySelection.step === 3 && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <button
+                    onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 2, rightHalf: null }))}
+                    className="text-white hover:text-red-500 transition-colors"
+                  >
+                    ← Назад
+                  </button>
+                  <h3 className="text-2xl font-bold text-white">Избери дясната половина</h3>
+                  <div className="w-20"></div>
+                </div>
+                
+                <div className="flex gap-4 mb-4">
+                  <div className="inline-block px-4 py-2 bg-red-900 border border-red-500 text-red-400">
+                    Размер: {fiftyFiftySelection.size}
+                  </div>
+                  <div className="inline-block px-4 py-2 bg-green-900 border border-green-500 text-green-400">
+                    Лява: {fiftyFiftySelection.leftHalf?.name}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2">
+                  {products.map((pizza) => (
+                    <button
+                      key={pizza.id}
+                      onClick={() => {
+                        const finalPrice = calculateFiftyFiftyPrice(fiftyFiftySelection.leftHalf, pizza, fiftyFiftySelection.size)
+                        setFiftyFiftySelection(prev => ({
+                          ...prev,
+                          rightHalf: pizza,
+                          finalPrice: finalPrice,
+                          step: 4
+                        }))
+                      }}
+                      className={`p-4 transition-all ${
+                        pizza.id === fiftyFiftySelection.leftHalf?.id 
+                          ? 'bg-gray-700 border-2 border-gray-500' 
+                          : fiftyFiftySelection.rightHalf?.id === pizza.id
+                            ? 'bg-red-900 border-2 border-red-500'
+                            : 'bg-gray-900 border border-gray-700 hover:border-red-500'
+                      }`}
+                    >
+                      <div className="text-white font-medium text-center text-sm mb-2 leading-tight line-clamp-2">
+                        {pizza.name}
+                      </div>
+                      <div className="text-red-500 font-bold text-lg text-center">
+                        {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.
+                      </div>
+                      {pizza.id === fiftyFiftySelection.leftHalf?.id && (
+                        <div className="text-gray-400 text-xs text-center mt-2">ЛЯВА</div>
+                      )}
+                      {fiftyFiftySelection.rightHalf?.id === pizza.id && (
+                        <div className="text-red-400 text-xs text-center mt-2">✓ ДЯСНА</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Addons Selection */}
+            {fiftyFiftySelection.step === 4 && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <button
+                    onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 3 }))}
+                    className="text-white hover:text-red-500 transition-colors"
+                  >
+                    ← Назад
+                  </button>
+                  <h3 className="text-2xl font-bold text-white">Избери добавки</h3>
+                  <div className="w-20"></div>
+                </div>
+                
+                <div className="flex gap-4 mb-6">
+                  <div className="inline-block px-4 py-2 bg-red-900 border border-red-500 text-red-400">
+                    {fiftyFiftySelection.leftHalf?.name} / {fiftyFiftySelection.rightHalf?.name}
+                  </div>
+                  <div className="inline-block px-4 py-2 bg-green-900 border border-green-500 text-green-400">
+                    {fiftyFiftySelection.size} (~2000г | 60см)
+                  </div>
+                  <div className="inline-block px-4 py-2 bg-orange-900 border border-orange-500 text-orange-400">
+                    {fiftyFiftySelection.finalPrice.toFixed(2)} лв.
+                  </div>
+                </div>
+
+                {/* Addons Selection */}
+                <div className="mb-8">
+                  {menuData.pizza?.[0]?.addons && menuData.pizza[0].addons.length > 0 ? (
+                    <div>
+                      <p className="text-sm text-gray-400 mb-4">
+                        💡 Първите 3 соса са безплатни, първите 3 салати са безплатни.
+                      </p>
+                      
+                      {/* Sauces */}
+                      {menuData.pizza[0].addons.filter((addon: any) => addon.AddonType === 'sauce').length > 0 && (
+                        <div className="mb-6">
+                          <h5 className="text-sm text-gray-400 mb-2">Сосове:</h5>
+                          <div className="grid grid-cols-3 gap-2">
+                            {menuData.pizza[0].addons
+                              .filter((addon: any) => addon.AddonType === 'sauce')
+                              .map((addon: any) => {
+                                const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
+                                const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
+                                const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
+                                const isFree = typeSelected.length < 3 || (isSelected && positionInType < 3)
+                                
+                                return (
+                                  <button
+                                    key={addon.AddonID}
+                                    onClick={() => {
+                                      setFiftyFiftySelection(prev => ({
+                                        ...prev,
+                                        selectedAddons: isSelected
+                                          ? prev.selectedAddons.filter((a: any) => a.AddonID !== addon.AddonID)
+                                          : [...prev.selectedAddons, addon]
+                                      }))
+                                    }}
+                                    className={`p-3 border transition-all ${
+                                      isSelected
+                                        ? 'border-green-500 bg-green-900 text-green-400'
+                                        : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-600'
+                                    }`}
+                                  >
+                                    <div className="font-medium text-sm">{addon.Name}</div>
+                                    <div className={`text-xs mt-1 ${isFree ? 'text-green-400' : 'text-red-400'}`}>
+                                      {isFree ? 'Безплатно' : `${addon.Price.toFixed(2)} лв.`}
+                                    </div>
+                                  </button>
+                                )
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Vegetables */}
+                      {menuData.pizza[0].addons.filter((addon: any) => addon.AddonType === 'vegetable').length > 0 && (
+                        <div>
+                          <h5 className="text-sm text-gray-400 mb-2">Салати:</h5>
+                          <div className="grid grid-cols-3 gap-2">
+                            {menuData.pizza[0].addons
+                              .filter((addon: any) => addon.AddonType === 'vegetable')
+                              .map((addon: any) => {
+                                const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
+                                const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
+                                const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
+                                const isFree = typeSelected.length < 3 || (isSelected && positionInType < 3)
+                                
+                                return (
+                                  <button
+                                    key={addon.AddonID}
+                                    onClick={() => {
+                                      setFiftyFiftySelection(prev => ({
+                                        ...prev,
+                                        selectedAddons: isSelected
+                                          ? prev.selectedAddons.filter((a: any) => a.AddonID !== addon.AddonID)
+                                          : [...prev.selectedAddons, addon]
+                                      }))
+                                    }}
+                                    className={`p-3 border transition-all ${
+                                      isSelected
+                                        ? 'border-green-500 bg-green-900 text-green-400'
+                                        : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-600'
+                                    }`}
+                                  >
+                                    <div className="font-medium text-sm">{addon.Name}</div>
+                                    <div className={`text-xs mt-1 ${isFree ? 'text-green-400' : 'text-red-400'}`}>
+                                      {isFree ? 'Безплатно' : `${addon.Price.toFixed(2)} лв.`}
+                                    </div>
+                                  </button>
+                                )
+                              })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400">Няма налични добавки</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Final Action Buttons */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 3 }))}
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-4 transition-colors duration-200"
+                  >
+                    ← Назад
+                  </button>
+                  <button
+                    onClick={addFiftyFiftyToCart}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-4 transition-colors duration-200"
+                  >
+                    Добави в кошницата
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side - Cart (Same as categories and products view) */}
         <div className="w-96 bg-gray-900 border-l border-gray-700 flex flex-col">
           {/* Cart Header */}
           <div className="p-4 border-b border-gray-700">
