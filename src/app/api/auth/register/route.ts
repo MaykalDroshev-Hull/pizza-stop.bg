@@ -42,46 +42,102 @@ export async function POST(request: NextRequest) {
       return handleValidationError(allErrors, endpoint);
     }
 
-    // Check if user already exists
-    const validator = new ResourceValidator();
-    const emailCheck = await validator.validateEmailExists(email);
+    // Check if user already exists (check for real accounts only)
+    const normalizedEmail = email.toLowerCase().trim();
     
-    if (emailCheck.exists) {
-      Logger.warn('Registration attempt with existing email', { email }, endpoint);
+    // First, check if there's already a real account (hashed password)
+    const { data: existingRealUser, error: realUserError } = await supabase
+      .from('Login')
+      .select('LoginID, Name, email, Password')
+      .eq('email', normalizedEmail)
+      .neq('Password', 'guest_password') // Exclude guest accounts
+      .single();
+    
+    if (existingRealUser) {
+      Logger.warn('Registration attempt with existing real account', { email }, endpoint);
       return ErrorResponseBuilder.conflict('Имейл адресът вече се използва', {
         suggestion: 'Ако вече имате акаунт, моля влезте в системата',
         action: 'login'
       });
+    }
+    
+    // Check if there are guest accounts to convert
+    const { data: guestAccounts, error: guestError } = await supabase
+      .from('Login')
+      .select('LoginID, Name, phone, LocationText, LocationCoordinates, addressInstructions, NumberOfOrders')
+      .eq('email', normalizedEmail)
+      .eq('Password', 'guest_password')
+      .order('created_at', { ascending: false }); // Get most recent guest account first
+    
+    let userToUpdate: any = null;
+    if (guestAccounts && guestAccounts.length > 0) {
+      // Use the most recent guest account data
+      userToUpdate = guestAccounts[0];
+      Logger.info('Found guest account to convert', { email, guestAccountId: userToUpdate.LoginID }, endpoint);
     }
 
     // Hash password with bcrypt
     const saltRounds = 12
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
-    // Create user in Supabase
-    const { data: newUser, error: insertError } = await supabase
-      .from('Login')
-      .insert([
-        {
-          email,
+    let newUser;
+    let insertError;
+
+    if (userToUpdate) {
+      // Convert guest account to real account
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('Login')
+        .update({
           Password: hashedPassword,
           Name: name,
-          phone,
-          NumberOfOrders: 0
-        }
-      ])
-      .select('LoginID, Name, email, phone, created_at')
-      .single()
+          phone: phone || userToUpdate.phone,
+          // Keep existing LocationText, LocationCoordinates, addressInstructions, NumberOfOrders
+          LocationText: userToUpdate.LocationText || '',
+          LocationCoordinates: userToUpdate.LocationCoordinates || '',
+          addressInstructions: userToUpdate.addressInstructions || '',
+          NumberOfOrders: userToUpdate.NumberOfOrders || 0
+        })
+        .eq('LoginID', userToUpdate.LoginID)
+        .select('LoginID, Name, email, phone, created_at')
+        .single();
+
+      newUser = updatedUser;
+      insertError = updateError;
+      
+      if (!insertError) {
+        Logger.info('Guest account converted to real account', { 
+          email, 
+          userId: userToUpdate.LoginID,
+          preservedOrders: userToUpdate.NumberOfOrders 
+        }, endpoint);
+      }
+    } else {
+      // Create new user account
+      const { data: createdUser, error: createError } = await supabase
+        .from('Login')
+        .insert([
+          {
+            email: normalizedEmail,
+            Password: hashedPassword,
+            Name: name,
+            phone,
+            NumberOfOrders: 0
+          }
+        ])
+        .select('LoginID, Name, email, phone, created_at')
+        .single();
+
+      newUser = createdUser;
+      insertError = createError;
+      
+      if (!insertError) {
+        Logger.info('New user account created', { email, userId: newUser.LoginID }, endpoint);
+      }
+    }
 
     if (insertError) {
-      Logger.logDatabaseError(endpoint, insertError, 'createUser');
-      
-      // Check for duplicate email error
-      if (insertError.code === '23505' && insertError.details?.includes('email')) {
-        return ErrorResponseBuilder.conflict('Този имейл вече съществува');
-      }
-      
-      return handleDatabaseError(insertError, 'createUser', endpoint);
+      Logger.logDatabaseError(endpoint, insertError, userToUpdate ? 'convertGuestAccount' : 'createUser');
+      return handleDatabaseError(insertError, userToUpdate ? 'convertGuestAccount' : 'createUser', endpoint);
     }
 
     // Send welcome email

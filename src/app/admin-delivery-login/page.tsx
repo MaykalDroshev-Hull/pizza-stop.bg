@@ -15,23 +15,34 @@ export default function AdminDeliveryLoginPage() {
     }
   }, [])
 
-  const handleLogin = (username: string, password: string): boolean => {
-    // Get credentials from environment variables
-    const validUsername = process.env.NEXT_PUBLIC_DELIVERY_USERNAME || '1'
-    const validPassword = process.env.NEXT_PUBLIC_DELIVERY_PASSWORD || '1'
-    
-    console.log('🚚 Delivery Login Attempt:', { username, provided: '***' })
-    console.log('🔑 Expected credentials:', { 
-      username: validUsername, 
-      password: validPassword ? '***' : 'NOT_SET' 
-    })
+  const handleLogin = async (username: string, password: string): Promise<boolean> => {
+    try {
+      console.log('🚚 Delivery Login Attempt:', { username, provided: '***' })
+      
+      const response = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password,
+          type: 'delivery'
+        }),
+      });
 
-    if (username === validUsername && password === validPassword) {
-      console.log('✅ Delivery login successful')
-      setIsAuthenticated(true)
-      return true
-    } else {
-      console.log('❌ Delivery login failed')
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log('✅ Delivery login successful')
+        setIsAuthenticated(true)
+        return true
+      } else {
+        console.log('❌ Delivery login failed')
+        return false
+      }
+    } catch (error) {
+      console.error('Delivery login error:', error)
       return false
     }
   }

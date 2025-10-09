@@ -15,8 +15,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # Email Configuration (for password reset and notifications)
-NEXT_PUBLIC_EMAIL=your_gmail_address@gmail.com
-NEXT_PUBLIC_EMAIL_PASS=your_gmail_app_password
+# Email Configuration (SERVER-SIDE ONLY - DO NOT USE NEXT_PUBLIC_)
+EMAIL_USER=your_gmail_address@gmail.com
+EMAIL_PASS=your_gmail_app_password
 ```
 
 ## 📋 How to Get Supabase Credentials
