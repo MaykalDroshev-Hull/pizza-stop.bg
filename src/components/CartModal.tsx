@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { X, Plus, Minus } from 'lucide-react'
 import { useCart } from './CartContext'
 import { isRestaurantOpen } from '../utils/openingHours'
+import { fetchAddons } from '../lib/menuData'
 
 interface CartModalProps {
   isOpen: boolean
@@ -31,6 +32,8 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
   const [selectedAddons, setSelectedAddons] = useState<any[]>([])
   const [comment, setComment] = useState('')
   const [quantity, setQuantity] = useState(1)
+  const [currentAddons, setCurrentAddons] = useState<any[]>([])
+  const [isLoadingAddons, setIsLoadingAddons] = useState(false)
 
   // Update size when selectedSize prop changes
   useEffect(() => {
@@ -40,6 +43,40 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
       setSize('')
     }
   }, [selectedSize])
+
+  // Fetch addons dynamically when size changes (for pizzas) or when modal opens
+  useEffect(() => {
+    const fetchAddonsForCurrentState = async () => {
+      if (!isOpen) return
+
+      // For pizzas, fetch addons based on selected size
+      if (item.category === 'pizza' && (size || selectedSize?.name)) {
+        const currentSize = selectedSize?.name || size
+        setIsLoadingAddons(true)
+        try {
+          console.log(`🍕 Fetching addons for pizza size: ${currentSize}`)
+          const addons = await fetchAddons(1, currentSize) // ProductTypeID = 1 for pizza
+          setCurrentAddons(addons)
+          // Clear selected addons when size changes to avoid confusion
+          setSelectedAddons([])
+          console.log(`✅ Loaded ${addons.length} addons for ${currentSize} pizza`)
+        } catch (error) {
+          console.error('Error fetching pizza addons:', error)
+          setCurrentAddons([])
+        } finally {
+          setIsLoadingAddons(false)
+        }
+      } else if (item.category === 'pizza' && !size && !selectedSize?.name) {
+        // Pizza but no size selected yet - clear addons
+        setCurrentAddons([])
+      } else {
+        // For non-pizza items, use the static addons from item
+        setCurrentAddons(item.addons || [])
+      }
+    }
+
+    fetchAddonsForCurrentState()
+  }, [isOpen, item.category, size, selectedSize?.name, item.addons])
 
   if (!isOpen) return null
 
@@ -348,19 +385,27 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
           )}
 
           {/* Addons (only for food) */}
-          {!isDrink && item.addons && item.addons.length > 0 && (
+          {!isDrink && currentAddons && currentAddons.length > 0 && (
             <div>
               <h4 className="font-medium text-text mb-4">Добавки:</h4>
               <p className="text-sm text-muted mb-4">
-                💡 Първите 3 соса са безплатни, първите 3 салати са безплатни. След избора на 3-ти сос или 3-та салата ще се покажат цените за останалите от същия тип.
+                {item.category === 'pizza' 
+                  ? '💡 Добавките за пица са платени според цената в менюто.'
+                  : '💡 Първите 3 добавки от всеки тип са безплатни. След избора на 3-та добавка от даден тип ще се покажат цените за останалите от същия тип.'
+                }
               </p>
+              {isLoadingAddons && (
+                <div className="text-center text-sm text-muted py-2">
+                  Зареждане на добавки...
+                </div>
+              )}
               <div className="space-y-4">
                 {/* Sauces */}
-                {item.addons.filter(addon => addon.AddonType === 'sauce').length > 0 && (
+                {currentAddons.filter(addon => addon.AddonType === 'sauce').length > 0 && (
                   <div>
                     <h5 className="text-sm text-muted mb-2">Сосове:</h5>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {item.addons
+                      {currentAddons
                         .filter(addon => addon.AddonType === 'sauce')
                         .map(addon => (
                           <button
@@ -441,11 +486,11 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                 )}
 
                 {/* Vegetables */}
-                {item.addons.filter(addon => addon.AddonType === 'vegetable').length > 0 && (
+                {currentAddons.filter(addon => addon.AddonType === 'vegetable').length > 0 && (
                   <div>
                     <h5 className="text-sm text-muted mb-2">Салати:</h5>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {item.addons
+                      {currentAddons
                         .filter(addon => addon.AddonType === 'vegetable')
                         .map(addon => (
                           <button
@@ -524,6 +569,129 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                     </div>
                   </div>
                 )}
+
+                {/* Meats (for pizzas) */}
+                {currentAddons.filter(addon => addon.AddonType === 'meat').length > 0 && (
+                  <div>
+                    <h5 className="text-sm text-muted mb-2">Колбаси:</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {currentAddons
+                        .filter(addon => addon.AddonType === 'meat')
+                        .map(addon => (
+                          <button
+                            key={addon.AddonID}
+                            onClick={() => toggleAddon(addon)}
+                            className={`w-full rounded-lg border text-sm transition-all text-center sauce-button ${
+                              selectedAddons.find(a => a.AddonID === addon.AddonID)
+                                ? 'border-green-500 bg-green-500/20 text-green-400'
+                                : 'border-white/12 text-muted hover:border-white/20'
+                            }`}
+                            style={{
+                              height: '60px',
+                              padding: '8px 12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              lineHeight: '1.2'
+                            }}
+                            title={addon.Name}
+                          >
+                            <div className="font-medium truncate w-full text-center text-sm" style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>{addon.Name}</div>
+                            <div className="text-xs mt-1 text-red-400">
+                              {addon.Price.toFixed(2)} лв.
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cheese (for pizzas) */}
+                {currentAddons.filter(addon => addon.AddonType === 'cheese').length > 0 && (
+                  <div>
+                    <h5 className="text-sm text-muted mb-2">Сирена:</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {currentAddons
+                        .filter(addon => addon.AddonType === 'cheese')
+                        .map(addon => (
+                          <button
+                            key={addon.AddonID}
+                            onClick={() => toggleAddon(addon)}
+                            className={`w-full rounded-lg border text-sm transition-all text-center sauce-button ${
+                              selectedAddons.find(a => a.AddonID === addon.AddonID)
+                                ? 'border-green-500 bg-green-500/20 text-green-400'
+                                : 'border-white/12 text-muted hover:border-white/20'
+                            }`}
+                            style={{
+                              height: '60px',
+                              padding: '8px 12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              lineHeight: '1.2'
+                            }}
+                            title={addon.Name}
+                          >
+                            <div className="font-medium truncate w-full text-center text-sm" style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>{addon.Name}</div>
+                            <div className="text-xs mt-1 text-red-400">
+                              {addon.Price.toFixed(2)} лв.
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pizza Addons (for pizzas) */}
+                {currentAddons.filter(addon => addon.AddonType === 'pizza-addon').length > 0 && (
+                  <div>
+                    <h5 className="text-sm text-muted mb-2">Добавки:</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {currentAddons
+                        .filter(addon => addon.AddonType === 'pizza-addon')
+                        .map(addon => (
+                          <button
+                            key={addon.AddonID}
+                            onClick={() => toggleAddon(addon)}
+                            className={`w-full rounded-lg border text-sm transition-all text-center sauce-button ${
+                              selectedAddons.find(a => a.AddonID === addon.AddonID)
+                                ? 'border-green-500 bg-green-500/20 text-green-400'
+                                : 'border-white/12 text-muted hover:border-white/20'
+                            }`}
+                            style={{
+                              height: '60px',
+                              padding: '8px 12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              lineHeight: '1.2'
+                            }}
+                            title={addon.Name}
+                          >
+                            <div className="font-medium truncate w-full text-center text-sm" style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>{addon.Name}</div>
+                            <div className="text-xs mt-1 text-red-400">
+                              {addon.Price.toFixed(2)} лв.
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -574,10 +742,15 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
               
               const addonCost = selectedAddons
                 .map((addon) => {
-                  // Count how many of this type are selected
+                  // For pizzas, all addons are paid
+                  if (item.category === 'pizza') {
+                    return addon.Price
+                  }
+                  
+                  // For other products, first 3 of each type are free
                   const typeSelected = selectedAddons.filter(a => a.AddonType === addon.AddonType)
                   const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID)
-                  return positionInType < 3 ? 0 : addon.Price // First 3 of each type are free
+                  return positionInType < 3 ? 0 : addon.Price
                 })
                 .reduce((sum, price) => sum + price, 0) * quantity
               
@@ -599,16 +772,25 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                   {selectedAddons.length > 0 && (
                     <div className="space-y-1">
                       {selectedAddons.map((addon, index) => {
-                        const typeSelected = selectedAddons.filter(a => a.AddonType === addon.AddonType)
-                        const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID)
-                        const addonPrice = positionInType < 3 ? 0 : addon.Price
+                        // For pizzas, all addons are paid
+                        let addonPrice = addon.Price
+                        let isFree = false
+                        
+                        if (item.category !== 'pizza') {
+                          // For non-pizza items, use the free tier logic
+                          const typeSelected = selectedAddons.filter(a => a.AddonType === addon.AddonType)
+                          const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID)
+                          addonPrice = positionInType < 3 ? 0 : addon.Price
+                          isFree = positionInType < 3
+                        }
+                        
                         const addonTotal = addonPrice * quantity
                         
                         return (
                           <div key={index} className="flex justify-between items-center ml-4">
                             <span className="text-xs text-muted">
                               {addon.Name} {quantity > 1 && `× ${quantity}`}
-                              {positionInType < 3 && <span className="text-green-400 ml-1">(безплатно)</span>}
+                              {isFree && <span className="text-green-400 ml-1">(безплатно)</span>}
                             </span>
                             <span className="text-xs font-medium text-text">
                               {addonTotal.toFixed(2)} лв.

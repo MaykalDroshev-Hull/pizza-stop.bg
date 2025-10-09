@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Star, Clock, Plus, HelpCircle, X } from 'lucide-react'
 import CartModal from '../../components/CartModal'
-import { fetchMenuData, MenuItem } from '../../lib/menuData'
+import { fetchMenuData, MenuItem, fetchAddons } from '../../lib/menuData'
 import { useLoading } from '../../components/LoadingContext'
 import { useCart } from '../../components/CartContext'
 
@@ -43,6 +43,10 @@ export default function MenuPage() {
     selectedAddons: [],
     step: 1 // 1: size, 2: left half, 3: right half, 4: review, 5: addons
   })
+
+  // 50/50 Pizza addons state
+  const [fiftyFiftyAddons, setFiftyFiftyAddons] = useState<any[]>([])
+  const [isLoadingFiftyFiftyAddons, setIsLoadingFiftyFiftyAddons] = useState(false)
 
   const [menuData, setMenuData] = useState<{ [key: string]: MenuItem[] }>({})
   const [isDataLoaded, setIsDataLoaded] = useState(false)
@@ -113,14 +117,9 @@ export default function MenuPage() {
       return
     }
 
-    // Calculate addon cost (first 3 of each type free)
+    // Calculate addon cost (all addons are paid for 50/50 pizza)
     const addonCost = (fiftyFiftySelection.selectedAddons || [])
-      .map((addon: any) => {
-        // Count how many of this type are selected
-        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
-        const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
-        return positionInType < 3 ? 0 : addon.Price // First 3 of each type are free
-      })
+      .map((addon: any) => addon.Price) // All addons are paid for 50/50 pizza
       .reduce((sum: number, price: number) => sum + price, 0)
 
     // Create unique cart item for 50/50 pizza
@@ -158,6 +157,37 @@ export default function MenuPage() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Fetch large pizza addons when 50/50 pizza reaches step 5
+  useEffect(() => {
+    const fetchFiftyFiftyAddons = async () => {
+      if (fiftyFiftySelection.step === 5 && fiftyFiftyAddons.length === 0) {
+        setIsLoadingFiftyFiftyAddons(true)
+        try {
+          console.log('🍕 Fetching large pizza addons for 50/50 pizza')
+          const addons = await fetchAddons(1, 'голяма') // ProductTypeID = 1 for pizza, 'голяма' for large
+          setFiftyFiftyAddons(addons)
+          console.log(`✅ Loaded ${addons.length} addons for 50/50 pizza`)
+          console.log(`📊 50/50 Addon breakdown:`, {
+            total: addons.length,
+            meat: addons.filter(a => a.AddonType === 'meat').length,
+            cheese: addons.filter(a => a.AddonType === 'cheese').length,
+            'pizza-addon': addons.filter(a => a.AddonType === 'pizza-addon').length,
+            meatAddons: addons.filter(a => a.AddonType === 'meat').map(a => ({ id: a.AddonID, name: a.Name, type: a.AddonType })),
+            cheeseAddons: addons.filter(a => a.AddonType === 'cheese').map(a => ({ id: a.AddonID, name: a.Name, type: a.AddonType })),
+            pizzaAddonAddons: addons.filter(a => a.AddonType === 'pizza-addon').map(a => ({ id: a.AddonID, name: a.Name, type: a.AddonType }))
+          })
+        } catch (error) {
+          console.error('Error fetching 50/50 pizza addons:', error)
+          setFiftyFiftyAddons([])
+        } finally {
+          setIsLoadingFiftyFiftyAddons(false)
+        }
+      }
+    }
+
+    fetchFiftyFiftyAddons()
+  }, [fiftyFiftySelection.step, fiftyFiftyAddons.length])
 
 
   // Fetch menu data from Supabase
@@ -801,18 +831,22 @@ export default function MenuPage() {
 
                   {/* Addons Selection */}
                   <div className="mb-8 -mx-4 px-4">
-                    {menuData.pizza?.[0]?.addons && menuData.pizza[0].addons.length > 0 ? (
+                    {isLoadingFiftyFiftyAddons ? (
+                      <div className="text-center text-muted py-4">
+                        Зареждане на добавки...
+                      </div>
+                    ) : fiftyFiftyAddons && fiftyFiftyAddons.length > 0 ? (
                       <div>
                         <h4 className="font-medium text-text mb-4">Добавки:</h4>
                         <p className="text-sm text-muted mb-4">
-                          💡 Първите 3 соса са безплатни, първите 3 салати са безплатни. След избора на 3-ти сос или 3-та салата ще се покажат цените за останалите от същия тип.
+                          💡 Добавките за пица са платени според цената в менюто.
                         </p>
                         {/* Sauces */}
-                        {menuData.pizza[0].addons.filter((addon: any) => addon.AddonType === 'sauce').length > 0 && (
+                        {fiftyFiftyAddons.filter((addon: any) => addon.AddonType === 'sauce').length > 0 && (
                           <div>
                             <h5 className="text-sm text-muted mb-2">Сосове:</h5>
-                            <div className="grid gap-3 place-items-center grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                              {menuData.pizza[0].addons
+                            <div className="grid gap-3 place-items-center grid-cols-1 sm:grid-cols-2">
+                              {fiftyFiftyAddons
                                 .filter((addon: any) => addon.AddonType === 'sauce')
                                 .map((addon: any) => (
                                   <button
@@ -847,52 +881,8 @@ export default function MenuPage() {
                                       textOverflow: 'ellipsis',
                                       whiteSpace: 'nowrap'
                                     }}>{addon.Name}</div>
-                                    <div className={`text-xs mt-1 ${
-                                      (() => {
-                                        // Per-type logic: 3 free sauces, 3 free salads
-                                        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
-                                        const isSelected = (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
-                                        
-                                        if (typeSelected.length < 3) {
-                                          // Before 3 of this type are selected - all green
-                                          return isSelected ? 'text-green-300' : 'text-green-400'
-                                        } else {
-                                          // After 3 of this type are selected
-                                          if (isSelected) {
-                                            const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
-                                            return positionInType >= 3 ? 'text-red-400' : 'text-green-300'
-                                          } else {
-                                            return 'text-red-400'
-                                          }
-                                        }
-                                      })()
-                                    }`}>
-                                      {(() => {
-                                        // Per-type logic: 3 free sauces, 3 free salads
-                                        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
-                                        const isSelected = (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
-                                        
-                                        if (typeSelected.length < 3) {
-                                          // Before 3 of this type are selected - all show as free
-                                          return 'Безплатно'
-                                        } else {
-                                          // After 3 of this type are selected
-                                          if (isSelected) {
-                                            // Check position among selected addons of this type
-                                            const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
-                                            if (positionInType >= 3) {
-                                              // 4th and beyond of this type are paid
-                                              return `${addon.Price.toFixed(2)} лв.`
-                                            } else {
-                                              // First 3 of this type remain free
-                                              return 'Безплатно'
-                                            }
-                                          } else {
-                                            // Unselected ones show price after 3 of this type are selected
-                                            return `${addon.Price.toFixed(2)} лв.`
-                                          }
-                                        }
-                                      })()}
+                                    <div className="text-xs mt-1 text-red-400">
+                                      {addon.Price.toFixed(2)} лв.
                                     </div>
                                   </button>
                                 ))}
@@ -901,11 +891,11 @@ export default function MenuPage() {
                         )}
 
                         {/* Vegetables */}
-                        {menuData.pizza[0].addons.filter((addon: any) => addon.AddonType === 'vegetable').length > 0 && (
+                        {fiftyFiftyAddons.filter((addon: any) => addon.AddonType === 'vegetable').length > 0 && (
                           <div>
                             <h5 className="text-sm text-muted mb-2">Салати:</h5>
-                            <div className="grid gap-3 place-items-center grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                              {menuData.pizza[0].addons
+                            <div className="grid gap-3 place-items-center grid-cols-1 sm:grid-cols-2">
+                              {fiftyFiftyAddons
                                 .filter((addon: any) => addon.AddonType === 'vegetable')
                                 .map((addon: any) => (
                                   <button
@@ -940,52 +930,155 @@ export default function MenuPage() {
                                       textOverflow: 'ellipsis',
                                       whiteSpace: 'nowrap'
                                     }}>{addon.Name}</div>
-                                    <div className={`text-xs mt-1 ${
-                                      (() => {
-                                        // Per-type logic: 3 free sauces, 3 free salads
-                                        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
-                                        const isSelected = (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
-                                        
-                                        if (typeSelected.length < 3) {
-                                          // Before 3 of this type are selected - all green
-                                          return isSelected ? 'text-green-300' : 'text-green-400'
-                                        } else {
-                                          // After 3 of this type are selected
-                                          if (isSelected) {
-                                            const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
-                                            return positionInType >= 3 ? 'text-red-400' : 'text-green-300'
-                                          } else {
-                                            return 'text-red-400'
-                                          }
-                                        }
-                                      })()
-                                    }`}>
-                                      {(() => {
-                                        // Per-type logic: 3 free sauces, 3 free salads
-                                        const typeSelected = (fiftyFiftySelection.selectedAddons || []).filter((a: any) => a.AddonType === addon.AddonType)
-                                        const isSelected = (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
-                                        
-                                        if (typeSelected.length < 3) {
-                                          // Before 3 of this type are selected - all show as free
-                                          return 'Безплатно'
-                                        } else {
-                                          // After 3 of this type are selected
-                                          if (isSelected) {
-                                            // Check position among selected addons of this type
-                                            const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
-                                            if (positionInType >= 3) {
-                                              // 4th and beyond of this type are paid
-                                              return `${addon.Price.toFixed(2)} лв.`
-                                            } else {
-                                              // First 3 of this type remain free
-                                              return 'Безплатно'
-                                            }
-                                          } else {
-                                            // Unselected ones show price after 3 of this type are selected
-                                            return `${addon.Price.toFixed(2)} лв.`
-                                          }
-                                        }
-                                      })()}
+                                    <div className="text-xs mt-1 text-red-400">
+                                      {addon.Price.toFixed(2)} лв.
+                                    </div>
+                                  </button>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Meats (for 50/50 pizza) */}
+                        {fiftyFiftyAddons.filter((addon: any) => addon.AddonType === 'meat').length > 0 && (
+                          <div>
+                            <h5 className="text-sm text-muted mb-2">Колбаси:</h5>
+                            <div className="grid gap-3 place-items-center grid-cols-1 sm:grid-cols-2">
+                              {fiftyFiftyAddons
+                                .filter((addon: any) => addon.AddonType === 'meat')
+                                .map((addon: any) => (
+                                  <button
+                                    key={addon.AddonID}
+                                    onClick={() => {
+                                      const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
+                                      setFiftyFiftySelection(prev => ({
+                                        ...prev,
+                                        selectedAddons: isSelected
+                                          ? prev.selectedAddons.filter((a: any) => a.AddonID !== addon.AddonID)
+                                          : [...prev.selectedAddons, addon]
+                                      }))
+                                    }}
+                                    className={`w-full rounded-lg border text-sm transition-all text-center sauce-button ${
+                                      (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
+                                        ? 'border-green-500 bg-green-500/20 text-green-400'
+                                        : 'border-white/12 text-muted hover:border-white/20'
+                                    }`}
+                                    style={{
+                                      height: '60px',
+                                      padding: '8px 12px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1.2'
+                                    }}
+                                    title={addon.Name}
+                                  >
+                                    <div className="font-medium truncate w-full text-center text-sm" style={{
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}>{addon.Name}</div>
+                                    <div className="text-xs mt-1 text-red-400">
+                                      {addon.Price.toFixed(2)} лв.
+                                    </div>
+                                  </button>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Cheese (for 50/50 pizza) */}
+                        {fiftyFiftyAddons.filter((addon: any) => addon.AddonType === 'cheese').length > 0 && (
+                          <div>
+                            <h5 className="text-sm text-muted mb-2">Сирена:</h5>
+                            <div className="grid gap-3 place-items-center grid-cols-1 sm:grid-cols-2">
+                              {fiftyFiftyAddons
+                                .filter((addon: any) => addon.AddonType === 'cheese')
+                                .map((addon: any) => (
+                                  <button
+                                    key={addon.AddonID}
+                                    onClick={() => {
+                                      const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
+                                      setFiftyFiftySelection(prev => ({
+                                        ...prev,
+                                        selectedAddons: isSelected
+                                          ? prev.selectedAddons.filter((a: any) => a.AddonID !== addon.AddonID)
+                                          : [...prev.selectedAddons, addon]
+                                      }))
+                                    }}
+                                    className={`w-full rounded-lg border text-sm transition-all text-center sauce-button ${
+                                      (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
+                                        ? 'border-green-500 bg-green-500/20 text-green-400'
+                                        : 'border-white/12 text-muted hover:border-white/20'
+                                    }`}
+                                    style={{
+                                      height: '60px',
+                                      padding: '8px 12px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1.2'
+                                    }}
+                                    title={addon.Name}
+                                  >
+                                    <div className="font-medium truncate w-full text-center text-sm" style={{
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}>{addon.Name}</div>
+                                    <div className="text-xs mt-1 text-red-400">
+                                      {addon.Price.toFixed(2)} лв.
+                                    </div>
+                                  </button>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Pizza Addons (for 50/50 pizza) */}
+                        {fiftyFiftyAddons.filter((addon: any) => addon.AddonType === 'pizza-addon').length > 0 && (
+                          <div>
+                            <h5 className="text-sm text-muted mb-2">Добавки:</h5>
+                            <div className="grid gap-3 place-items-center grid-cols-1 sm:grid-cols-2">
+                              {fiftyFiftyAddons
+                                .filter((addon: any) => addon.AddonType === 'pizza-addon')
+                                .map((addon: any) => (
+                                  <button
+                                    key={addon.AddonID}
+                                    onClick={() => {
+                                      const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
+                                      setFiftyFiftySelection(prev => ({
+                                        ...prev,
+                                        selectedAddons: isSelected
+                                          ? prev.selectedAddons.filter((a: any) => a.AddonID !== addon.AddonID)
+                                          : [...prev.selectedAddons, addon]
+                                      }))
+                                    }}
+                                    className={`w-full rounded-lg border text-sm transition-all text-center sauce-button ${
+                                      (fiftyFiftySelection.selectedAddons || []).find((a: any) => a.AddonID === addon.AddonID)
+                                        ? 'border-green-500 bg-green-500/20 text-green-400'
+                                        : 'border-white/12 text-muted hover:border-white/20'
+                                    }`}
+                                    style={{
+                                      height: '60px',
+                                      padding: '8px 12px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      lineHeight: '1.2'
+                                    }}
+                                    title={addon.Name}
+                                  >
+                                    <div className="font-medium truncate w-full text-center text-sm" style={{
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}>{addon.Name}</div>
+                                    <div className="text-xs mt-1 text-red-400">
+                                      {addon.Price.toFixed(2)} лв.
                                     </div>
                                   </button>
                                 ))}

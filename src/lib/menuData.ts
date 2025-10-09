@@ -125,11 +125,97 @@ const ratingMap: { [key: number]: number } = {
   6: 4.3
 }
 
-// Function to fetch addons for a specific product type
-export async function fetchAddons(productTypeID: number) {
+// Function to fetch addons for a specific product type and size
+export async function fetchAddons(productTypeID: number, size?: string) {
   try {
-    console.log(`🔍 Fetching addons for product type: ${productTypeID}`)
+    console.log(`🔍 Fetching addons for product type: ${productTypeID}, size: ${size}`)
     
+    // Special handling for pizza size-based addons
+    if (productTypeID === 1 && size) {
+      let meatRange: { min: number; max: number }
+      let cheeseRange: { min: number; max: number }
+      let addonRange: { min: number; max: number }
+      
+      if (size.toLowerCase().includes('малка') || size.toLowerCase().includes('small')) {
+        meatRange = { min: 800, max: 899 }
+        cheeseRange = { min: 700, max: 799 }
+        addonRange = { min: 600, max: 699 }
+      } else if (size.toLowerCase().includes('голяма') || size.toLowerCase().includes('large')) {
+        meatRange = { min: 8000, max: 8999 }
+        cheeseRange = { min: 7000, max: 7999 }
+        addonRange = { min: 6000, max: 6999 }
+      } else {
+        // Default to small pizza addons if size is not recognized
+        meatRange = { min: 800, max: 899 }
+        cheeseRange = { min: 700, max: 799 }
+        addonRange = { min: 600, max: 699 }
+      }
+      
+      console.log(`🍕 Fetching pizza addons for ${size} pizza (Meat: ${meatRange.min}-${meatRange.max}, Cheese: ${cheeseRange.min}-${cheeseRange.max}, Addons: ${addonRange.min}-${addonRange.max})`)
+      
+      // Fetch meat, cheese, and addon addons
+      const { data: pizzaAddons, error: pizzaError } = await supabase
+        .from('Addon')
+        .select('*')
+        .or(`and(AddonID.gte.${meatRange.min},AddonID.lte.${meatRange.max}),and(AddonID.gte.${cheeseRange.min},AddonID.lte.${cheeseRange.max}),and(AddonID.gte.${addonRange.min},AddonID.lte.${addonRange.max})`)
+      
+      if (pizzaError) {
+        console.error('Error fetching pizza addons:', pizzaError)
+        return []
+      }
+      
+      if (!pizzaAddons) return []
+      
+      console.log(`🔍 Raw pizza addons from DB for ${size}:`, pizzaAddons.map(a => ({ id: a.AddonID, name: a.Name, price: a.Price })))
+      
+      // Transform to our interface format
+      const transformedPizzaAddons: any[] = pizzaAddons.map(addon => {
+        let addonType = 'meat'
+        let addonTypeBG = 'колбаси'
+        
+        // Determine addon type based on ID range
+        if (size.toLowerCase().includes('малка') || size.toLowerCase().includes('small')) {
+          if (addon.AddonID >= 700 && addon.AddonID <= 799) {
+            addonType = 'cheese'
+            addonTypeBG = 'сирена'
+          } else if (addon.AddonID >= 600 && addon.AddonID <= 699) {
+            addonType = 'pizza-addon'
+            addonTypeBG = 'добавки'
+          }
+        } else if (size.toLowerCase().includes('голяма') || size.toLowerCase().includes('large')) {
+          if (addon.AddonID >= 7000 && addon.AddonID <= 7999) {
+            addonType = 'cheese'
+            addonTypeBG = 'сирена'
+          } else if (addon.AddonID >= 6000 && addon.AddonID <= 6999) {
+            addonType = 'pizza-addon'
+            addonTypeBG = 'добавки'
+          }
+        }
+        
+        return {
+          AddonID: addon.AddonID,
+          Name: addon.Name,
+          Price: addon.Price || 0,
+          ProductTypeID: addon.ProductTypeID,
+          AddonType: addonType,
+          AddonTypeBG: addonTypeBG
+        }
+      })
+      
+      console.log(`✅ Transformed pizza addons for ${size}:`, transformedPizzaAddons)
+      console.log(`📊 Addon breakdown:`, {
+        total: transformedPizzaAddons.length,
+        meat: transformedPizzaAddons.filter(a => a.AddonType === 'meat').length,
+        cheese: transformedPizzaAddons.filter(a => a.AddonType === 'cheese').length,
+        'pizza-addon': transformedPizzaAddons.filter(a => a.AddonType === 'pizza-addon').length,
+        meatAddons: transformedPizzaAddons.filter(a => a.AddonType === 'meat').map(a => ({ id: a.AddonID, name: a.Name })),
+        cheeseAddons: transformedPizzaAddons.filter(a => a.AddonType === 'cheese').map(a => ({ id: a.AddonID, name: a.Name })),
+        pizzaAddonAddons: transformedPizzaAddons.filter(a => a.AddonType === 'pizza-addon').map(a => ({ id: a.AddonID, name: a.Name }))
+      })
+      return transformedPizzaAddons
+    }
+    
+    // Original logic for non-pizza products (burgers, doners)
     // First, get the AddonIDs that are linked to this specific product type
     const { data: linkedAddons, error: linkError } = await supabase
       .from('LkProductTypeAddons')
@@ -380,12 +466,12 @@ export async function fetchMenuData() {
     // Now fetch addons for each product type individually
     console.log('🎯 Fetching addons for each product type...')
     
-    // Fetch addons for pizza (ProductTypeID = 1)
+    // Pizza addons will be fetched dynamically based on size selection
+    // So we initialize with empty addons for pizzas
     if (menuData.pizza.length > 0) {
-      const pizzaAddons = await fetchAddons(1)
-      console.log('🍕 Pizza addons:', pizzaAddons)
+      console.log('🍕 Pizza addons will be fetched dynamically based on size')
       menuData.pizza.forEach(item => {
-        item.addons = pizzaAddons
+        item.addons = [] // Empty initially, will be populated when size is selected
       })
     }
     
