@@ -292,10 +292,6 @@ export function generateTicketHTML(data: TicketData): string {
         <span>${data.subtotal.toFixed(2)} лв</span>
       </div>
       <div class="total-line">
-        <span>ТАКСА ОБСЛУЖВАНЕ</span>
-        <span>${data.serviceCharge.toFixed(2)} лв</span>
-      </div>
-      <div class="total-line">
         <span>ДОСТАВКА</span>
         <span>${data.deliveryCharge.toFixed(2)} лв</span>
       </div>

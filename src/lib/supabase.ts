@@ -81,7 +81,9 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
       OrderStatusID,
       OrderType,
       RfPaymentMethodID,
-      IsPaid
+      IsPaid,
+      DeliveryPrice,
+      Comments
     `)
     .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
     .order('OrderDT', { ascending: false })
@@ -146,7 +148,9 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
         CustomerLocation: order.OrderLocation,
         Products: (products as LkOrderProducts[]) || [],
         TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
-        SpecialInstructions: '' // Add this field if needed
+        DeliveryPrice: order.DeliveryPrice || 0,
+        SpecialInstructions: '', // Add this field if needed
+        Comments: order.Comments || null
       };
     })
   );
