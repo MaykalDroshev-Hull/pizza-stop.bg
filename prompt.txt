@@ -1,134 +1,482 @@
-Delivery page — Fix Pack (Desktop + Mobile scope)
-🔒 Ограничения
+Architecture & Rendering Strategy
 
-Промените важат само за delivery page (и имейлите, свързани с него). Други страници/компоненти не се пипат.
+App Router hygiene: Prefer Server Components by default; mark Client Components explicitly. Eliminate accidental client boundaries.
+✅ GOOD: Using 'use client' explicitly where needed (CartModal, CartContext, etc.)
+⚠️ MODERATE ISSUE: Many components could be Server Components but are client components (e.g., not-found.tsx)
+💡 SUGGESTION: Audit components and convert to Server Components where possible
 
-Имаш правото ако имаш по-хубави идеи да ме питаш или предложиш.
+Data-fetching model: Decide per route between SSG/ISR (revalidate) vs SSR (dynamic) vs client fetch. Use generateStaticParams for menu/category pages; use tag-based revalidation for menu changes.
+❌ CRITICAL MISSING: No generateStaticParams for menu items
+❌ CRITICAL MISSING: No ISR/revalidation strategy implemented
+❌ CRITICAL MISSING: Menu data fetched on every request, no caching strategy
+💡 SUGGESTION: Implement revalidation: export const revalidate = 300 // 5 minutes for menu pages
+💡 SUGGESTION: Add generateStaticParams for popular menu items
 
-Не създавай нови имейл темплейти — използвай текущите; позволени са само корекции на изпращача/конфигурацията.
+Cache controls: Use fetch options (cache, revalidate, next: { tags }) and Route Segment Config (dynamic, runtime, preferredRegion) intentionally.
+❌ CRITICAL MISSING: No cache controls in fetch operations
+❌ CRITICAL MISSING: No route segment config (no dynamic, revalidate, runtime exports)
+💡 SUGGESTION: Add to API routes: export const revalidate = 60; export const dynamic = 'force-dynamic' where needed
 
-По подразбиране таргетът е desktop, освен ако е изрично казано „само телефон/мобилно“ (виж т.4).
+Edge vs Node runtime: Put price/tax calc or personalization at the edge; keep DB/payment logic on Node.
+⚠️ NOT IMPLEMENTED: All routes run on Node runtime
+💡 SUGGESTION: Consider edge runtime for price calculations and menu display
 
-След всеки таск добавяй кратка бележка тук във файла. Имаш правото да добавяш текст: ✅ Fixed / ⚠️ Potential side effect.
+Error boundaries & loading states: error.tsx, not-found.tsx, and thoughtful loading.tsx per route. Stream with Suspense where helpful.
+✅ GOOD: not-found.tsx exists with creative UI
+❌ CRITICAL MISSING: No error.tsx files anywhere in the app
+❌ CRITICAL MISSING: No loading.tsx files for any routes
+❌ CRITICAL MISSING: No Suspense boundaries for data fetching
+💡 SUGGESTION: Add error.tsx and loading.tsx to all major routes (/order, /checkout, /dashboard)
 
-Пример: ✅ Fixed – … (файл/компонент, редове/PR, бележка за риск).
+Routing & URL design: Clean, localized, canonical URLs: /menu, /menu/margherita, /order, /locations.
+✅ GOOD: Clean URLs (/order, /checkout, /dashboard)
+⚠️ MINOR ISSUE: Menu is under /order, could be /menu for better SEO
+⚠️ MINOR ISSUE: No individual product pages (/menu/[slug])
 
-1) Имейлите „Вашата поръчка е на път“ и „Поръчката започва да се приготвя“ — унифициране на изпращача
+Performance & Web Vitals
 
-Проблем
-Първият имейл („Вашата поръчка е на път“) се получава „от Пица Стоп“, а вторият („Поръчката започва да се приготвя“) изглежда като от конкретен човек.
+Images: Use next/image with sizes, correct width/height, AVIF/WEBP; preload hero image; compress menu photos.
+❌ CRITICAL ISSUE: Using regular <img> tags instead of next/image throughout the app
+❌ CRITICAL ISSUE: No width/height specified, causing layout shift
+❌ CRITICAL ISSUE: Images from Unsplash are not optimized
+💡 SUGGESTION: Replace all <img> with next/image and specify dimensions
+💡 SUGGESTION: Use priority prop for hero image
 
-Цел
-И двата имейла да идват със същото Sender/From име и адрес, напр.:
-From: "Пица Стоп" <no-reply@domain.bg> (или актуалното бранд име/домен).
-Reply-To да е еднотипно (support@… или info@…), според текущите практики.
+Fonts: Use next/font with subset/display: swap; avoid layout shift.
+✅ EXCELLENT: Using next/font (Inter) with proper subset
+✅ GOOD: Font display strategy is correct
 
-Acceptance criteria
+Bundling: Dynamic import heavy client widgets (map, analytics, carousels); tree-shake UI libs; run next build with bundle analyzer.
+⚠️ MODERATE ISSUE: No dynamic imports for heavy components (DeliveryAreaMap, ImageCarousel)
+❌ MISSING: No bundle analyzer configured
+💡 SUGGESTION: Dynamic import map: const DeliveryAreaMap = dynamic(() => import('./DeliveryAreaMap'))
+💡 SUGGESTION: Add @next/bundle-analyzer to package.json
 
-И двата имейла показват идентично Display Name + From Email.
+Prefetching: Let Next prefetch internal links; disable if it hurts bandwidth on mobile.
+✅ DEFAULT: Using default Next.js prefetching
+⚠️ NOT MONITORED: No analytics to measure impact
 
-Reply-To е консистентно.
+CDN & caching: Confirm CDN in front (e.g., Vercel). Set immutable headers for static assets.
+⚠️ UNKNOWN: Deployment platform not specified in code
+❌ MISSING: No custom cache headers in next.config.js
 
-Няма промяна по субжект/съдържание на имейлите.
+Core Web Vitals checks: LCP element is predictable; CLS < 0.1; TTFB optimized via caching/edge.
+❌ CRITICAL ISSUE: CLS likely high due to missing image dimensions
+❌ CRITICAL ISSUE: LCP likely slow due to unoptimized images and no preloading
+💡 SUGGESTION: Add Lighthouse CI to monitor Web Vitals
 
-Тест в Gmail/Outlook показва един и същи изпращач визуално.
+SEO & Local Discovery (critical for restaurants)
 
-Тест
+Metadata API: Titles, descriptions, canonical, alternate locales, OG/Twitter tags.
+✅ EXCELLENT: Comprehensive metadata in layout.tsx
+✅ GOOD: OpenGraph and Twitter cards configured
+⚠️ MINOR ISSUE: Google verification code is placeholder text
+💡 SUGGESTION: Add actual Google Search Console verification code
 
-Три пробни поръчки (delivery, pickup, mixed) за потвърждение.
+Structured data (JSON-LD): Restaurant, Menu, LocalBusiness, PostalAddress, opening hours, price range, hasMenu links, and Product for pizzas with offers.
+✅ GOOD: Basic Restaurant schema exists on homepage
+❌ CRITICAL MISSING: No Menu schema with actual menu items
+❌ CRITICAL MISSING: No Product schema for individual pizzas
+❌ CRITICAL MISSING: No priceRange in restaurant schema
+❌ CRITICAL MISSING: URL in schema is "https://example.com" - needs to be real domain
+💡 SUGGESTION: Add per-product JSON-LD with offers, images, and reviews
+💡 SUGGESTION: Add AggregateRating schema if you have reviews
 
-Проверка на хедърите (From, Reply-To) и визуализацията в пощенски клиенти.
+Sitemap & robots: sitemap.xml, robots.txt, and 404/410 handling.
+❌ CRITICAL MISSING: No sitemap.xml or sitemap.ts
+❌ CRITICAL MISSING: No robots.txt
+✅ GOOD: 404 handling with not-found.tsx
+💡 SUGGESTION: Add app/sitemap.ts to generate dynamic sitemap
+💡 SUGGESTION: Add public/robots.txt
 
-✅ Fixed – Unified sender for "on the way" & "preparing" emails (src/utils/emailService.ts line 904). Both now use "Pizza Stop" <email> format. Reply-To standardized. ⚠️ Verify DMARC/DKIM alignment.
+OG images: Generate with /og route for each menu item/category.
+❌ CRITICAL MISSING: No dynamic OG image generation
+💡 SUGGESTION: Create app/api/og/route.tsx using @vercel/og
 
-2) Дневна статистика — линията/графиката не се визуализира
+Local SEO: Embed NAP consistently; map + driving directions; "near me" phrasing on location pages.
+✅ GOOD: Map component exists (DeliveryAreaMap)
+✅ GOOD: Address and contact info visible
+⚠️ MODERATE: No "near me" optimization or location-specific pages
+💡 SUGGESTION: Add "pizza delivery near me lovech" content
 
-Проблем
-В секцията за дневна статистика и статистика по дни има графика, но липсва визуална линия/серия (не показва спад/увеличение).
+Accessibility (a11y)
 
-Цел
-Графиката да показва реална линия/серии по данните за поръчки (брой/ден, оборот/ден — според наличния API). При липса на данни → осмислен празен state („Няма данни за избрания период“), а не празен платно.
+Keyboard navigation: Focus traps for modals (cart/checkout), visible focus states.
+⚠️ MODERATE ISSUE: Modals don't trap focus properly
+⚠️ MODERATE ISSUE: Focus states not consistently visible
+💡 SUGGESTION: Use Radix Dialog's built-in focus management
+💡 SUGGESTION: Add :focus-visible styles to all interactive elements
 
-Acceptance criteria
+Semantics: Headings order, nav/main/footer, buttons not divs, form labels.
+✅ GOOD: Proper semantic HTML (nav, main, footer)
+⚠️ MINOR ISSUE: Some buttons could be more semantic
+✅ GOOD: Form labels present
 
-Рендерира се минимум една линия/серия за дневните стойности.
+Color contrast & text size: Meet WCAG AA; avoid text on busy food photos without overlay.
+⚠️ NEEDS AUDIT: Dark theme may have contrast issues in some areas
+💡 SUGGESTION: Run automated accessibility audit with axe-core
 
-Оста време е коректна (локал: Europe/Sofia).
+ARIA live regions: For cart updates and toast notifications.
+❌ MISSING: No aria-live regions for cart count updates
+💡 SUGGESTION: Add aria-live="polite" to cart counter
 
-При 0 точки има empty state вместо „празна“ графика.
+Internationalization & Currency (if relevant)
 
-Няма JS грешки/варнинги в конзолата.
+i18n routing: Locale segments, Intl.NumberFormat for prices, date/time for delivery windows.
+✅ GOOD: Using Bulgarian locale (bg-BG)
+✅ GOOD: Using Intl for date formatting in some places
+⚠️ MINOR: Not using Intl.NumberFormat for prices consistently
+💡 SUGGESTION: Use Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'BGN' })
 
-Тест
+RTL support if needed; language attributes and direction toggles.
+✅ N/A: Bulgarian is LTR, not needed
 
-Данни за последните 7/30 дни.
+Security & Compliance
 
-Ръчно вкарани sample данни (dev) → вижда се линия и точки.
+Auth model: Session cookies (httpOnly, secure, sameSite=lax), short-lived JWTs if used; rotate secrets.
+❌ CRITICAL SECURITY ISSUE: Admin auth uses localStorage instead of httpOnly cookies
+❌ CRITICAL SECURITY ISSUE: Client-side auth is vulnerable to XSS attacks
+❌ CRITICAL SECURITY ISSUE: No session management, no expiry enforcement
+💡 SUGGESTION: Implement server-side sessions with httpOnly cookies
+💡 SUGGESTION: Use next-auth or similar for proper authentication
 
-Edge case: един ден данни (1 точка) → показва се маркер/бар/линия според либата.
+Rate limiting: On login, signup, promo code, and checkout endpoints (IP + user).
+❌ CRITICAL MISSING: No rate limiting on any endpoints
+❌ CRITICAL MISSING: Login endpoint vulnerable to brute force attacks
+💡 SUGGESTION: Implement rate limiting with Upstash Redis or similar
+💡 SUGGESTION: Add rate limits: 5 login attempts per 15 min per IP
 
-✅ Fixed – Daily chart renders series (src/app/delivery/page.tsx lines 1475-1544). Added SVG line chart overlay with trend visualization, data points, and legend. Improved empty state message. Chart shows both bars and trend line.
+CSRF/Clickjacking: CSRF tokens for state-changing POSTs; X-Frame-Options/frame-ancestors.
+❌ CRITICAL MISSING: No CSRF protection
+❌ CRITICAL MISSING: No X-Frame-Options header
+💡 SUGGESTION: Add security headers in next.config.js headers()
+💡 SUGGESTION: Consider CSRF tokens for critical operations
 
-3) Pickup (вземане от ресторант) — да не влиза в Delivery page; изпращане на текущите имейли за получаване/ETA
+Validation & sanitization: Zod/Valibot on server for every payload (cart, checkout, contact forms).
+✅ GOOD: Custom ValidationService exists
+⚠️ MODERATE ISSUE: Not using Zod/Valibot for type-safe validation
+⚠️ MODERATE ISSUE: Client data trusted in order confirmation (prices calculated on client)
+💡 SUGGESTION: Install Zod and validate all API inputs
+💡 SUGGESTION: CRITICAL - Recalculate all prices on server, never trust client
 
-Проблем
-Когато е избрана опция „вземане от ресторанта (pickup)“, поръчката продължава към delivery и се третират като „за доставка“.
+Headers: Strict-Transport-Security, Content-Security-Policy (allow required domains only), Referrer-Policy, Permissions-Policy.
+❌ CRITICAL MISSING: No security headers configured
+❌ CRITICAL MISSING: No CSP policy
+❌ CRITICAL MISSING: No HSTS header
+💡 SUGGESTION: Add to next.config.js:
+  headers() {
+    return [{
+      source: '/:path*',
+      headers: [
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' }
+      ]
+    }]
+  }
 
-Цел
+Uploads: If users can upload (e.g., receipts), virus scan + type/size checks.
+✅ N/A: No user uploads currently
 
-Pickup поръчките да НЕ се появяват в списъка/борда на Delivery page.
+Secrets: No secrets in client; use env vars in the platform's secret manager; audit next.config.js for accidental exposure.
+✅ GOOD: Using environment variables
+✅ GOOD: Public keys properly prefixed with NEXT_PUBLIC_
+⚠️ MODERATE: SUPABASE_SERVICE_ROLE_KEY in code comments (SUPABASE_SETUP.md)
+💡 SUGGESTION: Review all .md files for sensitive information
 
-Автоматично да се изпратят съществуващите имейли за получена поръчка и ориентировъчно време за готовност (ETA) — без създаване на нови темплейти.
+GDPR/CPRA: Cookie consent for non-essential cookies, privacy policy, data retention, "contact us" and DSR process.
+❌ CRITICAL MISSING: No cookie consent banner
+❌ CRITICAL MISSING: No privacy policy
+❌ CRITICAL MISSING: No terms of service
+❌ CRITICAL MISSING: No GDPR compliance for EU users
+💡 SUGGESTION: Add cookie consent (required for EU users visiting .bg domain)
+💡 SUGGESTION: Create /privacy-policy and /terms pages
 
-Acceptance criteria
+Payments & Orders (core restaurant flows)
 
-Поръчки с deliveryMethod = pickup липсват в Delivery page.
+Checkout flow: Server-side price calculation; never trust client totals.
+❌ CRITICAL SECURITY ISSUE: Prices and totals calculated on client and sent to server
+❌ CRITICAL SECURITY ISSUE: User can manipulate prices before checkout
+💡 SUGGESTION: URGENT - Recalculate entire order on server using product IDs only
+💡 SUGGESTION: Fetch prices from database, never accept from client
 
-Имейлите:
+Payment provider: Use server Route Handlers for intents/tokens; idempotency keys; handle 3DS flows.
+⚠️ UNKNOWN: No online payment integration visible (only cash/card on delivery)
+✅ GOOD: Payment handled offline (cash on delivery)
 
-„Поръчката е получена“ (existing template)
+Webhooks: Verify signatures; implement retries; reconcile order status; avoid duplicate fulfillment.
+✅ N/A: No webhooks currently
 
-„Ще бъде готова след ~X мин.“ (existing template/динамично съдържание)
+Taxes, tips, delivery fee: Centralized calculations; currency rounding; gift card/promo code edge cases.
+✅ GOOD: Delivery fee logic exists
+⚠️ MODERATE: No promo code system
+⚠️ MODERATE: No tip functionality
+💡 SUGGESTION: Add VAT breakdown in order confirmation
 
-Няма промяна за реалните delivery поръчки.
+Receipts & emails: Transactional emails with DKIM/SPF; include VAT/tax details and order summary.
+✅ GOOD: Email service implemented with nodemailer
+⚠️ MODERATE: No DKIM/SPF validation mentioned
+⚠️ MODERATE: No VAT details in emails
+💡 SUGGESTION: Configure DKIM/SPF for email domain
+💡 SUGGESTION: Add VAT number and tax breakdown to receipts
 
-Нито един друг компонент/flow не е засегнат.
+Pickup vs delivery rules: Delivery radius, kitchen hours, prep times, surge/blackout logic.
+✅ GOOD: Opening hours logic implemented (isRestaurantOpen)
+✅ GOOD: Collection vs delivery options
+⚠️ MODERATE: Delivery radius checked via map but no backend validation
+💡 SUGGESTION: Validate delivery address on server before accepting order
 
-Тест
+Inventory & 86ing items: Feature-flag to hide sold-out pies; backoffice toggle triggers revalidate by tag.
+✅ GOOD: IsDisabled field in Product table
+⚠️ MODERATE: No revalidation when products disabled
+💡 SUGGESTION: Add revalidateTag('menu') when product disabled
 
-Създай 1× pickup и 1× delivery поръчка:
+Data & Backend
 
-Pickup → не се появява на Delivery page; имейлите са изпратени.
+DB connections: Use serverless-friendly drivers and pooling; avoid connecting in Client Components.
+✅ EXCELLENT: Using Supabase (serverless-friendly)
+✅ EXCELLENT: DB queries only in Server Components and API routes
 
-Delivery → появява се нормално; имейлите за доставка остават без промяна.
+ORM & migrations: Prisma/Drizzle with migrations in CI; seed script for staging only.
+⚠️ MODERATE: Using raw Supabase queries, no type-safe ORM
+⚠️ MODERATE: No migration system visible
+💡 SUGGESTION: Consider Prisma for type-safe database access
 
-Проверка, че ETA се изчислява от съществуващата логика (без нови правила).
+Caching layer: Consider Redis for menus, "most ordered" lists; set TTLs; bust via tags on changes.
+❌ MISSING: No caching layer
+💡 SUGGESTION: Add Redis for menu caching and session management
 
-✅ Fixed – Excluded pickup from Delivery board (src/app/delivery/page.tsx lines 276, 295). Added .neq('OrderType', 1) filter to exclude pickup orders. Added pickup ready time email (src/app/api/order/confirm/route.ts lines 399-419). Reused existing "received" & "ETA" emails; no new templates.
+Background jobs: Queue for email/webhook retries, order printing, and scheduled revalidation.
+❌ MISSING: No queue system for background jobs
+⚠️ MODERATE: Emails sent synchronously (blocking)
+💡 SUGGESTION: Use Inngest, BullMQ, or similar for background jobs
 
-4) (Само телефон) — Историята в Delivery page да се скролва до края
+Search: If menu search exists, debounce client input, server paginate, guard against injection.
+❌ MISSING: No menu search functionality
+💡 SUGGESTION: Add search with debouncing and server-side filtering
 
-Проблем
-На телефон History/История не се скролва до последните събития/края.
+API Layer (Route Handlers / server actions)
 
-Цел
-Само на мобилни устройства (телефон): историята да скролва до края (auto-scroll on open/append).
+File boundaries: All sensitive logic stays on the server; server actions with explicit use server.
+✅ GOOD: API routes properly separated
+❌ MISSING: No server actions used (could simplify some flows)
 
-Acceptance criteria
+CORS: Tight allowlist if exposing APIs (mobile app, kiosk).
+✅ N/A: No CORS needed for same-origin
 
-При отваряне на историята на телефон → автоскрол до последния елемент.
+Input/output types: Typed responses; consistent error shapes; avoid leaking stack traces.
+✅ GOOD: ErrorResponseBuilder for consistent errors
+✅ GOOD: Logger masks sensitive data
+⚠️ MINOR: Some console.error with full error objects
 
-При ново събитие → скрол към последния елемент (ако потребителят не е ръчно скролнал нагоре).
+Observability & Reliability
 
-Desktop/таблет поведение остава без промяна.
+Logging: Structured logs with order/user correlation IDs; mask PII.
+✅ EXCELLENT: Custom Logger utility with structured logging
+✅ GOOD: Masking PII in logs
+✅ GOOD: Correlation with request IDs
 
-Тест
+Monitoring: Sentry (frontend+server), RUM for Web Vitals, uptime checks on /health.
+✅ GOOD: /api/health endpoint exists
+❌ MISSING: No Sentry or error monitoring
+❌ MISSING: No RUM for Web Vitals
+💡 SUGGESTION: Add Sentry for production error tracking
+💡 SUGGESTION: Add Vercel Analytics or similar for RUM
 
-iOS Safari / Android Chrome.
+Feature flags: Kill-switches for payments, coupons, new menu layout.
+❌ MISSING: No feature flag system
+💡 SUGGESTION: Add simple feature flags for critical features
 
-История с много елементи; добавяне на нов лог → autoscroll (mobile only).
+Graceful degradation: If the menu API fails, show cached menu + notice; cart persists locally.
+✅ EXCELLENT: Cart persists to localStorage
+✅ GOOD: Fallback menu data exists (getFallbackMenuData)
+⚠️ MODERATE: No user-facing error messages when API fails
 
-Няма layout shift/„скачане“ при ръчно четене нагоре.
+Testing & QA
 
-Лог след изпълнение (попълни):
-✅ Fixed – Mobile-only auto-scroll for History (src/app/delivery/page.tsx lines 174-212, 1635-1639). Added scroll detection, auto-scroll on view change and new items, respects manual scrolling. Desktop unaffected.
+Unit & integration: Price calc, promotions, cart math, availability windows.
+❌ CRITICAL MISSING: No tests at all (no .test.* or .spec.* files)
+❌ CRITICAL MISSING: No testing framework configured (no Jest, Vitest, etc.)
+💡 SUGGESTION: Add Vitest for unit tests
+💡 SUGGESTION: Test price calculations, cart logic, validation
+
+E2E (Playwright): Guest → add to cart → checkout → payment (test mode) → confirmation → email received.
+❌ CRITICAL MISSING: No E2E tests
+💡 SUGGESTION: Add Playwright and test critical user flows
+
+Accessibility tests: axe in CI; keyboard-only smoke run.
+❌ MISSING: No accessibility testing
+💡 SUGGESTION: Add @axe-core/playwright
+
+Performance budget: Lighthouse CI thresholds per route.
+❌ MISSING: No performance budgets or CI checks
+💡 SUGGESTION: Add Lighthouse CI with minimum scores
+
+Cross-device QA: Low-end Android, iPhone Safari; network throttling; offline states if PWA.
+⚠️ UNKNOWN: Manual testing status unclear
+💡 SUGGESTION: Test on real devices, especially older Android
+
+Frontend UX details
+
+Cart behavior: Persistent via cookies/indexedDB; merge guest cart on login.
+✅ EXCELLENT: Cart persists to localStorage
+❌ MISSING: Cart not merged on login (guest orders separate)
+💡 SUGGESTION: Merge cart items when user logs in
+
+Forms: Inline validation; address autocomplete (server-validated), phone masking, delivery instructions.
+✅ GOOD: Inline validation exists
+✅ GOOD: Delivery instructions field
+⚠️ MODERATE: No phone number masking
+⚠️ MODERATE: No Google Places autocomplete for addresses
+💡 SUGGESTION: Add phone input masking: (0XX) XXX-XXXX
+
+Maps: Lazy-load map component; static map fallback; avoid blocking hydration.
+⚠️ MODERATE ISSUE: Map not lazy-loaded
+⚠️ MODERATE: No static fallback
+💡 SUGGESTION: Dynamic import map component
+
+Notifications: Toasts for add-to-cart, order status; email/SMS opt-in compliant.
+✅ GOOD: Toast notifications via Radix Toast
+⚠️ MODERATE: No order status notifications
+💡 SUGGESTION: Add SMS notifications for order updates
+
+Content management: Menu items, allergens, spicy/vegan flags editable by staff.
+✅ GOOD: Admin panel exists (/admin)
+⚠️ MODERATE: No allergen or dietary flags visible
+💡 SUGGESTION: Add allergen warnings to products
+
+PWA & Mobile
+
+App manifest & icons: Proper sizes, maskable icon, theme color.
+✅ GOOD: site.webmanifest exists
+⚠️ MODERATE: Missing multiple icon sizes (only 192x192)
+⚠️ MODERATE: No 512x512 icon for splash screen
+💡 SUGGESTION: Add icons: 72, 96, 128, 144, 152, 192, 384, 512
+
+Service worker (optional): Cache static assets; avoid caching dynamic checkout.
+❌ MISSING: No service worker
+💡 SUGGESTION: Consider adding for offline menu viewing
+
+Add to Home Screen prompts tuned for mobile users.
+❌ MISSING: No A2HS prompt
+💡 SUGGESTION: Implement custom A2HS prompt for better UX
+
+Build, Env, & Deploy
+
+next.config.js: Production reactStrictMode, images.remotePatterns, headers() for security, redirects()/rewrites(), compression on.
+❌ CRITICAL MISSING: reactStrictMode not enabled
+❌ CRITICAL MISSING: No images.remotePatterns (required for external images)
+❌ CRITICAL MISSING: No security headers configured
+❌ CRITICAL MISSING: No compression settings
+💡 SUGGESTION: Update next.config.js with all production settings
+
+Env separation: .env.production vs staging; guard against falling back to dev keys.
+⚠️ MODERATE: No environment separation visible
+💡 SUGGESTION: Add .env.production and validation on startup
+
+CI/CD: Lint (ESLint), typecheck (TS), tests, build, preview deploys, then promote.
+⚠️ UNKNOWN: No CI/CD configuration visible (no .github/workflows)
+💡 SUGGESTION: Add GitHub Actions for CI/CD pipeline
+
+Rollbacks: Keep last known good build; document manual rollback.
+⚠️ UNKNOWN: Deployment strategy not documented
+💡 SUGGESTION: Document rollback procedure
+
+Cron & schedules: Regenerate sitemaps/OG if needed; tag revalidation for daily specials.
+❌ MISSING: No cron jobs configured
+💡 SUGGESTION: Add daily revalidation for menu data
+
+Cost checks: Image/CDN usage, DB egress, third-party quotas.
+⚠️ UNKNOWN: No cost monitoring visible
+💡 SUGGESTION: Set up alerts for Supabase usage
+
+Content & Legal
+
+Allergen & nutrition info: Visible and accurate; disclaimers.
+❌ MISSING: No allergen information
+❌ MISSING: No nutrition info
+💡 SUGGESTION: Add allergen warnings (EU requirement)
+
+Terms of Service & Privacy Policy: Linked in footer; last-updated date.
+❌ CRITICAL MISSING: No terms of service
+❌ CRITICAL MISSING: No privacy policy
+💡 SUGGESTION: Create legal pages (required by law)
+
+Cookie banner: Only fire analytics after consent (EU users).
+❌ CRITICAL MISSING: No cookie consent (GDPR violation for EU users)
+💡 SUGGESTION: Add cookie banner for compliance
+
+Launch Day Runbook
+
+Cache warm key routes; confirm webhooks green; test real card $1 then refund; toggle "Open" state; monitor logs and errors for the first hour; be ready to feature-flag off risky features.
+❌ MISSING: No launch runbook documented
+💡 SUGGESTION: Create launch checklist document
+💡 SUGGESTION: Plan soft launch with monitoring
+
+
+═══════════════════════════════════════════════════════════════
+OVERALL ASSESSMENT & RATING
+═══════════════════════════════════════════════════════════════
+
+RATING: 5.5 / 10
+
+BREAKDOWN:
+• Core Functionality: 7/10 - Ordering works, cart persists, basic flows complete
+• Security: 3/10 - Critical issues with auth, price validation, missing headers
+• Performance: 4/10 - No image optimization, no caching, no code splitting
+• SEO: 6/10 - Basic metadata good, but missing sitemaps, structured data incomplete
+• Accessibility: 5/10 - Semantic HTML good, but missing ARIA, focus management
+• Testing: 0/10 - No tests at all
+• Production Readiness: 4/10 - Missing critical infrastructure pieces
+• Legal Compliance: 2/10 - No GDPR compliance, no legal pages
+
+STRENGTHS:
+✅ Clean, modern UI with good UX
+✅ Excellent logging and error handling infrastructure
+✅ Good use of TypeScript
+✅ Cart persistence and guest checkout work well
+✅ Email notifications implemented
+✅ Database schema is solid
+✅ Admin panel exists
+
+CRITICAL BLOCKERS FOR PRODUCTION:
+🚨 SERVER-SIDE PRICE VALIDATION - User can manipulate prices (URGENT)
+🚨 SECURITY HEADERS - No CSP, HSTS, X-Frame-Options
+🚨 AUTHENTICATION - localStorage auth is insecure
+🚨 RATE LIMITING - APIs vulnerable to abuse
+🚨 IMAGE OPTIMIZATION - Using <img> instead of next/image
+🚨 GDPR COMPLIANCE - No cookie consent or privacy policy
+🚨 NO TESTS - Zero test coverage
+
+RECOMMENDED IMMEDIATE ACTIONS:
+1. Fix price calculation - recalculate all prices on server
+2. Add security headers to next.config.js
+3. Replace <img> with next/image everywhere
+4. Add rate limiting to auth endpoints
+5. Create privacy policy and terms of service
+6. Add cookie consent banner
+7. Implement server-side session management
+8. Add basic E2E tests for critical flows
+9. Configure next.config.js properly (images, headers, compression)
+10. Create sitemap.xml and robots.txt
+
+NICE TO HAVES FOR BETTER EXPERIENCE:
+• Add Sentry for error monitoring
+• Implement Redis caching for menu
+• Add search functionality
+• Improve PWA capabilities
+• Add performance monitoring
+• Implement background job queue
+• Add feature flags
+• Create comprehensive test suite
+
+TIME ESTIMATE TO PRODUCTION-READY:
+• Minimum viable (fix critical blockers): 2-3 days
+• Good production quality: 1-2 weeks
+• Excellent production quality: 3-4 weeks
+
+The application has good bones and solid core functionality, but needs
+significant security hardening, performance optimization, and compliance
+work before production launch. The lack of testing is concerning for
+maintaining quality as the app evolves.
