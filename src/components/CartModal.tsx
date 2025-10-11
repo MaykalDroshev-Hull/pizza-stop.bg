@@ -227,6 +227,11 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
           <div>
             <h4 className="font-medium text-text mb-4">
               {(selectedSize?.name && size) ? `Избран размер: ${(() => {
+                // Special case for Paninins (ProductID 900, 902, 903, 904)
+                const isPanini = [900, 902, 903, 904].includes(item.id);
+                if (isPanini && selectedSize.name === 'Малка') {
+                  return 'Стандартен размер';
+                }
                 // Special case for standard size pizzas - show custom text
                 const standardSizePizzas = [
                   'калцоне', 'calzone', 'мортадела бурата', 'прошутто фреш', 
@@ -251,6 +256,11 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
               <div className="p-4 bg-orange/10 border border-orange/20 rounded-xl">
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-orange">{(() => {
+                    // Special case for Paninins (ProductID 900, 902, 903, 904)
+                    const isPanini = [900, 902, 903, 904].includes(item.id);
+                    if (isPanini && selectedSize.name === 'Малка') {
+                      return 'Стандартен размер';
+                    }
                     // Special case for standard size pizzas - show custom text
                     const standardSizePizzas = [
                       'калцоне', 'calzone', 'мортадела бурата', 'прошутто фреш', 
@@ -330,6 +340,9 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                 ) : item.sizes && Array.isArray(item.sizes) ? (
                   // New size structure with predefined sizes
                   item.sizes.map((sizeOption: any) => {
+                    // Special case for Paninins (ProductID 900, 902, 903, 904)
+                    const isPanini = [900, 902, 903, 904].includes(item.id);
+                    
                     // Special case for standard size pizzas - show custom text
                     const standardSizePizzas = [
                       'калцоне', 'calzone', 'мортадела бурата', 'прошутто фреш', 
@@ -339,7 +352,9 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                       item.name.toLowerCase().includes(pizza)
                     );
                     let displayName = sizeOption.name;
-                    if (isStandardSizePizza && sizeOption.name === 'Малка') {
+                    if (isPanini && sizeOption.name === 'Малка') {
+                      displayName = 'Стандартен размер';
+                    } else if (isStandardSizePizza && sizeOption.name === 'Малка') {
                       displayName = 'Стандартен размер (30см | 450гр)';
                     } else if (item.category === 'doners' && sizeOption.name === 'Малка') {
                       displayName = 'Стандартен размер';

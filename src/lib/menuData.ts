@@ -40,7 +40,8 @@ const categoryMap: { [key: number]: string } = {
   3: 'doners',
   4: 'drinks',
   5: 'sauces',
-  6: 'sauces'
+  6: 'sauces',
+  9: 'pizza'
 }
 
 // Map ProductTypeID to images
@@ -92,6 +93,14 @@ const imageMap: { [key: number]: string[] } = {
     'https://images.unsplash.com/photo-1586511925558-a4c6376fe65f?w=300&h=300&fit=crop',
     'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop',
     'https://images.unsplash.com/photo-1552767059-ce182ead6c1b?w=300&h=300&fit=crop'
+  ],
+  9: [ // Pizzas (same as 1)
+    'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1590947132387-155cc02f3212?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=300&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=300&h=300&fit=crop'
   ]
 }
 
@@ -102,7 +111,8 @@ const emojiMap: { [key: number]: string } = {
   3: '🥙',
   4: '🥤',
   5: '🍶',
-  6: '🍶'
+  6: '🍶',
+  9: '🍕'
 }
 
 // Map ProductTypeID to preparation times
@@ -112,7 +122,8 @@ const timeMap: { [key: number]: string } = {
   3: '8-12 мин',
   4: '2-5 мин',
   5: '1-2 мин',
-  6: '1-2 мин'
+  6: '1-2 мин',
+  9: '15-20 мин'
 }
 
 // Map ProductTypeID to ratings
@@ -122,7 +133,8 @@ const ratingMap: { [key: number]: number } = {
   3: 4.7,
   4: 4.5,
   5: 4.3,
-  6: 4.3
+  6: 4.3,
+  9: 4.8
 }
 
 // Function to fetch addons for a specific product type and size
