@@ -102,6 +102,7 @@ CREATE TABLE public.Order (
   DeliveryPrice real,
   TotalAmount double precision,
   ReadyTime timestamp with time zone,
+  Comments text,
   CONSTRAINT Order_pkey PRIMARY KEY (OrderID),
   CONSTRAINT fk_order_login FOREIGN KEY (LoginID) REFERENCES public.Login(LoginID),
   CONSTRAINT fk_order_orderstatus FOREIGN KEY (OrderStatusID) REFERENCES public.RfOrderStatus(OrderStatusID)
@@ -165,6 +166,11 @@ INSERT INTO public.RfOrderStatus (OrderStatusID, OrderStatus) VALUES
 -- OrderType Values Reference:
 -- 1 = Restaurant collection (customer picks up from restaurant)
 -- 2 = Delivery (restaurant delivers to customer address)
+
+-- Order Fields Reference:
+-- DeliveryPrice (real/float4): The delivery charge for this order. Used in kitchen ticket printing.
+-- Comments (text): Customer delivery instructions (e.g., "Ring the bell when you arrive").
+--                  Stored at order level and displayed on kitchen tickets under customer address.
 ```
 
 ## 🔐 Password Security

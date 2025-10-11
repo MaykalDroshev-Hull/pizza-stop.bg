@@ -307,7 +307,9 @@ const DeliveryDashboard = () => {
           OrderLocationCoordinates,
           OrderStatusID,
           IsPaid,
-          OrderType
+          OrderType,
+          DeliveryPrice,
+          Comments
         `)
         .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
         .neq('OrderType', 1) // Exclude pickup orders (OrderType = 1)
@@ -326,7 +328,9 @@ const DeliveryDashboard = () => {
           OrderLocationCoordinates,
           OrderStatusID,
           IsPaid,
-          OrderType
+          OrderType,
+          DeliveryPrice,
+          Comments
         `)
         .eq('OrderStatusID', ORDER_STATUS.DELIVERED)
         .neq('OrderType', 1) // Exclude pickup orders (OrderType = 1)
@@ -393,7 +397,9 @@ const DeliveryDashboard = () => {
               CustomerLocation: order.OrderLocation,
               Products: (products as LkOrderProducts[]) || [],
               TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
-              SpecialInstructions: ''
+              DeliveryPrice: order.DeliveryPrice || 0,
+              SpecialInstructions: '',
+              Comments: order.Comments || null
             };
 
             return convertToDeliveryOrder(kitchenOrder);
@@ -451,7 +457,9 @@ const DeliveryDashboard = () => {
               CustomerLocation: order.OrderLocation,
               Products: (products as LkOrderProducts[]) || [],
               TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
-              SpecialInstructions: ''
+              DeliveryPrice: order.DeliveryPrice || 0,
+              SpecialInstructions: '',
+              Comments: order.Comments || null
             };
 
             return convertToDeliveryOrder(kitchenOrder);
