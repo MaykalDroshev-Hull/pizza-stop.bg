@@ -46,21 +46,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return []
   })
 
-  // Calculate addon cost for an item (first 3 of each type free)
-  const calculateAddonCost = (addons: ProductAddon[]) => {
+  // Calculate addon cost for an item
+  const calculateAddonCost = (addons: ProductAddon[], category?: string) => {
     return addons
       .map((addon) => {
-        // Count how many of this type are selected
+        // For pizzas, all addons are paid
+        if (category === 'pizza') {
+          return addon.Price
+        }
+        
+        // For other products, first 3 of each type are free
         const typeSelected = addons.filter(a => a.AddonType === addon.AddonType)
         const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID)
-        return positionInType < 3 ? 0 : addon.Price // First 3 of each type are free
+        return positionInType < 3 ? 0 : addon.Price
       })
       .reduce((sum, price) => sum + price, 0)
   }
 
   // Get total price for an item including addons
   const getItemTotalPrice = useCallback((item: CartItem) => {
-    const addonCost = calculateAddonCost(item.addons)
+    const addonCost = calculateAddonCost(item.addons, item.category)
     return (item.price + addonCost) * item.quantity
   }, [])
 
