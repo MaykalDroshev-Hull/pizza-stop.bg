@@ -81,7 +81,9 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
       OrderStatusID,
       OrderType,
       RfPaymentMethodID,
-      IsPaid
+      IsPaid,
+      DeliveryPrice,
+      Comments
     `)
     .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
     .order('OrderDT', { ascending: false })
@@ -146,7 +148,9 @@ export async function getDeliveryOrders(): Promise<KitchenOrder[]> {
         CustomerLocation: order.OrderLocation,
         Products: (products as LkOrderProducts[]) || [],
         TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
-        SpecialInstructions: '' // Add this field if needed
+        DeliveryPrice: order.DeliveryPrice || 0,
+        SpecialInstructions: '', // Add this field if needed
+        Comments: order.Comments || null
       };
     })
   );
@@ -169,7 +173,9 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
         OrderStatusID,
         OrderType,
         RfPaymentMethodID,
-        IsPaid
+        IsPaid,
+        DeliveryPrice,
+        Comments
       `)
       .in('OrderStatusID', [ORDER_STATUS.ACCEPTED, ORDER_STATUS.IN_PREPARATION, ORDER_STATUS.READY])
       .order('OrderDT', { ascending: false })
@@ -241,7 +247,9 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
         CustomerLocation: order.OrderLocation || customer?.LocationText || '',
         Products: products,
         TotalOrderPrice: totalPrice,
-        SpecialInstructions: customer?.addressInstructions || null
+        DeliveryPrice: order.DeliveryPrice || 0,
+        SpecialInstructions: customer?.addressInstructions || null,
+        Comments: order.Comments || null
       };
     });
 
@@ -380,6 +388,8 @@ export interface Order {
   OrderStatusID: number
   RfPaymentMethodID: number | null
   IsPaid: boolean
+  DeliveryPrice: number
+  Comments: string | null
 }
 
 export interface CompositeProduct {
@@ -424,5 +434,7 @@ export interface KitchenOrder {
   CustomerLocation: string | null
   Products: LkOrderProducts[]
   TotalOrderPrice: number
+  DeliveryPrice: number
   SpecialInstructions: string | null
+  Comments: string | null
 }
