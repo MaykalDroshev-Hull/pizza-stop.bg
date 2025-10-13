@@ -50,8 +50,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const calculateAddonCost = (addons: ProductAddon[], category?: string) => {
     return addons
       .map((addon) => {
-        // For pizzas, all addons are paid
-        if (category === 'pizza') {
+        // For pizzas (including 50/50 pizzas), all addons are paid
+        if (category === 'pizza' || category === 'pizza-5050') {
           return addon.Price
         }
         

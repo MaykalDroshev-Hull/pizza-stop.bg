@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
+import { validateUserSession } from '@/utils/sessionAuth'
 
 // Create Supabase client with service role key for admin operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -25,6 +26,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const userIdNum = parseInt(userId, 10)
+    if (isNaN(userIdNum)) {
+      return NextResponse.json(
+        { error: 'Invalid user ID' },
+        { status: 400 }
+      )
+    }
+
+    // SECURITY: Validate user authorization (prevent IDOR)
+    const authValidation = await validateUserSession(request, userIdNum)
+    if (!authValidation.isValid) {
+      return NextResponse.json(
+        { error: authValidation.error || 'Unauthorized access' },
+        { status: 401 }
+      )
+    }
+
     if (newPassword.length < 6) {
       return NextResponse.json(
         { error: 'New password must be at least 6 characters long' },
@@ -36,7 +54,7 @@ export async function POST(request: NextRequest) {
     const { data: user, error: fetchError } = await supabase
       .from('Login')
       .select('LoginID, Password')
-      .eq('LoginID', userId)
+      .eq('LoginID', userIdNum)
       .single()
 
     if (fetchError || !user) {
@@ -63,7 +81,7 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from('Login')
       .update({ Password: hashedNewPassword })
-      .eq('LoginID', userId)
+      .eq('LoginID', userIdNum)
 
     if (updateError) {
       console.error('Error updating password:', updateError)
