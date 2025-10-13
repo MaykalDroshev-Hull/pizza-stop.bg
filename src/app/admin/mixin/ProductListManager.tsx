@@ -445,7 +445,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         mediumPrice: savedProduct.MediumPrice,
         largePrice: savedProduct.LargePrice,
         productTypeId: savedProduct.ProductTypeID,
-        productType: getProductTypeName(savedProduct.ProductTypeID || 0),
+        productType: updatedProduct.productType || getProductTypeName(savedProduct.ProductTypeID || 0),
         isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
       

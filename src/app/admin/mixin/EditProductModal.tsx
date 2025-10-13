@@ -101,21 +101,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
   };
 
   const getProductTypeName = (productTypeId: number): string => {
-    switch (productTypeId) {
-      case 1:
-      case 2:
-      case 3:
-      case 7:
-        return "Пица";
-      case 4:
-        return "Напитки";
-      case 5:
-        return "Сосове";
-      case 6:
-        return "Добавки";
-      default:
-        return "Неизвестно";
-    }
+    const category = categoryOptions.find(option => option.id === productTypeId);
+    return category ? category.name : "Неизвестно";
   };
 
   const handleSave = (): void => {
