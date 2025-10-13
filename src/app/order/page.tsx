@@ -117,23 +117,19 @@ export default function MenuPage() {
       return
     }
 
-    // Calculate addon cost (all addons are paid for 50/50 pizza)
-    const addonCost = (fiftyFiftySelection.selectedAddons || [])
-      .map((addon: any) => addon.Price) // All addons are paid for 50/50 pizza
-      .reduce((sum: number, price: number) => sum + price, 0)
-
     // Create unique cart item for 50/50 pizza
+    // IMPORTANT: Store base price WITHOUT addons (addons will be calculated by CartContext)
     const leftHalfName = fiftyFiftySelection.leftHalf?.name || 'Unknown'
     const rightHalfName = fiftyFiftySelection.rightHalf?.name || 'Unknown'
     
     const cartItem = {
       id: Date.now(), // Unique ID based on timestamp
       name: `${leftHalfName} / ${rightHalfName}`,
-      price: fiftyFiftySelection.finalPrice + addonCost,
+      price: fiftyFiftySelection.finalPrice, // Base price ONLY (without addons)
       image: '🍕',
       category: 'pizza-5050',
       size: fiftyFiftySelection.size,
-      addons: fiftyFiftySelection.selectedAddons,
+      addons: fiftyFiftySelection.selectedAddons, // Addons stored separately
       comment: `50/50 пица: ${fiftyFiftySelection.leftHalf?.name} / ${fiftyFiftySelection.rightHalf?.name}: ${fiftyFiftySelection.size} (~2000г | 60см)${(fiftyFiftySelection.selectedAddons || []).length > 0 ? ` | ${(fiftyFiftySelection.selectedAddons || []).length} добавки` : ''}`,
       quantity: 1
     }

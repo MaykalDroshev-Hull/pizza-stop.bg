@@ -147,14 +147,31 @@ export default function PrinterPage() {
     console.log('50/50 пица добавена в кошницата:', cartItem)
   }
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple authentication - in production, use proper auth
-    if (username === "printer" && password === "printer123") {
-      setIsAuthenticated(true);
-      setCurrentView("categories");
-    } else {
-      alert("Невалидни данни за вход");
+    
+    try {
+      const response = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+          type: 'printer'
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setIsAuthenticated(true);
+        setCurrentView("categories");
+      } else {
+        alert("Невалидни данни за вход");
+      }
+    } catch (error) {
+      console.error('Printer login error:', error);
+      alert("Грешка при влизане");
     }
   };
 

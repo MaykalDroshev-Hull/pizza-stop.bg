@@ -404,7 +404,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
             <div>
               <h4 className="font-medium text-text mb-4">Добавки:</h4>
               <p className="text-sm text-muted mb-4">
-                {item.category === 'pizza' 
+                {(item.category === 'pizza' || item.category === 'pizza-5050')
                   ? '💡 Добавките за пица са платени според цената в менюто.'
                   : '💡 Първите 3 добавки от всеки тип са безплатни. След избора на 3-та добавка от даден тип ще се покажат цените за останалите от същия тип.'
                 }
@@ -757,8 +757,8 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
               
               const addonCost = selectedAddons
                 .map((addon) => {
-                  // For pizzas, all addons are paid
-                  if (item.category === 'pizza') {
+                  // For pizzas (including 50/50 pizzas), all addons are paid
+                  if (item.category === 'pizza' || item.category === 'pizza-5050') {
                     return addon.Price
                   }
                   

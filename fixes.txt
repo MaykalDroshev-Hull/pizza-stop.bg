@@ -1,0 +1,559 @@
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL FIXES REQUIRED - Price Calculation & Security Issues
+═══════════════════════════════════════════════════════════════════════════════
+Analysis Date: Current Session
+Issue: Order #112 shows 112.60 лв. in email but 98.40 лв. in kitchen (14.20 лв. difference)
+
+═══════════════════════════════════════════════════════════════════════════════
+🚨 PRIORITY 1 - CRITICAL SECURITY VULNERABILITY (FIX IMMEDIATELY)
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE #1: Server Accepts Client-Calculated Prices (CRITICAL SECURITY FLAW)
+───────────────────────────────────────────────────────────────────────────────
+Location: src/app/api/order/confirm/route.ts (lines 26, 380)
+
+CURRENT PROBLEM:
+- Client sends totalPrice in request body
+- Server TRUSTS this value without validation
+- Email uses client's totalPrice → Correct but INSECURE
+- Malicious user can modify totalPrice to any value (e.g., $0.01 for $100 order)
+
+CURRENT CODE (VULNERABLE):
+```javascript
+const { 
+  totalPrice,    // ❌ NEVER trust client prices!
+  orderItems,
+  deliveryCost
+} = body
+
+// Later in email
+totalAmount: totalPrice + (isCollection ? 0 : deliveryCost)  // ❌ Uses unvalidated client price
+```
+
+FIX REQUIRED:
+───────────────────────────────────────────────────────────────────────────────
+STEP 1: Remove totalPrice from request body acceptance
+STEP 2: Recalculate EVERYTHING on server using product IDs only
+STEP 3: Validate against database prices
+
+IMPLEMENTATION:
+
+A) Modify request handler (src/app/api/order/confirm/route.ts):
+
+```javascript
+// BEFORE - Lines 20-30 (REMOVE totalPrice):
+const { 
+  customerInfo, 
+  orderItems,     // Should only contain: id, quantity, size, addonIDs (NOT prices)
+  orderTime, 
+  orderType, 
+  deliveryCost,   // ❌ REMOVE - calculate on server
+  totalPrice,     // ❌ REMOVE - calculate on server
+  isCollection,
+  paymentMethodId,
+  loginId
+} = body
+
+// AFTER - Accept only IDs and quantities:
+const { 
+  customerInfo, 
+  orderItems,     // Array of: { productId, quantity, size, addonIds: [id1, id2], comment }
+  orderTime, 
+  orderType, 
+  isCollection,
+  paymentMethodId,
+  loginId
+} = body
+```
+
+B) Add server-side price calculation function:
+
+```javascript
+async function calculateServerSidePrice(orderItems, isCollection, supabase) {
+  let totalItemsPrice = 0
+  const validatedItems = []
+  
+  for (const item of orderItems) {
+    // 1. Fetch product from database by ID
+    const { data: product, error: productError } = await supabase
+      .from('Product')
+      .select('ProductID, Product, SmallPrice, MediumPrice, LargePrice')
+      .eq('ProductID', item.productId)
+      .eq('IsDisabled', 0)  // Only active products
+      .single()
+    
+    if (productError || !product) {
+      throw new Error(`Product ${item.productId} not found or disabled`)
+    }
+    
+    // 2. Get correct price based on size
+    let productPrice = 0
+    if (item.size === 'Малка' || item.size === 'Малък') {
+      productPrice = product.SmallPrice
+    } else if (item.size === 'Средна' || item.size === 'Среден') {
+      productPrice = product.MediumPrice || product.SmallPrice
+    } else if (item.size === 'Голяма' || item.size === 'Голям') {
+      productPrice = product.LargePrice || product.SmallPrice
+    } else {
+      productPrice = product.SmallPrice  // Default
+    }
+    
+    // 3. Calculate addon prices from database
+    let addonPrice = 0
+    const validatedAddons = []
+    
+    if (item.addonIds && item.addonIds.length > 0) {
+      const { data: addons, error: addonError } = await supabase
+        .from('Addon')
+        .select('AddonID, Name, Price, ProductTypeID')
+        .in('AddonID', item.addonIds)
+      
+      if (!addonError && addons) {
+        addons.forEach(addon => {
+          addonPrice += addon.Price || 0
+          validatedAddons.push({
+            AddonID: addon.AddonID,
+            Name: addon.Name,
+            Price: addon.Price
+          })
+        })
+      }
+    }
+    
+    // 4. Calculate item total
+    const itemTotal = (productPrice + addonPrice) * item.quantity
+    totalItemsPrice += itemTotal
+    
+    // 5. Store validated item data
+    validatedItems.push({
+      productId: product.ProductID,
+      name: product.Product,
+      size: item.size,
+      quantity: item.quantity,
+      unitPrice: productPrice,
+      addons: validatedAddons,
+      addonTotal: addonPrice,
+      itemTotal: itemTotal,
+      comment: item.comment
+    })
+  }
+  
+  // 6. Calculate delivery cost based on order type
+  let deliveryCost = 0
+  if (!isCollection) {
+    // TODO: Implement your delivery cost logic here
+    // For now, using a fixed rate or database lookup
+    deliveryCost = 5.00  // Example: 5 лв. delivery fee
+  }
+  
+  // 7. Return validated prices
+  return {
+    validatedItems,
+    itemsTotal: totalItemsPrice,
+    deliveryCost,
+    totalPrice: totalItemsPrice + deliveryCost
+  }
+}
+```
+
+C) Use validated prices in order creation:
+
+```javascript
+// Add after line 45 (after creating supabase client):
+
+// VALIDATE AND CALCULATE PRICES ON SERVER
+console.log('💰 Calculating server-side prices...')
+const priceCalculation = await calculateServerSidePrice(orderItems, isCollection, supabase)
+console.log('✅ Server-calculated total:', priceCalculation.totalPrice)
+
+// Use validated items for the rest of the process
+const validatedOrderItems = priceCalculation.validatedItems
+const serverTotalPrice = priceCalculation.totalPrice
+const serverDeliveryCost = priceCalculation.deliveryCost
+```
+
+D) Update email to use server-calculated prices:
+
+```javascript
+// Line 380 - BEFORE:
+totalAmount: totalPrice + (isCollection ? 0 : deliveryCost)
+
+// Line 380 - AFTER:
+totalAmount: serverTotalPrice  // Already includes delivery
+```
+
+SECURITY BENEFITS:
+✅ Client cannot manipulate prices
+✅ All prices fetched from database
+✅ Validation ensures products exist and are active
+✅ Consistent pricing across email, kitchen, database
+✅ Audit trail of actual prices paid
+
+
+═══════════════════════════════════════════════════════════════════════════════
+🚨 PRIORITY 2 - CRITICAL BUG (FIX IMMEDIATELY)
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE #2: Case Sensitivity Bug in Addon Price Calculation
+───────────────────────────────────────────────────────────────────────────────
+Location: src/app/api/order/confirm/route.ts (lines 199-205)
+
+CURRENT PROBLEM:
+- Addon objects have property 'Price' (uppercase P)
+- Server code reads 'price' (lowercase p)
+- Result: addon.price = undefined → addonTotal = 0
+- Kitchen shows wrong prices (missing all addon costs)
+
+CURRENT CODE (BROKEN):
+```javascript
+// Lines 199-205
+let addonTotal = 0
+if (item.addons && Array.isArray(item.addons)) {
+  addonTotal = item.addons.reduce((sum: number, addon: any) => {
+    return sum + (addon.price || 0)  // ❌ 'price' is undefined, should be 'Price'
+  }, 0)
+}
+```
+
+QUICK FIX (TEMPORARY - Until Priority 1 is implemented):
+───────────────────────────────────────────────────────────────────────────────
+Change line 203 from:
+```javascript
+return sum + (addon.price || 0)
+```
+
+To:
+```javascript
+return sum + (addon.Price || addon.price || 0)
+```
+
+This handles both uppercase and lowercase variants.
+
+PROPER FIX (With Priority 1):
+───────────────────────────────────────────────────────────────────────────────
+Once Priority 1 is implemented, this becomes irrelevant because:
+- Server fetches addons from database (always has 'Price')
+- No client addon data is trusted
+- Consistent data structure guaranteed
+
+
+═══════════════════════════════════════════════════════════════════════════════
+🔧 PRIORITY 3 - DATA INTEGRITY (FIX WITHIN 24-48 HOURS)
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE #3: Inconsistent TotalPrice Storage in Database
+───────────────────────────────────────────────────────────────────────────────
+Location: src/app/api/order/confirm/route.ts (lines 331, 339)
+
+CURRENT PROBLEM:
+- LkOrderProduct.TotalPrice stored with wrong calculation
+- Kitchen queries this field → shows wrong prices
+- Historical orders have incorrect prices
+- Financial reports are inaccurate
+
+CURRENT CODE:
+```javascript
+// Lines 331, 339
+const itemTotal = (item.price + addonTotal) * item.quantity  // addonTotal = 0 due to bug
+TotalPrice: itemTotal  // Wrong value saved to database
+```
+
+FIX REQUIRED:
+───────────────────────────────────────────────────────────────────────────────
+Once Priority 1 & 2 are fixed, this is automatically resolved.
+
+ADDITIONAL: Fix historical data (one-time migration):
+
+```sql
+-- Run this SQL script on your Supabase database to audit the damage:
+
+-- 1. Find orders with potential addon pricing issues
+SELECT 
+  o.OrderID,
+  o.OrderDT,
+  o.TotalAmount as OrderTotal,
+  SUM(lop.TotalPrice) as CalculatedItemsTotal,
+  o.DeliveryPrice,
+  (SUM(lop.TotalPrice) + COALESCE(o.DeliveryPrice, 0)) as ExpectedTotal,
+  (o.TotalAmount - (SUM(lop.TotalPrice) + COALESCE(o.DeliveryPrice, 0))) as Discrepancy
+FROM "Order" o
+JOIN "LkOrderProduct" lop ON o.OrderID = lop.OrderID
+GROUP BY o.OrderID, o.OrderDT, o.TotalAmount, o.DeliveryPrice
+HAVING ABS(o.TotalAmount - (SUM(lop.TotalPrice) + COALESCE(o.DeliveryPrice, 0))) > 0.01
+ORDER BY o.OrderDT DESC;
+
+-- 2. For Order #112 specifically:
+SELECT 
+  lop.*,
+  lop.Addons,
+  LENGTH(lop.Addons) as AddonsPresent
+FROM "LkOrderProduct" lop
+WHERE lop.OrderID = 112;
+```
+
+RECOMMENDATION:
+- Review all orders from the last 30 days
+- Calculate actual addon costs from saved JSON
+- Update LkOrderProduct.TotalPrice if needed
+- Keep audit log of corrections
+
+
+═══════════════════════════════════════════════════════════════════════════════
+🔧 PRIORITY 4 - CODE QUALITY (FIX WITHIN 1 WEEK)
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE #4: Type Safety for Addon Objects
+───────────────────────────────────────────────────────────────────────────────
+Location: Multiple files
+
+CURRENT PROBLEM:
+- Addon objects use inconsistent property names
+- No type enforcement
+- Easy to make case sensitivity mistakes
+
+FIX REQUIRED:
+───────────────────────────────────────────────────────────────────────────────
+
+A) Define strict interface (src/lib/menuData.ts):
+
+```typescript
+export interface ProductAddon {
+  AddonID: number
+  Name: string
+  Price: number          // Always uppercase 'P'
+  AddonType: string
+  ProductTypeID: number
+}
+```
+
+B) Enforce in cart context (src/components/CartContext.tsx):
+
+```typescript
+interface CartItem {
+  id: number
+  name: string
+  price: number
+  image: string
+  category: string
+  size?: string
+  addons: ProductAddon[]  // ✅ Strict type
+  comment?: string
+  quantity: number
+}
+```
+
+C) Add runtime validation:
+
+```typescript
+function validateAddon(addon: any): addon is ProductAddon {
+  return (
+    typeof addon.AddonID === 'number' &&
+    typeof addon.Name === 'string' &&
+    typeof addon.Price === 'number' &&
+    typeof addon.AddonType === 'string'
+  )
+}
+```
+
+
+═══════════════════════════════════════════════════════════════════════════════
+📋 PRIORITY 5 - TESTING & VALIDATION (FIX WITHIN 1 WEEK)
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE #5: No Price Calculation Tests
+───────────────────────────────────────────────────────────────────────────────
+
+FIX REQUIRED:
+───────────────────────────────────────────────────────────────────────────────
+
+Create test file: __tests__/priceCalculation.test.ts
+
+```typescript
+import { describe, it, expect } from 'vitest'
+
+describe('Order Price Calculation', () => {
+  it('should calculate pizza with addons correctly', () => {
+    const item = {
+      price: 15.00,
+      quantity: 2,
+      addons: [
+        { AddonID: 1, Name: 'Bacon', Price: 2.50, AddonType: 'meat' },
+        { AddonID: 2, Name: 'Extra Cheese', Price: 1.50, AddonType: 'cheese' }
+      ]
+    }
+    
+    const addonTotal = item.addons.reduce((sum, addon) => sum + addon.Price, 0)
+    const itemTotal = (item.price + addonTotal) * item.quantity
+    
+    expect(addonTotal).toBe(4.00)
+    expect(itemTotal).toBe(38.00)  // (15 + 4) × 2
+  })
+  
+  it('should handle free addons for non-pizza items', () => {
+    const item = {
+      price: 8.00,
+      category: 'burgers',
+      quantity: 1,
+      addons: [
+        { AddonID: 10, Name: 'Ketchup', Price: 0.50, AddonType: 'sauce' },
+        { AddonID: 11, Name: 'Mayo', Price: 0.50, AddonType: 'sauce' },
+        { AddonID: 12, Name: 'BBQ', Price: 0.50, AddonType: 'sauce' },
+        { AddonID: 13, Name: 'Ranch', Price: 0.50, AddonType: 'sauce' }  // 4th = paid
+      ]
+    }
+    
+    // First 3 of each type are free
+    const addonCost = calculateAddonCost(item.addons, item.category)
+    expect(addonCost).toBe(0.50)  // Only 4th addon is paid
+  })
+  
+  it('server and client calculations should match', async () => {
+    const clientTotal = 112.60
+    const serverTotal = await calculateServerSideTotal(orderItems, false)
+    
+    expect(serverTotal).toBe(clientTotal)
+  })
+})
+```
+
+
+═══════════════════════════════════════════════════════════════════════════════
+📊 PRIORITY 6 - MONITORING & ALERTS (FIX WITHIN 2 WEEKS)
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE #6: No Price Discrepancy Detection
+───────────────────────────────────────────────────────────────────────────────
+
+FIX REQUIRED:
+───────────────────────────────────────────────────────────────────────────────
+
+Add price validation middleware:
+
+```typescript
+// Add to src/app/api/order/confirm/route.ts
+
+function validatePriceConsistency(
+  clientTotal: number, 
+  serverTotal: number, 
+  orderId: number
+) {
+  const difference = Math.abs(clientTotal - serverTotal)
+  const threshold = 0.10  // 10 cents tolerance for rounding
+  
+  if (difference > threshold) {
+    // Log critical alert
+    console.error('🚨 PRICE MISMATCH DETECTED!', {
+      orderId,
+      clientTotal,
+      serverTotal,
+      difference,
+      timestamp: new Date().toISOString()
+    })
+    
+    // TODO: Send alert to monitoring system (Sentry, email, etc.)
+    // TODO: Flag order for manual review
+    
+    // Optionally block order
+    throw new Error(
+      `Price mismatch detected. Client: ${clientTotal}, Server: ${serverTotal}`
+    )
+  }
+  
+  return true
+}
+```
+
+
+═══════════════════════════════════════════════════════════════════════════════
+🎯 IMPLEMENTATION ROADMAP
+═══════════════════════════════════════════════════════════════════════════════
+
+DAY 1 (IMMEDIATE):
+──────────────────
+✅ Priority 2: Quick fix for case sensitivity (5 minutes)
+✅ Priority 1: Start implementing server-side price calculation (4-6 hours)
+
+DAY 2-3:
+────────
+✅ Priority 1: Complete server-side validation
+✅ Priority 1: Test thoroughly with various order types
+✅ Priority 3: Run database audit query
+
+DAY 4-7:
+────────
+✅ Priority 3: Fix historical data if needed
+✅ Priority 4: Add type safety
+✅ Priority 5: Create tests
+
+WEEK 2:
+───────
+✅ Priority 6: Add monitoring
+✅ Full regression testing
+✅ Deploy to production with monitoring
+
+
+═══════════════════════════════════════════════════════════════════════════════
+⚠️ CRITICAL WARNINGS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. DO NOT SKIP PRIORITY 1
+   - This is a CRITICAL security vulnerability
+   - Every order is at risk of price manipulation
+   - Financial loss potential is UNLIMITED
+
+2. BACKUP DATABASE BEFORE FIXES
+   - Test on staging environment first
+   - Have rollback plan ready
+
+3. COMMUNICATE WITH STAKEHOLDERS
+   - Inform about potential historical data issues
+   - Some orders may have incorrect totals
+   - May need to issue refunds/corrections
+
+4. MONITOR AFTER DEPLOYMENT
+   - Watch for price discrepancies
+   - Check kitchen vs email totals
+   - Verify customer complaints decrease
+
+
+═══════════════════════════════════════════════════════════════════════════════
+📝 VERIFICATION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+After implementing fixes, verify:
+
+□ Client cannot send arbitrary prices
+□ Server calculates all prices from database
+□ Email total = Kitchen total = Database total
+□ Addon prices correctly included
+□ Delivery cost calculated server-side
+□ Historical orders audited
+□ Tests passing
+□ Type safety enforced
+□ Monitoring in place
+□ No price manipulation possible
+
+Test scenarios:
+□ Order pizza with 3 addons
+□ Order burger with 4 sauces (verify 3 free, 1 paid)
+□ Order collection (no delivery fee)
+□ Order delivery (includes delivery fee)
+□ Try to manipulate price in dev tools (should fail)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+💰 ESTIMATED IMPACT
+═══════════════════════════════════════════════════════════════════════════════
+
+If bug has been live for 30 days with 100 orders:
+- Average 2 addons per order @ 2 лв each = 4 лв lost per order
+- Total revenue loss: 400 лв minimum
+- Plus potential for malicious price manipulation: UNLIMITED
+
+This is why Priority 1 is CRITICAL!
+
+
+═══════════════════════════════════════════════════════════════════════════════
+END OF FIXES DOCUMENT
+═══════════════════════════════════════════════════════════════════════════════
+

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { validateUserSession } from '@/utils/sessionAuth'
 
 // Create Supabase client with service role key for admin operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -24,8 +25,25 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const userIdNum = parseInt(userId, 10)
+    if (isNaN(userIdNum)) {
+      return NextResponse.json(
+        { error: 'Invalid user ID' },
+        { status: 400 }
+      )
+    }
+
+    // SECURITY: Validate user authorization (prevent IDOR)
+    const authValidation = await validateUserSession(request, userIdNum)
+    if (!authValidation.isValid) {
+      return NextResponse.json(
+        { error: authValidation.error || 'Unauthorized access' },
+        { status: 401 }
+      )
+    }
+
     // Fetch user profile information
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError} = await supabase
       .from('Login')
       .select(`
         LoginID,
@@ -37,7 +55,7 @@ export async function GET(request: NextRequest) {
         addressInstructions,
         created_at
       `)
-      .eq('LoginID', userId)
+      .eq('LoginID', userIdNum)
       .single()
 
     if (userError || !user) {
@@ -90,6 +108,23 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: 'User ID is required' },
         { status: 400 }
+      )
+    }
+
+    const userIdNum = parseInt(userId, 10)
+    if (isNaN(userIdNum)) {
+      return NextResponse.json(
+        { error: 'Invalid user ID' },
+        { status: 400 }
+      )
+    }
+
+    // SECURITY: Validate user authorization (prevent IDOR)
+    const authValidation = await validateUserSession(request, userIdNum)
+    if (!authValidation.isValid) {
+      return NextResponse.json(
+        { error: authValidation.error || 'Unauthorized access' },
+        { status: 401 }
       )
     }
 
@@ -150,7 +185,7 @@ export async function PUT(request: NextRequest) {
         phone: phone,
         updated_at: new Date().toISOString()
       })
-      .eq('LoginID', userId)
+      .eq('LoginID', userIdNum)
       .select(`
         LoginID,
         Name,

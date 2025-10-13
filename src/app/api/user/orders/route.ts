@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { validateUserSession } from '@/utils/sessionAuth'
 
 // Type definitions for the database response
 interface LkOrderProductData {
@@ -47,6 +48,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'User ID must be a valid number' },
         { status: 400 }
+      )
+    }
+
+    // SECURITY: Validate user authorization (prevent IDOR)
+    const authValidation = await validateUserSession(request, userIdNum)
+    if (!authValidation.isValid) {
+      return NextResponse.json(
+        { error: authValidation.error || 'Unauthorized access' },
+        { status: 401 }
       )
     }
 

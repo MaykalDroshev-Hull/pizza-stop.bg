@@ -22,18 +22,30 @@ export async function POST(request: NextRequest) {
         validPassword = process.env.ADMIN_PASSWORD || ''
         break
       case 'kitchen':
-        validUsername = process.env.KITCHEN_USERNAME || 'kitchen'
-        validPassword = process.env.KITCHEN_PASSWORD || 'kitchen123'
+        validUsername = process.env.KITCHEN_USERNAME || ''
+        validPassword = process.env.KITCHEN_PASSWORD || ''
         break
       case 'delivery':
-        validUsername = process.env.DELIVERY_USERNAME || 'delivery'
-        validPassword = process.env.DELIVERY_PASSWORD || 'delivery123'
+        validUsername = process.env.DELIVERY_USERNAME || ''
+        validPassword = process.env.DELIVERY_PASSWORD || ''
+        break
+      case 'printer':
+        validUsername = process.env.PRINTER_USERNAME || ''
+        validPassword = process.env.PRINTER_PASSWORD || ''
         break
       default:
         return NextResponse.json(
           { error: 'Invalid login type' },
           { status: 400 }
         )
+    }
+    
+    // Reject if credentials not configured
+    if (!validUsername || !validPassword) {
+      return NextResponse.json(
+        { error: 'Authentication not configured for this role' },
+        { status: 500 }
+      )
     }
 
     // Verify credentials

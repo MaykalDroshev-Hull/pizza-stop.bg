@@ -1,17 +1,54 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { listProducts, upsertProduct, setProductDisabled, deleteProducts } from '@/server/productService.server';
 
-export async function GET() {
+/**
+ * Simple admin authentication check
+ * TODO: Replace with proper session-based authentication
+ */
+function checkAdminAuth(req: NextRequest): boolean {
+  const authHeader = req.headers.get('x-admin-auth');
+  const adminToken = process.env.ADMIN_API_TOKEN;
+  
+  // For now, require a simple token
+  // TODO: Implement proper session validation
+  return authHeader === adminToken && !!adminToken;
+}
+
+export async function GET(req: NextRequest) {
+  // Admin authentication required
+  if (!checkAdminAuth(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Admin access required' },
+      { status: 401 }
+    );
+  }
+  
   try { return NextResponse.json(await listProducts()); }
   catch (e:any) { return NextResponse.json({ error: e.message }, { status: 400 }); }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Admin authentication required
+  if (!checkAdminAuth(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Admin access required' },
+      { status: 401 }
+    );
+  }
+  
   try { return NextResponse.json(await upsertProduct(await req.json())); }
   catch (e:any) { return NextResponse.json({ error: e.message }, { status: 400 }); }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
+  // Admin authentication required
+  if (!checkAdminAuth(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Admin access required' },
+      { status: 401 }
+    );
+  }
+  
   try {
     const { id, isDisabled } = await req.json();
     await setProductDisabled(Number(id), !!isDisabled);
@@ -21,7 +58,15 @@ export async function PUT(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  // Admin authentication required
+  if (!checkAdminAuth(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Admin access required' },
+      { status: 401 }
+    );
+  }
+  
   try {
     const { ids } = await req.json();
     if (!Array.isArray(ids) || ids.length === 0) {

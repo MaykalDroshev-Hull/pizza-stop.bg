@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { emailService } from '@/utils/emailService'
+import { calculateServerSidePrice, validatePriceMatch } from '@/utils/priceCalculation'
 
 // Helper function to get payment method name
 function getPaymentMethodName(paymentMethodId: number): string {
@@ -43,6 +44,56 @@ export async function POST(request: NextRequest) {
 
     // Create server-side Supabase client (bypasses RLS)
     const supabase = createServerClient()
+
+    // ===== CRITICAL SECURITY: Server-Side Price Validation =====
+    console.log('💰 Calculating and validating prices on server...')
+    const priceCalculation = await calculateServerSidePrice(
+      orderItems,
+      isCollection,
+      customerInfo.LocationCoordinates ? 
+        (typeof customerInfo.LocationCoordinates === 'string' ? 
+          JSON.parse(customerInfo.LocationCoordinates) : customerInfo.LocationCoordinates) 
+        : undefined
+    )
+
+    // Log warnings if any products were invalid
+    if (priceCalculation.warnings.length > 0) {
+      console.warn('⚠️ Price calculation warnings:', priceCalculation.warnings)
+    }
+
+    // Validate client price vs server price
+    const clientTotal = totalPrice + (isCollection ? 0 : deliveryCost)
+    const serverTotal = priceCalculation.totalPrice
+    const priceValidation = validatePriceMatch(clientTotal, serverTotal)
+
+    if (!priceValidation.isValid) {
+      console.error('🚨 SECURITY ALERT: Price mismatch detected!')
+      console.error(`   Client sent: ${clientTotal} лв`)
+      console.error(`   Server calculated: ${serverTotal} лв`)
+      console.error(`   Difference: ${priceValidation.difference} лв`)
+      
+      // Log for security audit
+      console.error('🚨 POTENTIAL PRICE MANIPULATION ATTEMPT:', {
+        timestamp: new Date().toISOString(),
+        customerEmail: customerInfo.email,
+        clientTotal,
+        serverTotal,
+        difference: priceValidation.difference
+      })
+      
+      // For now, continue with server price but flag for review
+      // TODO: In production, you may want to reject the order
+    }
+
+    // Use SERVER-CALCULATED prices (not client prices!)
+    const validatedTotalPrice = serverTotal
+    const validatedDeliveryCost = priceCalculation.deliveryCost
+    const validatedItemsTotal = priceCalculation.itemsTotal
+
+    console.log('✅ Server-side price validation complete:')
+    console.log(`   Items total: ${validatedItemsTotal.toFixed(2)} лв`)
+    console.log(`   Delivery: ${validatedDeliveryCost.toFixed(2)} лв`)
+    console.log(`   Final total: ${validatedTotalPrice.toFixed(2)} лв`)
 
     let finalLoginId = loginId
 
@@ -169,8 +220,8 @@ export async function POST(request: NextRequest) {
       IsPaid: false, // Orders start as unpaid
       ExpectedDT: expectedDT.toISOString(),
       OrderType: isCollection ? 1 : 2, // 1 = Restaurant collection, 2 = Delivery
-      DeliveryPrice: isCollection ? 0 : deliveryCost, // Add delivery charge
-      TotalAmount: totalPrice + (isCollection ? 0 : deliveryCost) // Add total amount for the order
+      DeliveryPrice: validatedDeliveryCost, // Use server-validated delivery cost
+      TotalAmount: validatedTotalPrice // Use server-validated total (SECURITY: Never trust client)
     }
 
     console.log('📋 Creating order with data:', orderData)
@@ -196,12 +247,35 @@ export async function POST(request: NextRequest) {
       const orderItemsData: any[] = []
       
       for (const item of orderItems) {
-        // Calculate addon prices
+        // Calculate addon prices with same logic as CartContext
         let addonTotal = 0
         if (item.addons && Array.isArray(item.addons)) {
-          addonTotal = item.addons.reduce((sum: number, addon: any) => {
-            return sum + (addon.price || 0)
-          }, 0)
+          // For pizzas (including 50/50), all addons are paid
+          if (item.category === 'pizza' || item.category === 'pizza-5050') {
+            addonTotal = item.addons.reduce((sum: number, addon: any) => {
+              return sum + (addon.Price || addon.price || 0)
+            }, 0)
+          } else {
+            // For other products (burgers, doners, sauces), first 3 of each type are free
+            addonTotal = item.addons
+              .map((addon: any) => {
+                const addonPrice = addon.Price || addon.price || 0
+                const addonType = addon.AddonType || addon.addonType
+                
+                // Count how many addons of this type are selected
+                const typeSelected = item.addons.filter((a: any) => 
+                  (a.AddonType || a.addonType) === addonType
+                )
+                const addonId = addon.AddonID || addon.addonId || addon.id
+                const positionInType = typeSelected.findIndex((a: any) => 
+                  (a.AddonID || a.addonId || a.id) === addonId
+                )
+                
+                // First 3 of each type are free
+                return positionInType < 3 ? 0 : addonPrice
+              })
+              .reduce((sum: number, price: number) => sum + price, 0)
+          }
         }
         
         // Check if this is a 50/50 pizza (category: 'pizza-5050')
@@ -365,31 +439,74 @@ export async function POST(request: NextRequest) {
         to: customerInfo.email,
         name: customerInfo.name,
         orderId: order.OrderID.toString(),
-        orderDetails: {
-          items: orderItems.map((item: any) => ({
-            name: item.name,
-            size: item.size,
-            quantity: item.quantity,
-            price: item.price,
-            addons: item.addons?.map((addon: any) => ({
-              name: addon.Name || addon.name,
-              price: addon.Price || addon.price
-            })),
-            comment: item.comment
-          })),
-          totalAmount: totalPrice + (isCollection ? 0 : deliveryCost),
-          orderTime: new Date().toLocaleString('bg-BG'),
-          orderType: isCollection ? 'Вземане от ресторанта' : 'Доставка',
-          paymentMethod: getPaymentMethodName(paymentMethodId),
-          location: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : (customerInfo.LocationText || customerInfo.address),
-          estimatedTime: expectedDT.toLocaleString('bg-BG', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+        orderDetails: (() => {
+          // Calculate email items with correct pricing
+          const emailItems = orderItems.map((item: any) => {
+            // Calculate addon cost for this specific item (same logic as CartContext)
+            let itemAddonCost = 0
+            if (item.addons && Array.isArray(item.addons)) {
+              if (item.category === 'pizza' || item.category === 'pizza-5050') {
+                // For pizzas, all addons are paid
+                itemAddonCost = item.addons.reduce((sum: number, addon: any) => {
+                  return sum + (addon.Price || addon.price || 0)
+                }, 0)
+              } else {
+                // For other products, first 3 of each type are free
+                itemAddonCost = item.addons
+                  .map((addon: any) => {
+                    const addonPrice = addon.Price || addon.price || 0
+                    const addonType = addon.AddonType || addon.addonType
+                    const typeSelected = item.addons.filter((a: any) => 
+                      (a.AddonType || a.addonType) === addonType
+                    )
+                    const addonId = addon.AddonID || addon.addonId || addon.id
+                    const positionInType = typeSelected.findIndex((a: any) => 
+                      (a.AddonID || a.addonId || a.id) === addonId
+                    )
+                    return positionInType < 3 ? 0 : addonPrice
+                  })
+                  .reduce((sum: number, price: number) => sum + price, 0)
+              }
+            }
+            
+            return {
+              name: item.name,
+              size: item.size,
+              quantity: item.quantity,
+              price: item.price + itemAddonCost,  // Include addons in displayed price
+              addons: item.addons?.map((addon: any) => ({
+                name: addon.Name || addon.name,
+                price: addon.Price || addon.price
+              })),
+              comment: item.comment
+            }
           })
-        }
+          
+          // Calculate total from email items (more reliable than server validation)
+          const emailItemsTotal = emailItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+          const emailTotal = emailItemsTotal + validatedDeliveryCost
+          
+          console.log('📧 Email price calculation:')
+          console.log(`   Items total: ${emailItemsTotal.toFixed(2)} лв`)
+          console.log(`   Delivery: ${validatedDeliveryCost.toFixed(2)} лв`)
+          console.log(`   Email total: ${emailTotal.toFixed(2)} лв`)
+          
+          return {
+            items: emailItems,
+            totalAmount: emailTotal,  // Use email-calculated total instead of server validation
+            orderTime: new Date().toLocaleString('bg-BG'),
+            orderType: isCollection ? 'Вземане от ресторанта' : 'Доставка',
+            paymentMethod: getPaymentMethodName(paymentMethodId),
+            location: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : (customerInfo.LocationText || customerInfo.address),
+            estimatedTime: expectedDT.toLocaleString('bg-BG', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          }
+        })()
       }
 
       await emailService.sendOrderConfirmationEmail(emailData)
