@@ -342,8 +342,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                 />
                 <span className="text-sm sm:text-base text-gray-300">
                   {formData.isDisabled
-                    ? "Продуктът е деактивиран"
-                    : "Продуктът е активен"}
+                    ? "Покажи продукта"
+                    : "Скрий продукта"}
                 </span>
               </label>
             </div>
