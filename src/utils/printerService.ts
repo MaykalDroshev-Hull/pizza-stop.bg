@@ -124,9 +124,9 @@ function generateTicketBytes(data: TicketData): number[] {
   bytes.push(...Commands.FEED_LINE);
   
   // Date and time
-  bytes.push(...textToBytes(twoColumnLine('Дата:', data.date, width)));
+  bytes.push(...textToBytes(twoColumnLine('Дата:', data.placedTime.split(' ')[0], width)));
   bytes.push(...Commands.FEED_LINE);
-  bytes.push(...textToBytes(twoColumnLine('Час:', data.time, width)));
+  bytes.push(...textToBytes(twoColumnLine('Час:', data.placedTime.split(' ')[1] || data.placedTime, width)));
   bytes.push(...Commands.FEED_LINE);
   
   // Order type
@@ -144,7 +144,7 @@ function generateTicketBytes(data: TicketData): number[] {
   
   bytes.push(...textToBytes('Име: ' + data.customerName));
   bytes.push(...Commands.FEED_LINE);
-  bytes.push(...textToBytes('Тел: ' + data.customerPhone));
+  bytes.push(...textToBytes('Тел: ' + data.phone));
   bytes.push(...Commands.FEED_LINE);
   
   if (data.address) {
@@ -183,13 +183,13 @@ function generateTicketBytes(data: TicketData): number[] {
   data.items.forEach(item => {
     // Item name and price
     const itemLine = `${item.quantity}x ${item.name}`;
-    const price = `${item.totalPrice.toFixed(2)} лв`;
+    const price = `${(item.quantity * item.price).toFixed(2)} лв`;
     bytes.push(...textToBytes(twoColumnLine(itemLine, price, width)));
     bytes.push(...Commands.FEED_LINE);
     
     // Addons/customizations
-    if (item.customizations && item.customizations.length > 0) {
-      const addonsText = '  + ' + item.customizations.join(', ');
+    if (item.addons && item.addons.length > 0) {
+      const addonsText = '  + ' + item.addons.join(', ');
       
       // Word wrap addons
       if (addonsText.length > width) {
@@ -241,8 +241,8 @@ function generateTicketBytes(data: TicketData): number[] {
   bytes.push(...textToBytes(twoColumnLine('Междинна сума:', data.subtotal.toFixed(2) + ' лв', width)));
   bytes.push(...Commands.FEED_LINE);
   
-  if (data.deliveryFee > 0) {
-    bytes.push(...textToBytes(twoColumnLine('Доставка:', data.deliveryFee.toFixed(2) + ' лв', width)));
+  if (data.deliveryCharge > 0) {
+    bytes.push(...textToBytes(twoColumnLine('Доставка:', data.deliveryCharge.toFixed(2) + ' лв', width)));
     bytes.push(...Commands.FEED_LINE);
   }
   
@@ -250,7 +250,7 @@ function generateTicketBytes(data: TicketData): number[] {
   bytes.push(...Commands.FEED_LINE);
   
   bytes.push(...Commands.DOUBLE_HEIGHT);
-  bytes.push(...textToBytes(twoColumnLine('ОБЩО:', data.totalPrice.toFixed(2) + ' лв', width)));
+  bytes.push(...textToBytes(twoColumnLine('ОБЩО:', data.total.toFixed(2) + ' лв', width)));
   bytes.push(...Commands.FEED_LINE);
   bytes.push(...Commands.NORMAL_SIZE);
   bytes.push(...Commands.BOLD_OFF);
@@ -356,32 +356,33 @@ export async function testPrinterConnection(): Promise<{ success: boolean; messa
  */
 export async function printTestPage(): Promise<boolean> {
   const testData: TicketData = {
-    orderId: '999',
-    date: new Date().toLocaleDateString('bg-BG'),
-    time: new Date().toLocaleTimeString('bg-BG'),
-    orderType: 'TEST',
+    orderId: 999,
+    orderType: 'ДОСТАВКА',
     customerName: 'Test Customer',
-    customerPhone: '0888 123 456',
     address: 'Test Address',
+    phone: '0888 123 456',
     items: [
       {
         name: 'Test Item',
         quantity: 1,
-        unitPrice: 10.00,
-        totalPrice: 10.00,
-        customizations: ['Test Addon'],
+        price: 10.00,
+        addons: ['Test Addon'],
         comment: 'This is a test print',
       },
     ],
     subtotal: 10.00,
-    deliveryFee: 0,
-    totalPrice: 10.00,
-    paymentMethod: 'Cash',
+    serviceCharge: 0,
+    deliveryCharge: 0,
+    total: 10.00,
     isPaid: false,
+    paymentMethod: 'Cash',
+    placedTime: new Date().toLocaleString('bg-BG'),
+    deliveryTime: new Date().toLocaleString('bg-BG'),
+    restaurantName: 'Pizza Stop',
+    restaurantAddress: 'Test Address',
     restaurantPhone: '0888 123 456',
-    specialInstructions: 'This is a test print from Pizza Stop',
   };
-  
+
   return printToNetworkPrinter(testData);
 }
 
