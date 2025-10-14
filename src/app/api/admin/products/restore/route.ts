@@ -1,7 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { restoreProducts } from '@/server/productService.server';
 
+/**
+ * Simple admin authentication check
+ * TODO: Replace with proper session-based authentication
+ */
+function checkAdminAuth(req: NextRequest): boolean {
+  const authHeader = req.headers.get('x-admin-auth');
+  const adminToken = process.env.ADMIN_API_TOKEN;
+
+  // For now, require a simple token
+  // TODO: Implement proper session validation
+  return authHeader === adminToken && !!adminToken;
+}
+
 export async function POST(request: NextRequest) {
+  // Admin authentication required
+  if (!checkAdminAuth(request)) {
+    return NextResponse.json(
+      { error: 'Unauthorized - Admin access required' },
+      { status: 401 }
+    );
+  }
+
   try {
     const { ids } = await request.json();
     
