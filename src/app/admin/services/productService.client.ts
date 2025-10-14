@@ -13,9 +13,35 @@ export interface DatabaseProduct {
 }
 
 /**
+ * Get admin authentication token for API calls
+ */
+async function getAdminAuthToken(): Promise<string> {
+  if (typeof window === 'undefined') {
+    throw new Error('Cannot get auth token on server side');
+  }
+
+  // Check if admin is logged in
+  const isAdminLoggedIn = localStorage.getItem('admin_authenticated') === 'true';
+
+  if (!isAdminLoggedIn) {
+    throw new Error('Unauthorized - Admin access required');
+  }
+
+  // Get Supabase session for access token
+  const { supabase } = await import('@/lib/supabase');
+  const { data: { session }, error } = await supabase.auth.getSession();
+
+  if (error || !session?.access_token) {
+    throw new Error('No valid session found - please log in again');
+  }
+
+  return session.access_token;
+}
+
+/**
  * Check if admin is authenticated for client-side validation
  */
-function validateAdminAuth(): void {
+async function validateAdminAuth(): Promise<void> {
   if (typeof window === 'undefined') {
     return;
   }
@@ -26,13 +52,20 @@ function validateAdminAuth(): void {
   if (!isAdminLoggedIn) {
     throw new Error('Unauthorized - Admin access required');
   }
+
+  // Validate session exists
+  await getAdminAuthToken();
 }
 
 export async function getProductsClient(): Promise<DatabaseProduct[]> {
-  validateAdminAuth();
+  await validateAdminAuth();
+  const authToken = await getAdminAuthToken();
   const res = await fetch('/api/admin/products', {
     cache: 'no-store',
-    headers: { 'Content-Type': 'application/json' }
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-auth': authToken
+    }
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
@@ -65,10 +98,14 @@ export async function getAddons(): Promise<DatabaseProduct[]> {
 }
 
 export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<DatabaseProduct> {
-  validateAdminAuth();
+  await validateAdminAuth();
+  const authToken = await getAdminAuthToken();
   const res = await fetch('/api/admin/products', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-auth': authToken
+    },
     body: JSON.stringify(p),
   });
   const json = await res.json();
@@ -77,10 +114,14 @@ export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<
 }
 
 export async function setProductDisabledClient(id: number, isDisabled: boolean) {
-  validateAdminAuth();
+  await validateAdminAuth();
+  const authToken = await getAdminAuthToken();
   const res = await fetch('/api/admin/products', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-auth': authToken
+    },
     body: JSON.stringify({ id, isDisabled }),
   });
   const json = await res.json();
@@ -97,10 +138,14 @@ export interface DeleteProductsResponse {
 }
 
 export async function deleteProductsClient(ids: number[]): Promise<DeleteProductsResponse> {
-  validateAdminAuth();
+  await validateAdminAuth();
+  const authToken = await getAdminAuthToken();
   const res = await fetch('/api/admin/products', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-auth': authToken
+    },
     body: JSON.stringify({ ids }),
   });
   const json = await res.json();
@@ -109,10 +154,14 @@ export async function deleteProductsClient(ids: number[]): Promise<DeleteProduct
 }
 
 export async function softDeleteProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
-  validateAdminAuth();
+  await validateAdminAuth();
+  const authToken = await getAdminAuthToken();
   const res = await fetch('/api/admin/products/soft-delete', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-auth': authToken
+    },
     body: JSON.stringify({ ids }),
   });
   const json = await res.json();
@@ -121,10 +170,14 @@ export async function softDeleteProductsClient(ids: number[]): Promise<{ success
 }
 
 export async function restoreProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
-  validateAdminAuth();
+  await validateAdminAuth();
+  const authToken = await getAdminAuthToken();
   const res = await fetch('/api/admin/products/restore', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-auth': authToken
+    },
     body: JSON.stringify({ ids }),
   });
   const json = await res.json();
