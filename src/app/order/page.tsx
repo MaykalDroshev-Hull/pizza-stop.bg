@@ -94,9 +94,16 @@ export default function MenuPage() {
 
   const calculateFiftyFiftyPrice = (leftPizza: any, rightPizza: any, sizeName: string | null) => {
     if (!leftPizza || !rightPizza || !sizeName) return 0
-    
+
     const leftPrice = getPriceForSize(leftPizza, sizeName)
     const rightPrice = getPriceForSize(rightPizza, sizeName)
+
+    // Validate prices are reasonable
+    if (leftPrice < 0.50 || leftPrice > 1000 || rightPrice < 0.50 || rightPrice > 1000) {
+      console.error('🚨 ORDER PAGE: Invalid 50/50 pizza prices detected', { leftPrice, rightPrice })
+      return 0
+    }
+
     return Math.max(leftPrice, rightPrice)
   }
 
@@ -117,11 +124,18 @@ export default function MenuPage() {
       return
     }
 
+    // Validate final price before adding to cart
+    if (fiftyFiftySelection.finalPrice < 0.50 || fiftyFiftySelection.finalPrice > 1000) {
+      console.error('🚨 ORDER PAGE: Invalid 50/50 pizza final price detected:', fiftyFiftySelection.finalPrice)
+      alert('Невалидна цена за 50/50 пицата. Моля, опреснете страницата и опитайте отново.')
+      return
+    }
+
     // Create unique cart item for 50/50 pizza
     // IMPORTANT: Store base price WITHOUT addons (addons will be calculated by CartContext)
     const leftHalfName = fiftyFiftySelection.leftHalf?.name || 'Unknown'
     const rightHalfName = fiftyFiftySelection.rightHalf?.name || 'Unknown'
-    
+
     const cartItem = {
       id: Date.now(), // Unique ID based on timestamp
       name: `${leftHalfName} / ${rightHalfName}`,
@@ -135,10 +149,10 @@ export default function MenuPage() {
     }
 
     addItem(cartItem)
-    
+
     // Reset selection and go back to step 1
     resetFiftyFiftySelection()
-    
+
     // Show success message
     console.log('50/50 пица добавена в кошницата:', cartItem)
   }
@@ -210,7 +224,20 @@ export default function MenuPage() {
         console.log('🍔 Burgers count:', data.burgers?.length || 0)
         console.log('🥙 Doners count:', data.doners?.length || 0)
         console.log('🥤 Drinks count:', data.drinks?.length || 0)
-        
+
+        // Validate menu data prices for security
+        const allItems = Object.values(data).flat()
+        const suspiciousItems = allItems.filter((item: any) => {
+          const prices = [item.smallPrice, item.mediumPrice, item.largePrice, item.basePrice].filter(p => p != null)
+          return prices.some((price: number) => price < 0.20 || price > 1000)
+        })
+
+        if (suspiciousItems.length > 0) {
+          console.error('🚨 ORDER PAGE: Suspicious prices detected in menu data:', suspiciousItems)
+          alert('Открити са невалидни цени в менюто. Моля, опреснете страницата.')
+          return
+        }
+
         setMenuData(data)
         setIsDataLoaded(true)
         console.log('✅ Order page: Data loaded, about to call stopLoading()')
@@ -267,7 +294,7 @@ export default function MenuPage() {
         menuData[activeCategory] || []
 
   const handleAddToCart = (item: any) => {
-    
+
     // For sauces with single size, add directly to cart (same logic as CartModal)
     if (item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) {
       // Use default size for sauces that don't require size selection
@@ -275,10 +302,17 @@ export default function MenuPage() {
       if (item.sizes && item.sizes.length > 0) {
         finalSize = item.sizes[0].name
       }
-      
+
       // Get base price (same logic as CartModal)
       const basePrice = item.price || item.basePrice || 0
-      
+
+      // Validate price before adding to cart
+      if (basePrice < 0.50 || basePrice > 1000) {
+        console.error('🚨 ORDER PAGE: Invalid price detected for item:', item.name, 'Price:', basePrice)
+        alert('Невалидна цена за артикула. Моля, опреснете страницата.')
+        return
+      }
+
       const cartItem = {
         ...item,
         price: basePrice,

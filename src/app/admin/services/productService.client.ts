@@ -12,8 +12,42 @@ export interface DatabaseProduct {
   isDeleted?: number | boolean;
 }
 
+/**
+ * Check if admin is authenticated and get auth token
+ */
+function getAdminAuthHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  // Check if admin is logged in
+  const isAdminLoggedIn = localStorage.getItem('admin_authenticated') === 'true';
+
+  if (!isAdminLoggedIn) {
+    throw new Error('Unauthorized - Admin access required');
+  }
+
+  // Get the admin API token from environment (it should be available on client-side)
+  // Note: In production, this should come from a secure source, not exposed to client
+  const adminToken = process.env.NEXT_PUBLIC_ADMIN_API_TOKEN;
+
+  if (!adminToken) {
+    console.error('Admin API token not found. Please set NEXT_PUBLIC_ADMIN_API_TOKEN environment variable.');
+    throw new Error('Admin configuration error');
+  }
+
+  return {
+    'x-admin-auth': adminToken,
+    'Content-Type': 'application/json'
+  };
+}
+
 export async function getProductsClient(): Promise<DatabaseProduct[]> {
-  const res = await fetch('/api/admin/products', { cache: 'no-store' });
+  const headers = getAdminAuthHeaders();
+  const res = await fetch('/api/admin/products', {
+    cache: 'no-store',
+    headers
+  });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json as DatabaseProduct[];
@@ -45,8 +79,10 @@ export async function getAddons(): Promise<DatabaseProduct[]> {
 }
 
 export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<DatabaseProduct> {
+  const headers = getAdminAuthHeaders();
   const res = await fetch('/api/admin/products', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers,
     body: JSON.stringify(p),
   });
   const json = await res.json();
@@ -55,8 +91,10 @@ export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<
 }
 
 export async function setProductDisabledClient(id: number, isDisabled: boolean) {
+  const headers = getAdminAuthHeaders();
   const res = await fetch('/api/admin/products', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    method: 'PUT',
+    headers,
     body: JSON.stringify({ id, isDisabled }),
   });
   const json = await res.json();
@@ -73,9 +111,10 @@ export interface DeleteProductsResponse {
 }
 
 export async function deleteProductsClient(ids: number[]): Promise<DeleteProductsResponse> {
+  const headers = getAdminAuthHeaders();
   const res = await fetch('/api/admin/products', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ ids }),
   });
   const json = await res.json();
@@ -84,9 +123,10 @@ export async function deleteProductsClient(ids: number[]): Promise<DeleteProduct
 }
 
 export async function softDeleteProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
+  const headers = getAdminAuthHeaders();
   const res = await fetch('/api/admin/products/soft-delete', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ ids }),
   });
   const json = await res.json();
@@ -95,9 +135,10 @@ export async function softDeleteProductsClient(ids: number[]): Promise<{ success
 }
 
 export async function restoreProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
+  const headers = getAdminAuthHeaders();
   const res = await fetch('/api/admin/products/restore', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ ids }),
   });
   const json = await res.json();

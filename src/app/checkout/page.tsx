@@ -1271,24 +1271,50 @@ export default function CheckoutPage() {
        }
      }
      
-     // Handle order submission
-     const finalTotal = totalPrice + (isCollection ? 0 : deliveryCost)
-     
-     console.log('📦 Order details:', {
-       customerInfo, 
-       orderItems: items,
-       orderTime, 
-       orderType,
-       deliveryCost: isCollection ? 0 : deliveryCost,
-       totalPrice,
-       finalTotal,
-       addressZone,
-       isCollection,
-       paymentMethodId,
-       paymentData: paymentMethodId === 5 ? { ...paymentData, cardNumber: '****' } : null // Log payment data (masked)
-     })
-     
-     // Prepare order data for API
+    // Handle order submission
+    const finalTotal = totalPrice + (isCollection ? 0 : deliveryCost)
+
+    // Client-side price validation before sending to server
+    const suspiciousItems = items.filter(item => {
+      // Check for suspiciously low prices (less than 0.50 лв)
+      if (item.price < 0.50 && item.price > 0) {
+        console.error(`🚨 CLIENT VALIDATION: Suspiciously low price detected: ${item.name} priced at ${item.price} лв`)
+        return true
+      }
+      // Check for zero prices on non-free items
+      if (item.price === 0 && !item.name.toLowerCase().includes('free')) {
+        console.error(`🚨 CLIENT VALIDATION: Zero price detected: ${item.name} priced at 0 лв`)
+        return true
+      }
+      // Check for unreasonably high prices (more than 1000 лв)
+      if (item.price > 1000) {
+        console.error(`🚨 CLIENT VALIDATION: Unreasonably high price detected: ${item.name} priced at ${item.price} лв`)
+        return true
+      }
+      return false
+    })
+
+    if (suspiciousItems.length > 0) {
+      console.error('🚨 CLIENT VALIDATION: Order blocked due to suspicious pricing')
+      alert('Някои артикули имат невалидни цени. Моля, опреснете страницата и опитайте отново.')
+      return
+    }
+
+    console.log('📦 Order details:', {
+      customerInfo,
+      orderItems: items,
+      orderTime,
+      orderType,
+      deliveryCost: isCollection ? 0 : deliveryCost,
+      totalPrice,
+      finalTotal,
+      addressZone,
+      isCollection,
+      paymentMethodId,
+      paymentData: paymentMethodId === 5 ? { ...paymentData, cardNumber: '****' } : null // Log payment data (masked)
+    })
+
+    // Prepare order data for API
     const orderData = {
       customerInfo: {
         ...customerInfo,
