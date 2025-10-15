@@ -102,8 +102,6 @@ const AdminPage = (): React.JSX.Element => {
           {renderTabContent()}
         </div>
 
-          {/* Review Management */}
-          <ReviewManagement />
         </div>
       </div>
     </ProtectedRoute>
