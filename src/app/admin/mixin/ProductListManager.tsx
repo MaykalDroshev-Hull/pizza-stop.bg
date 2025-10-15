@@ -780,7 +780,12 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       setCurrentPage(currentPage + 1);
     }
   };
-
+  const inflect = (name) => {
+    const n = (name ?? "").trim();
+    if (!n) return "";
+    if (n.toLowerCase() === "продукти") return n.slice(0, -1);     
+    return  `${n.slice(0, -1)}а`; 
+  };
   // Generate pagination items
   const generatePaginationItems = (): (number | string)[] => {
     const items: (number | string)[] = [];
@@ -812,6 +817,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         items.push(totalPages);
       }
     }
+ 
     
     return items;
   };
@@ -959,8 +965,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 hover:bg-orange-700 px-4 py-3 sm:px-6 text-white font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 w-full sm:w-auto text-sm sm:text-base"
         >
           <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="hidden xs:inline">Добави {tabName.slice(0, -1)}</span>
-          <span className="xs:hidden">Добави {tabName.slice(0, -1)}</span>
+          <span className="hidden xs:inline">Добави {inflect(tabName)}</span>
+          <span className="xs:hidden">Добави {inflect(tabName)}</span>
         </button>
       </div>
 
@@ -1259,7 +1265,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                     className="w-3 h-3 sm:w-4 sm:h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2"
                   />
                   <span className="text-xs sm:text-sm text-gray-400">
-                    {product.isDisabled ? 'Скрий' : 'Покажи'}
+                    {'Скрито'}
                   </span>
                 </label>
               </div>
@@ -1359,7 +1365,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-800">
         <h2 className="text-lg sm:text-xl font-bold text-white">
-          Добавяне на нов {tabName.slice(0, -1)}
+          Добавяне на {inflect(tabName)}
         </h2>
         <button
           onClick={handleCloseModal}
