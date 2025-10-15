@@ -919,3 +919,4 @@ This is not a security issue - it's a business logic bug. The security is workin
 
 **Summary**: Your cart (204 лв) is CORRECT. The server is calculating WRONG (219.80 лв) because it doesn't apply the free addon rule. The email mystery (116.10 лв) needs further investigation with actual order data.
 
+

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ProductAddon } from '../lib/menuData'
 
 interface AddonSelectorProps {
@@ -14,6 +14,11 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons, category 
   const [selectedAddonIds, setSelectedAddonIds] = useState<number[]>(
     selectedAddons.map(addon => addon.AddonID)
   )
+
+  // Sync local state with prop changes to prevent double selection
+  useEffect(() => {
+    setSelectedAddonIds(selectedAddons.map(addon => addon.AddonID))
+  }, [selectedAddons])
 
   // Group addons by type
   const sauces = addons.filter(addon => addon.AddonType === 'sauce')
