@@ -1320,10 +1320,9 @@ export default function CheckoutPage() {
    const orderData = {
      customerInfo: {
        ...customerInfo,
-       email: orderType === 'guest' ? customerInfo.email : (user?.email || `guest_${Date.now()}@pizza-stop.bg`),
-       // For collection orders, ensure address fields are properly set
-       LocationText: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : customerInfo.LocationText,
-       address: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : customerInfo.address
+      email: orderType === 'guest' ? customerInfo.email : (user?.email || `guest_${Date.now()}@pizza-stop.bg`),
+      // For collection orders, ensure address fields are properly set
+      LocationText: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : customerInfo.LocationText
      },
      orderItems: items,
      orderTime: {

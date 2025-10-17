@@ -449,7 +449,7 @@ export async function POST(request: NextRequest) {
           const itemTotal = (item.price + addonTotal) * item.quantity
           
           // Extract ProductID: handle both simple IDs and composite IDs (productId_timestamp)
-          let productId = null
+          let productId: number | null = null
           if (item.productId) {
             // Use explicit productId if available
             productId = item.productId

@@ -46,6 +46,7 @@ export const addonSchema = z.object({
 // Order item schema
 export const orderItemSchema = z.object({
   id: z.union([z.number().int().positive(), z.string()]), // Allow string for unique cart item IDs
+  productId: z.number().int().positive().optional(), // Original database ProductID
   name: z.string().min(1).max(200),
   price: z.number().nonnegative(),
   size: z.string().max(50).optional(),
