@@ -294,7 +294,15 @@ export default function MenuPage() {
         menuData[activeCategory] || []
 
   const handleAddToCart = (item: any) => {
-
+    
+    // Define items that should be added directly to cart without personalization
+    const directAddItems = [
+      'Порция картофи',
+      'Порция картофи с моцарела', 
+      'Порция картофи със сирене',
+      'Порция салата'
+    ]
+    
     // For sauces with single size, add directly to cart (same logic as CartModal)
     if (item.category === 'sauces' && (!item.sizes || item.sizes.length <= 1)) {
       // Use default size for sauces that don't require size selection
@@ -305,16 +313,40 @@ export default function MenuPage() {
 
       // Get base price (same logic as CartModal)
       const basePrice = item.price || item.basePrice || 0
-
-      // Validate price before adding to cart
-      if (basePrice < 0.50 || basePrice > 1000) {
-        console.error('🚨 ORDER PAGE: Invalid price detected for item:', item.name, 'Price:', basePrice)
-        alert('Невалидна цена за артикула. Моля, опреснете страницата.')
-        return
-      }
-
+      
+      // For sauces, create a unique item each time by adding timestamp
+      // This prevents quantity incrementing and allows separate sauce orders
       const cartItem = {
         ...item,
+        id: `${item.id}_${Date.now()}`, // Make each sauce item unique
+        productId: item.id, // Preserve original product ID for database
+        price: basePrice,
+        size: finalSize,
+        addons: [],
+        comment: '',
+        quantity: 1
+      }
+
+      addItem(cartItem)
+      return
+    }
+    
+    // For specific items that should not have personalization modal
+    if (directAddItems.includes(item.name)) {
+      // Use default size for items that don't require size selection
+      let finalSize = 'Стандартен размер'
+      if (item.sizes && item.sizes.length > 0) {
+        finalSize = item.sizes[0].name
+      }
+      
+      // Get base price
+      const basePrice = item.price || item.basePrice || 0
+      
+      // Create unique item to prevent quantity incrementing
+      const cartItem = {
+        ...item,
+        id: `${item.id}_${Date.now()}`, // Make each item unique
+        productId: item.id, // Preserve original product ID for database
         price: basePrice,
         size: finalSize,
         addons: [],

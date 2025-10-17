@@ -1196,6 +1196,24 @@ export default function CheckoutPage() {
     
     try{
     
+    // CRITICAL: Validate cart is not empty
+    if (!items || items.length === 0) {
+      alert('❌ Вашата количка е празна! Моля, добавете продукти преди да поръчате.')
+      setIsLoading(false)
+      return
+    }
+    
+    // Validate all items have required data
+    const invalidItems = items.filter(item => !item.name || !item.price || item.quantity <= 0)
+    if (invalidItems.length > 0) {
+      console.error('❌ Invalid items in cart:', invalidItems)
+      alert('❌ Някои продукти в количката са невалидни. Моля, опреснете страницата.')
+      setIsLoading(false)
+      return
+    }
+    
+    console.log('✅ Cart validation passed:', items.length, 'items')
+    
     // Validate minimum order amount
     if (totalPrice < 15) {
       alert('❌ Минималната сума за поръчка е 15 лв.')
@@ -1271,65 +1289,64 @@ export default function CheckoutPage() {
        }
      }
      
-    // Handle order submission
-    const finalTotal = totalPrice + (isCollection ? 0 : deliveryCost)
-
-    // Client-side price validation before sending to server
-    const suspiciousItems = items.filter(item => {
-      // Check for suspiciously low prices (less than 0.50 лв)
-      if (item.price < 0.50 && item.price > 0) {
-        console.error(`🚨 CLIENT VALIDATION: Suspiciously low price detected: ${item.name} priced at ${item.price} лв`)
-        return true
-      }
-      // Check for zero prices on non-free items
-      if (item.price === 0 && !item.name.toLowerCase().includes('free')) {
-        console.error(`🚨 CLIENT VALIDATION: Zero price detected: ${item.name} priced at 0 лв`)
-        return true
-      }
-      // Check for unreasonably high prices (more than 1000 лв)
-      if (item.price > 1000) {
-        console.error(`🚨 CLIENT VALIDATION: Unreasonably high price detected: ${item.name} priced at ${item.price} лв`)
-        return true
-      }
-      return false
-    })
-
-    if (suspiciousItems.length > 0) {
-      console.error('🚨 CLIENT VALIDATION: Order blocked due to suspicious pricing')
-      alert('Някои артикули имат невалидни цени. Моля, опреснете страницата и опитайте отново.')
+     // Handle order submission
+     const finalTotal = totalPrice + (isCollection ? 0 : deliveryCost)
+     
+    console.log('📦 Order details being sent to API:')
+    console.log('   - Customer:', customerInfo.name, customerInfo.email)
+    console.log('   - Items count:', items.length)
+    console.log('   - Items:', items.map(item => `${item.name} x${item.quantity}`).join(', '))
+    console.log('   - Total:', totalPrice, 'лв')
+    console.log('   - Delivery:', isCollection ? 0 : deliveryCost, 'лв')
+    console.log('   - Final total:', finalTotal, 'лв')
+    console.log('   - Type:', isCollection ? 'Collection' : 'Delivery')
+    console.log('   - Payment method:', paymentMethodId)
+     
+    // Validate orderTime before sending (critical for API validation)
+    if (!orderTime.type) {
+      alert('❌ Моля, изберете кога искате да получите поръчката')
+      setIsLoading(false)
       return
     }
-
-    console.log('📦 Order details:', {
-      customerInfo,
-      orderItems: items,
-      orderTime,
-      orderType,
-      deliveryCost: isCollection ? 0 : deliveryCost,
-      totalPrice,
-      finalTotal,
-      addressZone,
-      isCollection,
-      paymentMethodId,
-      paymentData: paymentMethodId === 5 ? { ...paymentData, cardNumber: '****' } : null // Log payment data (masked)
-    })
-
-    // Prepare order data for API
-    const orderData = {
-      customerInfo: {
-        ...customerInfo,
-        email: orderType === 'guest' ? customerInfo.email : (user?.email || `guest_${Date.now()}@pizza-stop.bg`)
-      },
-      orderItems: items,
-      orderTime,
-      orderType,
-      deliveryCost: isCollection ? 0 : deliveryCost,
-      totalPrice,
-      isCollection,
-      paymentMethodId,
-      paymentData: paymentMethodId === 5 ? paymentData : null, // Include payment data for online payments
-      loginId: user?.id || null
+    
+    // Ensure scheduledTime is a valid Date if type is scheduled
+    if (orderTime.type === 'scheduled' && (!orderTime.scheduledTime || !(orderTime.scheduledTime instanceof Date))) {
+      alert('❌ Моля, изберете валидна дата и час за доставката')
+      setIsLoading(false)
+      return
     }
+    
+    // Prepare order data for API
+   const orderData = {
+     customerInfo: {
+       ...customerInfo,
+      email: orderType === 'guest' ? customerInfo.email : (user?.email || `guest_${Date.now()}@pizza-stop.bg`),
+      // For collection orders, ensure address fields are properly set
+      LocationText: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : customerInfo.LocationText
+     },
+     orderItems: items,
+     orderTime: {
+       type: orderTime.type as 'immediate' | 'scheduled', // Type assertion for Zod
+       // Convert Date to ISO string for Zod validation
+       scheduledTime: orderTime.scheduledTime ? orderTime.scheduledTime.toISOString() : undefined
+     },
+     orderType,
+     deliveryCost: isCollection ? 0 : deliveryCost,
+     totalPrice,
+     isCollection,
+     paymentMethodId,
+     paymentData: paymentMethodId === 5 ? paymentData : null, // Include payment data for online payments
+     loginId: user?.id || null
+   }
+   
+     console.log('🚀 Sending order data to API:')
+     console.log('   Full payload:', JSON.stringify(orderData, null, 2))
+     console.log('   CustomerInfo validation:')
+     console.log('     - name:', customerInfo.name, '(length:', customerInfo.name?.length, ')')
+     console.log('     - email:', customerInfo.email, '(valid:', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email || ''), ')')
+     console.log('     - phone:', customerInfo.phone, '(length:', customerInfo.phone?.length, ')')
+     console.log('     - LocationText:', customerInfo.LocationText, '(length:', customerInfo.LocationText?.length, ')')
+     console.log('     - LocationCoordinates:', customerInfo.LocationCoordinates)
      
      // Call order confirmation API
      const response = await fetch('/api/order/confirm', {
@@ -1343,12 +1360,62 @@ export default function CheckoutPage() {
      const result = await response.json()
      
     if (response.ok) {
+      console.log('✅ Order confirmed successfully:', result.orderId)
       // Redirect to order success page with encrypted order ID
       const encryptedOrderId = encryptOrderId(result.orderId.toString())
       // Don't stop loading, keep it running during redirect
       window.location.href = `/order-success?orderId=${encryptedOrderId}`
     } else {
+      console.error('❌ Order API returned error:', result)
+      console.error('   Status:', response.status)
+      console.error('   Error:', result.error)
+      console.error('   Details:', result.details)
       setIsLoading(false)
+      
+      // Show user-friendly error message
+      if (result.details) {
+        console.error('📋 Full validation details:', result.details)
+        
+        // Parse the validation errors
+        let errorMessage = '❌ Моля, коригирайте следните грешки:\n\n'
+        
+        if (result.details.customerInfo) {
+          errorMessage += 'Информация за клиента:\n'
+          result.details.customerInfo.forEach((err: string) => {
+            errorMessage += `  • ${err}\n`
+          })
+        }
+        
+        if (result.details.orderItems) {
+          errorMessage += '\nПродукти:\n'
+          result.details.orderItems.forEach((err: string) => {
+            errorMessage += `  • ${err}\n`
+          })
+        }
+        
+        if (result.details.orderTime) {
+          errorMessage += '\nВреме за доставка:\n'
+          result.details.orderTime.forEach((err: string) => {
+            errorMessage += `  • ${err}\n`
+          })
+        }
+        
+        // Show all other errors
+        Object.keys(result.details).forEach(key => {
+          if (!['customerInfo', 'orderItems', 'orderTime'].includes(key)) {
+            errorMessage += `\n${key}:\n`
+            if (Array.isArray(result.details[key])) {
+              result.details[key].forEach((err: string) => {
+                errorMessage += `  • ${err}\n`
+              })
+            }
+          }
+        })
+        
+        alert(errorMessage)
+      } else {
+        alert(`❌ ${result.error || 'Възникна грешка при потвърждаване на поръчката'}`)
+      }
       throw new Error(result.error || 'Failed to confirm order')
     }
    } catch (error) {
