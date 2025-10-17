@@ -1206,7 +1206,6 @@ PRE-DEPLOYMENT CHECKLIST (Bulgarian):
 КРАЙ НА ДОКЛАД ЗА PRODUCTION ГОТОВНОСТ
 ═══════════════════════════════════════════════════════════════
 
-<<<<<<< HEAD
 RATING: 6.2 / 10
 
 BREAKDOWN:
@@ -1270,9 +1269,7 @@ issues (price manipulation, admin authentication) have been resolved, but still 
 significant work on performance optimization, compliance, and testing before
 production launch. The lack of testing remains concerning for maintaining
 quality as the app evolves.
-=======
 Приложение A: Security Testing Scripts (линия 886-1560)
 Приложение B: ENV_SETUP_INSTRUCTIONS.md
 Приложение C: SECURITY_IMPROVEMENTS.md
 Приложение D: IMPLEMENTATION_SUMMARY.md
->>>>>>> main
