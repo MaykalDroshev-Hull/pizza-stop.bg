@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
   console.log('='.repeat(80))
   
   try {
+    // Get client identifier for rate limiting
+    const clientIdentifier = getClientIdentifier(request)
+    
     // Rate limiting - prevent order spam
     const rateLimit = await withRateLimit(request, 'order')
     if (!rateLimit.allowed) {
