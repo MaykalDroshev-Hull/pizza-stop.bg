@@ -5,6 +5,41 @@ import { calculateServerSidePrice, validatePriceMatch } from '@/utils/priceCalcu
 import { orderConfirmationSchema } from '@/utils/zodSchemas'
 import { withRateLimit, createRateLimitResponse } from '@/utils/rateLimit'
 
+// Simple in-memory rate limiting for price manipulation attempts
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+function checkRateLimit(identifier: string, maxAttempts: number = 5, windowMs: number = 15 * 60 * 1000): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(identifier)
+
+  if (!entry || now > entry.resetTime) {
+    // First attempt or window expired, reset counter
+    rateLimitMap.set(identifier, { count: 1, resetTime: now + windowMs })
+    return true
+  }
+
+  if (entry.count >= maxAttempts) {
+    console.error(`🚨 RATE LIMIT EXCEEDED for ${identifier} - ${entry.count} attempts`)
+    return false
+  }
+
+  entry.count++
+  rateLimitMap.set(identifier, entry)
+  return true
+}
+
+function getClientIdentifier(request: NextRequest): string {
+  // Use IP address as primary identifier, fallback to user agent hash
+  const ip = request.headers.get('x-forwarded-for') ||
+             request.headers.get('x-real-ip') ||
+             'unknown'
+
+  const userAgent = request.headers.get('user-agent') || 'unknown'
+  const userAgentHash = Buffer.from(userAgent).toString('base64').slice(0, 16)
+
+  return `${ip}:${userAgentHash}`
+}
+
 // Helper function to get payment method name
 function getPaymentMethodName(paymentMethodId: number): string {
   const paymentMethods: { [key: number]: string } = {
@@ -24,6 +59,9 @@ export async function POST(request: NextRequest) {
   console.log('='.repeat(80))
   
   try {
+    // Get client identifier for rate limiting
+    const clientIdentifier = getClientIdentifier(request)
+    
     // Rate limiting - prevent order spam
     const rateLimit = await withRateLimit(request, 'order')
     if (!rateLimit.allowed) {
@@ -109,22 +147,76 @@ export async function POST(request: NextRequest) {
     const priceValidation = validatePriceMatch(clientTotal, serverTotal)
 
     if (!priceValidation.isValid) {
-      console.error('🚨 SECURITY ALERT: Price mismatch detected!')
+      console.error('🚨 SECURITY ALERT: PRICE MANIPULATION DETECTED!')
+      console.error('🚨 ORDER REJECTED - Price mismatch detected!')
       console.error(`   Client sent: ${clientTotal} лв`)
       console.error(`   Server calculated: ${serverTotal} лв`)
       console.error(`   Difference: ${priceValidation.difference} лв`)
-      
+
       // Log for security audit
-      console.error('🚨 POTENTIAL PRICE MANIPULATION ATTEMPT:', {
+      console.error('🚨 PRICE MANIPULATION ATTEMPT BLOCKED:', {
         timestamp: new Date().toISOString(),
         customerEmail: customerInfo.email,
+        customerName: customerInfo.name,
         clientTotal,
         serverTotal,
-        difference: priceValidation.difference
+        difference: priceValidation.difference,
+        orderItems: orderItems?.map(item => ({
+          id: item.id,
+          name: item.name,
+          clientPrice: item.price,
+          quantity: item.quantity
+        })),
+        userAgent: request.headers.get('user-agent'),
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
       })
-      
-      // For now, continue with server price but flag for review
-      // TODO: In production, you may want to reject the order
+
+      // Increment rate limit counter for manipulation attempt
+      const currentEntry = rateLimitMap.get(clientIdentifier)
+      if (currentEntry) {
+        currentEntry.count += 2 // Double penalty for manipulation attempts
+        rateLimitMap.set(clientIdentifier, currentEntry)
+      }
+
+      // Reject the order due to price manipulation
+      return NextResponse.json({
+        error: 'Order rejected: Price verification failed',
+        message: 'There was an issue with your order pricing. Please refresh and try again.'
+      }, { status: 400 })
+    }
+
+    // Additional validation: Check for obviously manipulated individual item prices
+    const obviousManipulationDetected = orderItems?.some(item => {
+      // Check for prices that are suspiciously low (less than 0.50 лв)
+      if (item.price < 0.50 && item.price > 0) {
+        console.error(`🚨 SUSPICIOUSLY LOW PRICE DETECTED: ${item.name} priced at ${item.price} лв`)
+        return true
+      }
+      // Check for zero prices on non-free items
+      if (item.price === 0 && !item.name.toLowerCase().includes('free')) {
+        console.error(`🚨 ZERO PRICE DETECTED: ${item.name} priced at 0 лв`)
+        return true
+      }
+      return false
+    })
+
+    if (obviousManipulationDetected) {
+      console.error('🚨 OBVIOUS PRICE MANIPULATION DETECTED - ORDER REJECTED')
+      console.error('Order items with suspicious prices:', orderItems?.filter(item =>
+        item.price < 0.50 || (item.price === 0 && !item.name.toLowerCase().includes('free'))
+      ))
+
+      // Increment rate limit counter for manipulation attempt
+      const currentEntry = rateLimitMap.get(clientIdentifier)
+      if (currentEntry) {
+        currentEntry.count += 2 // Double penalty for manipulation attempts
+        rateLimitMap.set(clientIdentifier, currentEntry)
+      }
+
+      return NextResponse.json({
+        error: 'Order rejected: Invalid pricing detected',
+        message: 'Some items have invalid prices. Please refresh your cart and try again.'
+      }, { status: 400 })
     }
 
     // Use SERVER-CALCULATED prices (not client prices!)

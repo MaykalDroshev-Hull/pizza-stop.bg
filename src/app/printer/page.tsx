@@ -611,14 +611,14 @@ export default function PrinterPage() {
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <label className="block text-white text-sm font-medium mb-2">
-                Потребителско име
+                Имейл адрес
               </label>
               <input
-                type="text"
+                type="email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Въведете потребителско име"
+                placeholder="Въведете имейл адрес"
                 required
               />
             </div>
