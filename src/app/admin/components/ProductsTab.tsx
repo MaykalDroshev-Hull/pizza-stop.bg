@@ -14,11 +14,10 @@ const categoryOptions = [
 // Product type mapping function
 const getProductTypeName = (productTypeId: number): string => {
   switch (productTypeId) {
-    case 1:
-    case 2:
-    case 3:
-    case 7:
-      return 'Пица';
+    case 1: return 'Пица';
+    case 2: return 'Бургер';
+    case 3: return 'Дюнер';
+    case 7: return 'Десерт';
     case 4:
       return 'Напитки';
     case 5: 
