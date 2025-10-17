@@ -143,8 +143,12 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
       finalSize = 'Стандартен размер'
     }
     
+    // Create unique item to prevent quantity incrementing
+    // Each "Add to Cart" click should add a separate item
     const cartItem = {
       ...item,
+      id: `${item.id}_${Date.now()}`, // Make each item unique
+      productId: item.id, // Preserve original product ID for database
       price: getItemBasePrice(),
       size: finalSize,
       addons: selectedAddons,
