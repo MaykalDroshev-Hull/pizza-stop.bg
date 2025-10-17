@@ -7,6 +7,7 @@ import NavBar from '../components/NavBar'
 import { CartProvider } from '../components/CartContext'
 import { LoginIDProvider } from '../components/LoginIDContext'
 import ConditionalFooter from '../components/ConditionalFooter'
+import CookieConsent from '../components/CookieConsent'
 import ConditionalNavBar from '../components/ConditionalNavBar'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -95,6 +96,7 @@ export default function RootLayout({
                   </main>
                   <ConditionalFooter />
                   <LoadingOverlay />
+                  <CookieConsent />
                 </div>
               </CartProvider>
             </LoginIDProvider>

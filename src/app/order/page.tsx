@@ -292,6 +292,7 @@ export default function MenuPage() {
       const cartItem = {
         ...item,
         id: `${item.id}_${Date.now()}`, // Make each sauce item unique
+        productId: item.id, // Preserve original product ID for database
         price: basePrice,
         size: finalSize,
         addons: [],
@@ -318,6 +319,7 @@ export default function MenuPage() {
       const cartItem = {
         ...item,
         id: `${item.id}_${Date.now()}`, // Make each item unique
+        productId: item.id, // Preserve original product ID for database
         price: basePrice,
         size: finalSize,
         addons: [],

@@ -148,6 +148,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
     const cartItem = {
       ...item,
       id: `${item.id}_${Date.now()}`, // Make each item unique
+      productId: item.id, // Preserve original product ID for database
       price: getItemBasePrice(),
       size: finalSize,
       addons: selectedAddons,

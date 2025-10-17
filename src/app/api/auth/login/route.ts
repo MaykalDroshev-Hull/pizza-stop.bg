@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
+import { loginSchema } from '@/utils/zodSchemas'
+import { withRateLimit, createRateLimitResponse } from '@/utils/rateLimit'
 
 // Helper function to create Supabase client
 function createSupabaseClient() {
@@ -21,16 +23,32 @@ function createSupabaseClient() {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createSupabaseClient()
-    const { email, password } = await request.json()
+    // Rate limiting - prevent brute force attacks
+    const rateLimit = await withRateLimit(request, 'login')
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit.headers)
+    }
 
-    // Validate input
-    if (!email || !password) {
+    const supabase = createSupabaseClient()
+    const body = await request.json()
+
+    // Validate input with Zod
+    const validationResult = loginSchema.safeParse(body)
+    if (!validationResult.success) {
+      console.error('❌ Login validation failed:', validationResult.error.flatten())
       return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
+        { 
+          error: 'Invalid email or password format',
+          details: validationResult.error.flatten().fieldErrors
+        },
+        { 
+          status: 400,
+          headers: rateLimit.headers
+        }
       )
     }
+
+    const { email, password } = validationResult.data
 
     // Convert email to lowercase for consistent database queries
     const normalizedEmail = email.toLowerCase().trim()

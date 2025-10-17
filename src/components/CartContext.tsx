@@ -4,7 +4,8 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { ProductAddon } from '../lib/menuData'
 
 interface CartItem {
-  id: number
+  id: number | string  // Allow string for unique cart item IDs (product_timestamp)
+  productId?: number   // Original database ProductID (for regular products)
   name: string
   price: number
   image: string
@@ -18,8 +19,8 @@ interface CartItem {
 interface CartContextType {
   items: CartItem[]
   addItem: (item: CartItem) => void
-  removeItem: (id: number) => void
-  updateQuantity: (id: number, quantity: number) => void
+  removeItem: (id: number | string) => void
+  updateQuantity: (id: number | string, quantity: number) => void
   clearCart: () => void
   refreshFromStorage: () => void
   totalItems: number
