@@ -211,11 +211,13 @@ export function generateTicketHTML(data: TicketData): string {
     
     .total-line.final {
       font-weight: bold;
-      font-size: 13pt;
-      border-top: 2px solid #000;
-      border-bottom: 2px solid #000;
-      padding: 5px 0;
-      margin-top: 8px;
+      font-size: 18pt;
+      border-top: 3px solid #000;
+      border-bottom: 3px solid #000;
+      padding: 10px 0;
+      margin-top: 12px;
+      letter-spacing: 1px;
+      background: #f0f0f0;
     }
     
     .payment-status {

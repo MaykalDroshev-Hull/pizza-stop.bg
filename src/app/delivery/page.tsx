@@ -1,32 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   MapPin, 
   Phone, 
   Navigation,
-  Clock, 
-  DollarSign, 
-  CheckCircle, 
-  AlertCircle, 
-  Camera, 
   User,
   Car,
-  TrendingUp,
-  History,
-  Menu,
   X,
-  RotateCcw,
-  Star,
   Wifi,
-  WifiOff,
-  Calendar,
-  BarChart3,
-  Download,
-  Search,
-  Filter
+  WifiOff
 } from 'lucide-react';
-import { updateOrderStatusInDB, testDatabaseConnection, ORDER_STATUS, KitchenOrder, LkOrderProducts } from '../../lib/supabase';
+import { updateOrderStatusInDB, ORDER_STATUS, KitchenOrder, LkOrderProducts } from '../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import ETASelectionModal from '../../components/ETASelectionModal';
 // AdminLogin moved to separate page at /admin-delivery-login
@@ -128,7 +113,6 @@ const DeliveryDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [isOnline, setIsOnline] = useState(true);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'history'>('dashboard');
   const [selectedOrder, setSelectedOrder] = useState<DeliveryOrder | null>(null);
   const [showIssueDialog, setShowIssueDialog] = useState(false);
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
@@ -139,10 +123,6 @@ const DeliveryDashboard = () => {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedOrderForMap, setSelectedOrderForMap] = useState<DeliveryOrder | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  
-  // History auto-scroll state
-  const [hasUserScrolled, setHasUserScrolled] = useState(false);
-  const historyScrollRef = useRef<HTMLDivElement>(null);
   
   // ETA Modal State
   const [showETAModal, setShowETAModal] = useState(false);
@@ -157,52 +137,9 @@ const DeliveryDashboard = () => {
     totalTips: 45.20
   });
 
-  // Enhanced History State
-  const [timeFilter, setTimeFilter] = useState<'today' | 'week' | '2weeks' | 'month' | '3months' | '6months' | 'year' | 'custom'>('today');
-  const [customDateRange, setCustomDateRange] = useState<{ start: Date; end: Date } | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'amount' | 'customer'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
-
   // Real delivery orders from database
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
-  const [deliveryHistory, setDeliveryHistory] = useState<DeliveryOrder[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Auto-scroll to bottom of history (mobile only)
-  const scrollToBottom = useCallback(() => {
-    if (isMobile && historyScrollRef.current && !hasUserScrolled) {
-      historyScrollRef.current.scrollTop = historyScrollRef.current.scrollHeight;
-    }
-  }, [isMobile, hasUserScrolled]);
-
-  // Handle scroll events to detect manual scrolling
-  const handleHistoryScroll = useCallback(() => {
-    if (!isMobile || !historyScrollRef.current) return;
-    
-    const { scrollTop, scrollHeight, clientHeight } = historyScrollRef.current;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
-    
-    // If user scrolls away from bottom, mark as manually scrolled
-    if (!isAtBottom) {
-      setHasUserScrolled(true);
-    } else {
-      // If user scrolls back to bottom, reset the flag
-      setHasUserScrolled(false);
-    }
-  }, [isMobile]);
-
-  // Auto-scroll when history view opens or when new items are added
-  useEffect(() => {
-    if (currentView === 'history') {
-      // Reset scroll flag when switching to history view
-      setHasUserScrolled(false);
-      // Auto-scroll after a short delay to ensure DOM is updated
-      setTimeout(scrollToBottom, 100);
-    }
-  }, [currentView, scrollToBottom]);
 
   // Mobile detection and maps deeplink function
   useEffect(() => {
@@ -315,37 +252,10 @@ const DeliveryDashboard = () => {
         .neq('OrderType', 1) // Exclude pickup orders (OrderType = 1)
         .order('OrderDT', { ascending: false });
 
-      // Fetch delivered orders (status 6) for history, excluding pickup orders
-      const { data: deliveredOrders, error: deliveredError } = await supabase
-        .from('Order')
-        .select(`
-          OrderID,
-          LoginID,
-          OrderDT,
-          ExpectedDT,
-          ReadyTime,
-          OrderLocation,
-          OrderLocationCoordinates,
-          OrderStatusID,
-          IsPaid,
-          OrderType,
-          DeliveryPrice,
-          Comments
-        `)
-        .eq('OrderStatusID', ORDER_STATUS.DELIVERED)
-        .neq('OrderType', 1) // Exclude pickup orders (OrderType = 1)
-        .order('OrderDT', { ascending: false });
-
-      console.log('Delivered orders query result:', { deliveredOrders, deliveredError, ORDER_STATUS_DELIVERED: ORDER_STATUS.DELIVERED });
       console.log('🔍 Active orders query result:', { orders, ordersError, ORDER_STATUS_WITH_DRIVER: ORDER_STATUS.WITH_DRIVER, ORDER_STATUS_IN_DELIVERY: ORDER_STATUS.IN_DELIVERY });
 
       if (ordersError) {
         console.error('Error fetching orders:', ordersError);
-        return;
-      }
-
-      if (deliveredError) {
-        console.error('Error fetching delivered orders:', deliveredError);
         return;
       }
 
@@ -409,70 +319,6 @@ const DeliveryDashboard = () => {
       
       setOrders(ordersWithDetails);
       console.log(`Fetched ${ordersWithDetails.length} delivery orders`);
-
-      // Process delivered orders for history (always process, even if no active orders)
-      if (deliveredOrders && deliveredOrders.length > 0) {
-        const deliveredOrdersWithDetails = await Promise.all(
-          deliveredOrders.map(async (order) => {
-            let customer: { Name: string; phone: string; email: string } | null = null;
-            if (order.LoginID) {
-              const { data: customerData } = await supabase
-                .from('Login')
-                .select('Name, phone, email')
-                .eq('LoginID', order.LoginID)
-                .single();
-              customer = customerData || null;
-            }
-
-            // Get products for this order
-            const { data: products } = await supabase
-              .from('LkOrderProduct')
-              .select(`
-                LkOrderProductID,
-                OrderID,
-                ProductID,
-                ProductName,
-                ProductSize,
-                Quantity,
-                UnitPrice,
-                TotalPrice,
-                Addons,
-                Comment
-              `)
-              .eq('OrderID', order.OrderID);
-
-            const kitchenOrder: KitchenOrder = {
-              OrderID: order.OrderID,
-              OrderDT: order.OrderDT,
-              ExpectedDT: order.ExpectedDT,
-              ReadyTime: order.ReadyTime,
-              OrderLocation: order.OrderLocation,
-              OrderLocationCoordinates: order.OrderLocationCoordinates,
-              OrderStatusID: order.OrderStatusID,
-              OrderType: order.OrderType,
-              IsPaid: order.IsPaid,
-              CustomerName: customer?.Name || 'Unknown',
-              CustomerPhone: customer?.phone || '',
-              CustomerEmail: customer?.email || '',
-              CustomerLocation: order.OrderLocation,
-              Products: (products as LkOrderProducts[]) || [],
-              TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
-              DeliveryPrice: order.DeliveryPrice || 0,
-              SpecialInstructions: '',
-              Comments: order.Comments || null
-            };
-
-            return convertToDeliveryOrder(kitchenOrder);
-          })
-        );
-        
-        // Set delivered orders as history
-        setDeliveryHistory(deliveredOrdersWithDetails);
-        console.log(`Fetched ${deliveredOrdersWithDetails.length} delivered orders for history`);
-      } else {
-        // If no delivered orders, keep existing history
-        console.log('No delivered orders found');
-      }
     } catch (error) {
       console.error('Error fetching delivery orders:', error);
     } finally {
@@ -517,34 +363,6 @@ const DeliveryDashboard = () => {
       };
     }
   }, [isAuthenticated, getCurrentLocation]);
-
-  // Clean up duplicate orders in history
-  useEffect(() => {
-    setDeliveryHistory(prev => {
-      // Remove duplicates based on order ID, keeping the most recent one
-      const uniqueOrders = prev.reduce((acc, current) => {
-        const existingIndex = acc.findIndex(order => order.id === current.id);
-        if (existingIndex === -1) {
-          acc.push(current);
-        } else {
-          // Keep the more recent order (based on deliveredTime or orderTime)
-          const existing = acc[existingIndex];
-          const currentTime = current.deliveredTime || current.orderTime;
-          const existingTime = existing.deliveredTime || existing.orderTime;
-          if (currentTime > existingTime) {
-            acc[existingIndex] = current;
-          }
-        }
-        return acc;
-      }, [] as DeliveryOrder[]);
-      
-      if (uniqueOrders.length !== prev.length) {
-        console.log(`Removed ${prev.length - uniqueOrders.length} duplicate orders from history`);
-      }
-      
-      return uniqueOrders;
-    });
-  }, []);
 
   const updateOrderStatus = async (orderId: number, newStatus: DeliveryOrder['status']) => {
     const now = new Date();
@@ -600,26 +418,13 @@ const DeliveryDashboard = () => {
             updatedOrder.signature = signature;
             updatedOrder.customerRating = 5; // Default rating
             
-            // Move to history and remove from active orders (prevent duplicates)
-            setDeliveryHistory(prev => {
-              // Check if order already exists in history to prevent duplicates
-              const existingIndex = prev.findIndex(historyOrder => historyOrder.id === orderId);
-              if (existingIndex !== -1) {
-                // Replace existing order with updated one
-                const newHistory = [...prev];
-                newHistory[existingIndex] = updatedOrder;
-                return newHistory;
-              } else {
-                // Add new order to history
-                return [updatedOrder, ...prev];
-              }
-            });
+            // Remove from active orders
             setTimeout(() => {
               setOrders(current => current.filter(o => o.id !== orderId));
             }, 1000);
             
             // Show success message
-            console.log(`Order #${orderId} moved to delivery history`);
+            console.log(`Order #${orderId} marked as delivered`);
             
             // Update stats
             setStats(prev => ({
@@ -758,146 +563,6 @@ const DeliveryDashboard = () => {
     }
   };
 
-  // Enhanced History Helper Functions
-  const getDateRange = (filter: string) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    switch (filter) {
-      case 'today':
-        return { start: today, end: new Date(today.getTime() + 24 * 60 * 60 * 1000) };
-      case 'week':
-        const weekStart = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-        return { start: weekStart, end: now };
-      case '2weeks':
-        const twoWeeksStart = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
-        return { start: twoWeeksStart, end: now };
-      case 'month':
-        const monthStart = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-        return { start: monthStart, end: now };
-      case '3months':
-        const threeMonthsStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-        return { start: threeMonthsStart, end: now };
-      case '6months':
-        const sixMonthsStart = new Date(today.getTime() - 180 * 24 * 60 * 60 * 1000);
-        return { start: sixMonthsStart, end: now };
-      case 'year':
-        const yearStart = new Date(now.getFullYear(), 0, 1);
-        return { start: yearStart, end: now };
-      case 'custom':
-        return customDateRange || { start: today, end: now };
-      default:
-        return { start: today, end: now };
-    }
-  };
-
-  const getFilteredHistory = useMemo(() => {
-    const { start, end } = getDateRange(timeFilter);
-    
-    return deliveryHistory.filter(order => {
-      const orderDate = new Date(order.orderTime);
-      const matchesDate = orderDate >= start && orderDate <= end;
-      const matchesSearch = searchTerm === '' || 
-        order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.id.toString().includes(searchTerm) ||
-        order.address.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      return matchesDate && matchesSearch;
-    }).sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'date':
-          comparison = a.orderTime.getTime() - b.orderTime.getTime();
-          break;
-        case 'amount':
-          comparison = (a.totalPrice + a.deliveryFee) - (b.totalPrice + b.deliveryFee);
-          break;
-        case 'customer':
-          comparison = a.customerName.localeCompare(b.customerName);
-          break;
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-  }, [deliveryHistory, timeFilter, customDateRange, searchTerm, sortBy, sortOrder]);
-
-  // Auto-scroll when new history items are added
-  useEffect(() => {
-    if (currentView === 'history') {
-      setTimeout(scrollToBottom, 100);
-    }
-  }, [getFilteredHistory.length, currentView, scrollToBottom]);
-
-  const getTopProducts = useMemo(() => {
-    const productCounts: { [key: string]: { count: number; revenue: number; name: string } } = {};
-    
-    getFilteredHistory.forEach(order => {
-      order.items.forEach(item => {
-        const key = item.name;
-        if (!productCounts[key]) {
-          productCounts[key] = { count: 0, revenue: 0, name: item.name };
-        }
-        productCounts[key].count += item.quantity;
-        productCounts[key].revenue += item.price * item.quantity;
-      });
-    });
-    
-    return Object.values(productCounts)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 20);
-  }, [getFilteredHistory]);
-
-  const getAnalytics = useMemo(() => {
-    const orders = getFilteredHistory;
-    console.log('📊 Analytics calculation - orders count:', orders.length);
-    console.log('📊 Orders data:', orders);
-    
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalPrice + order.deliveryFee, 0);
-    const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
-    const totalOrders = orders.length;
-    
-    // Group by day for chart data
-    const dailyData: { [key: string]: { orders: number; revenue: number } } = {};
-    orders.forEach(order => {
-      const dateKey = order.orderTime.toISOString().split('T')[0];
-      if (!dailyData[dateKey]) {
-        dailyData[dateKey] = { orders: 0, revenue: 0 };
-      }
-      dailyData[dateKey].orders += 1;
-      dailyData[dateKey].revenue += order.totalPrice + order.deliveryFee;
-    });
-    
-    // Generate sample data if no real data exists (for testing)
-    let chartData = Object.entries(dailyData).map(([date, data]) => ({
-      date,
-      orders: data.orders,
-      revenue: data.revenue
-    })).sort((a, b) => a.date.localeCompare(b.date));
-    
-    // If no data, generate sample data for the last 7 days
-    if (chartData.length === 0) {
-      console.log('📊 No data found, generating sample data for chart');
-      const today = new Date();
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const dateKey = date.toISOString().split('T')[0];
-        chartData.push({
-          date: dateKey,
-          orders: Math.floor(Math.random() * 10) + 1, // 1-10 orders per day
-          revenue: Math.floor(Math.random() * 200) + 50 // 50-250 revenue per day
-        });
-      }
-    }
-    
-    console.log('📊 Final chart data:', chartData);
-    
-    return {
-      totalOrders,
-      totalRevenue,
-      averageOrderValue,
-      dailyData: chartData
-    };
-  }, [getFilteredHistory]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('bg-BG', { 
@@ -1050,58 +715,6 @@ const DeliveryDashboard = () => {
     );
   };
 
-  const HistoryCard = ({ order }: { order: DeliveryOrder }) => {
-    const deliveryTime = order.deliveredTime ? getTimeSince(order.deliveredTime) : 0;
-    
-    return (
-      <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 mb-3">
-        <div className="flex justify-between items-start mb-2">
-          <div className="flex items-center space-x-2">
-            <span className="text-lg font-bold text-white">#{order.id}</span>
-            <span className="text-xs px-2 py-1 rounded bg-green-700 text-green-200">
-              ДОСТАВЕНА
-            </span>
-            {order.customerRating && (
-              <div className="flex items-center space-x-1">
-                <Star size={14} className="text-yellow-400 fill-current" />
-                <span className="text-yellow-400 text-sm">{order.customerRating}</span>
-              </div>
-            )}
-          </div>
-          <div className="text-right">
-            <div className="text-green-400 font-bold">
-              {(order.totalPrice + order.deliveryFee + (order.tips || 0)).toFixed(2)} лв
-            </div>
-            {order.tips && (
-              <div className="text-xs text-yellow-400">
-                +{order.tips.toFixed(2)} лв бакшиш
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="text-sm text-gray-400 mb-2">
-          <div>
-            {order.customerName} • 
-            <span 
-              className={isMobile ? 'cursor-pointer hover:text-white transition-colors' : ''}
-              onClick={() => isMobile && openAddressInMaps(order.address)}
-              title={isMobile ? 'Tap to open in Maps' : undefined}
-            >
-              {order.address}
-            </span>
-          </div>
-          <div>
-            Доставено преди {deliveryTime} минути ({formatTime(order.deliveredTime!)})
-          </div>
-        </div>
-
-        <div className="text-xs text-gray-500">
-          {order.items.map(item => `${item.quantity}x ${item.name}`).join(', ')}
-        </div>
-      </div>
-    );
-  };
 
   // Redirect to login page if not authenticated (handled in useEffect above)
   if (!isAuthenticated) {
@@ -1148,30 +761,8 @@ const DeliveryDashboard = () => {
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="bg-gray-800 border-b border-gray-600 flex">
-        <button
-          onClick={() => setCurrentView('dashboard')}
-          className={`flex-1 py-3 px-4 text-center ${
-            currentView === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          📋 Активни
-        </button>
-        <button
-          onClick={() => setCurrentView('history')}
-          className={`flex-1 py-3 px-4 text-center ${
-            currentView === 'history' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          📜 История
-        </button>
-      </div>
-
-
       {/* Main Content - Mobile Optimized */}
       <div className="flex-1 overflow-hidden">
-        {currentView === 'dashboard' && (
           <div className="h-full flex flex-col lg:flex-row">
             {/* Orders List */}
             <div className="w-full lg:w-1/2 p-2 sm:p-4 overflow-y-auto">
@@ -1426,244 +1017,6 @@ const DeliveryDashboard = () => {
               </div>
             </div>
           </div>
-        )}
-
-        {currentView === 'history' && (
-          <div className="h-full flex flex-col overflow-hidden">
-            {/* Enhanced History Header */}
-            <div className="bg-gray-800 border-b border-gray-600 p-4 flex-shrink-0">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <h2 className="text-xl font-bold text-gray-300">
-                  📜 История на доставките ({getFilteredHistory.length})
-                </h2>
-                
-                {/* Time Filter Buttons */}
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { key: 'today', label: 'Днес' },
-                    { key: 'week', label: 'Тази седмица' },
-                    { key: '2weeks', label: 'Последните 2 седмици' },
-                    { key: 'month', label: 'Последния месец' },
-                    { key: '3months', label: 'Последните 3 месеца' },
-                    { key: '6months', label: 'Последните 6 месеца' },
-                    { key: 'year', label: 'Тази година' }
-                  ].map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setTimeFilter(key as any)}
-                      className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                        timeFilter === key
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Search and Sort Controls */}
-              <div className="flex flex-col sm:flex-row gap-4 mt-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Търси по клиент, поръчка или адрес..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex gap-2">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="date">По дата</option>
-                    <option value="amount">По сума</option>
-                    <option value="customer">По клиент</option>
-                  </select>
-                  
-                  <button
-                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white hover:bg-gray-600 transition-colors"
-                    title={sortOrder === 'asc' ? 'Възходящо' : 'Низходящо'}
-                  >
-                    {sortOrder === 'asc' ? '↑' : '↓'}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Analytics Dashboard */}
-            <div className="bg-gray-800 border-b border-gray-600 p-4 flex-shrink-0">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div className="bg-gray-700 rounded-lg p-3">
-                  <div className="text-sm text-gray-400">Общо поръчки</div>
-                  <div className="text-2xl font-bold text-white">{getAnalytics.totalOrders}</div>
-                </div>
-                <div className="bg-gray-700 rounded-lg p-3">
-                  <div className="text-sm text-gray-400">Общ приход</div>
-                  <div className="text-2xl font-bold text-green-400">{getAnalytics.totalRevenue.toFixed(2)} лв</div>
-                </div>
-                <div className="bg-gray-700 rounded-lg p-3">
-                  <div className="text-sm text-gray-400">Средна стойност</div>
-                  <div className="text-2xl font-bold text-blue-400">{getAnalytics.averageOrderValue.toFixed(2)} лв</div>
-                </div>
-                <div className="bg-gray-700 rounded-lg p-3">
-                  <div className="text-sm text-gray-400">Топ продукт</div>
-                  <div className="text-lg font-bold text-orange-400">
-                    {getTopProducts[0]?.name || 'Няма данни'}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Simple Chart Visualization */}
-              <div className="bg-gray-700 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                  <BarChart3 size={20} className="mr-2" />
-                  Дневна статистика
-                </h3>
-                {getAnalytics.dailyData.length > 0 ? (
-                  <div className="relative">
-                    {/* Chart Container */}
-                    <div className="flex items-end gap-2 h-32 relative">
-                      {/* Line Chart Overlay */}
-                      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }} viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <polyline
-                          fill="none"
-                          stroke="#ff7f11"
-                          strokeWidth="0.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          points={getAnalytics.dailyData.slice(-7).map((day, index) => {
-                            const maxOrders = Math.max(...getAnalytics.dailyData.map(d => d.orders));
-                            const height = maxOrders > 0 ? (day.orders / maxOrders) * 80 : 0; // Scale to 80% of height
-                            const x = (index / Math.max(1, getAnalytics.dailyData.slice(-7).length - 1)) * 100;
-                            const y = 90 - height; // Start from bottom (90) and go up
-                            return `${x},${y}`;
-                          }).join(' ')}
-                        />
-                        {/* Data Points */}
-                        {getAnalytics.dailyData.slice(-7).map((day, index) => {
-                          const maxOrders = Math.max(...getAnalytics.dailyData.map(d => d.orders));
-                          const height = maxOrders > 0 ? (day.orders / maxOrders) * 80 : 0;
-                          const x = (index / Math.max(1, getAnalytics.dailyData.slice(-7).length - 1)) * 100;
-                          const y = 90 - height;
-                          return (
-                            <circle
-                              key={`point-${day.date}`}
-                              cx={x}
-                              cy={y}
-                              r="1"
-                              fill="#ff7f11"
-                              stroke="#fff"
-                              strokeWidth="0.3"
-                            />
-                          );
-                        })}
-                      </svg>
-                      
-                      {/* Bar Chart */}
-                      {getAnalytics.dailyData.slice(-7).map((day, index) => {
-                        const maxOrders = Math.max(...getAnalytics.dailyData.map(d => d.orders));
-                        const height = maxOrders > 0 ? (day.orders / maxOrders) * 100 : 0;
-                        return (
-                          <div key={day.date} className="flex-1 flex flex-col items-center relative">
-                            <div 
-                              className="bg-blue-500/60 rounded-t w-full transition-all duration-300 hover:bg-blue-400/80"
-                              style={{ height: `${height}%` }}
-                              title={`${day.date}: ${day.orders} поръчки, ${day.revenue.toFixed(2)} лв`}
-                            ></div>
-                            <div className="text-xs text-gray-400 mt-2">
-                              {new Date(day.date).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit' })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* Chart Legend */}
-                    <div className="flex items-center justify-center gap-4 mt-3 text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500/60 rounded"></div>
-                        <span className="text-gray-300">Поръчки</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-0.5 bg-orange-500"></div>
-                        <span className="text-gray-300">Тренд</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-32 text-gray-400">
-                    <div className="text-center">
-                      <BarChart3 size={32} className="mx-auto mb-2 opacity-50" />
-                      <p>Няма данни за избрания период</p>
-                      <p className="text-sm mt-1">Опитайте с друг филтър или период</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Top Products Table */}
-            {getTopProducts.length > 0 && (
-              <div className="bg-gray-800 border-b border-gray-600 p-4 flex-shrink-0">
-                <h3 className="text-lg font-semibold text-white mb-3">🏆 Топ 20 продукта</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-600">
-                        <th className="text-left py-2 text-gray-400">#</th>
-                        <th className="text-left py-2 text-gray-400">Продукт</th>
-                        <th className="text-right py-2 text-gray-400">Количество</th>
-                        <th className="text-right py-2 text-gray-400">Приход</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getTopProducts.map((product, index) => (
-                        <tr key={product.name} className="border-b border-gray-700">
-                          <td className="py-2 text-gray-300">{index + 1}</td>
-                          <td className="py-2 text-white font-medium">{product.name}</td>
-                          <td className="py-2 text-right text-blue-400">{product.count}</td>
-                          <td className="py-2 text-right text-green-400">{product.revenue.toFixed(2)} лв</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Order History List */}
-            <div 
-              ref={historyScrollRef}
-              className="flex-1 overflow-y-auto p-4"
-              onScroll={handleHistoryScroll}
-            >
-              {getFilteredHistory.length > 0 ? (
-                <div className="space-y-3">
-                  {getFilteredHistory.map((order, index) => (
-                    <HistoryCard key={`${order.id}-${index}`} order={order} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-gray-400 mt-20">
-                  <History size={64} className="mx-auto mb-4 opacity-50" />
-                  <div className="text-xl">Няма поръчки за избрания период</div>
-                  <div className="text-sm">Опитайте с друг филтър или период</div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
       </div>
 
       {/* Delivery Confirmation Dialog */}

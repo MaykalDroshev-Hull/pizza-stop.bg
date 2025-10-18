@@ -3,26 +3,29 @@ import { emailService } from '@/utils/emailService'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, name } = await request.json()
+    // Send test email to hm.websiteprovisioning@gmail.com
+    const email = 'hm.websiteprovisioning@gmail.com'
+    const name = 'Pizza Stop Test User'
 
-    if (!email || !name) {
-      return NextResponse.json(
-        { error: 'Email and name are required' },
-        { status: 400 }
-      )
-    }
+    console.log('🚀 Sending welcome/registration email to:', email)
 
     await emailService.sendWelcomeEmail({ to: email, name })
 
     return NextResponse.json({
-      message: 'Test email sent successfully',
-      sentTo: email
+      message: 'Registration email sent successfully to hm.websiteprovisioning@gmail.com',
+      sentTo: email,
+      timestamp: new Date().toISOString(),
+      emailType: 'registration'
     })
 
   } catch (error) {
-    console.error('Test email error:', error)
+    console.error('Registration email error:', error)
     return NextResponse.json(
-      { error: 'Failed to send test email' },
+      {
+        error: 'Failed to send registration email',
+        details: error.message,
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     )
   }

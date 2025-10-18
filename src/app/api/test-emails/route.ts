@@ -3,8 +3,8 @@ import { emailService } from '../../../utils/emailService'
 
 export async function POST(request: NextRequest) {
   try {
-    const testEmail = 'mariyanaasenovadrosheva@gmail.com'
-    const testName = 'Марияна Дрошева'
+    const testEmail = 'hm.websiteprovisioning@gmail.com'
+    const testName = 'Pizza Stop Test User'
 
     console.log('🚀 Sending test emails...')
 
