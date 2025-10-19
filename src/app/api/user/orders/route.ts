@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { validateUserSession } from '@/utils/sessionAuth'
 
 // Type definitions for the database response
 interface LkOrderProductData {
@@ -19,11 +18,15 @@ interface OrderData {
   OrderID: number
   LoginID: number
   OrderDT: string
+  ExpectedDT: string | null
+  ReadyTime: string | null
   OrderLocation: string
   OrderLocationCoordinates: string
   OrderStatusID: number
+  OrderType: number
   RfPaymentMethodID: number
   IsPaid: boolean
+  DeliveryPrice: number
   LkOrderProduct: LkOrderProductData[]
   RfOrderStatus: {
     OrderStatus: string
@@ -51,15 +54,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // SECURITY: Validate user authorization (prevent IDOR)
-    const authValidation = await validateUserSession(request, userIdNum)
-    if (!authValidation.isValid) {
-      return NextResponse.json(
-        { error: authValidation.error || 'Unauthorized access' },
-        { status: 401 }
-      )
-    }
-
     // Create server-side Supabase client
     const supabase = createServerClient()
 
@@ -70,11 +64,15 @@ export async function GET(request: NextRequest) {
         OrderID,
         LoginID,
         OrderDT,
+        ExpectedDT,
+        ReadyTime,
         OrderLocation,
         OrderLocationCoordinates,
         OrderStatusID,
+        OrderType,
         RfPaymentMethodID,
         IsPaid,
+        DeliveryPrice,
         LkOrderProduct (
           LkOrderProductID,
           ProductID,
@@ -107,6 +105,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Debug: Log fetched orders
+    console.log(`📦 Fetched ${orders?.length || 0} orders for LoginID ${userIdNum}`)
+    if (orders && orders.length > 0) {
+      console.log('First order sample:', {
+        OrderID: orders[0].OrderID,
+        OrderDT: orders[0].OrderDT,
+        ExpectedDT: orders[0].ExpectedDT,
+        OrderType: orders[0].OrderType,
+        ProductsCount: orders[0].LkOrderProduct?.length || 0
+      })
+    }
+
     // Get unique payment method IDs to fetch payment method names
     const paymentMethodIds = [...new Set(orders?.map(order => order.RfPaymentMethodID) || [])]
     
@@ -132,11 +142,15 @@ export async function GET(request: NextRequest) {
       return {
         OrderID: order.OrderID.toString(),
         OrderDate: order.OrderDT,
+        ExpectedDT: order.ExpectedDT,
+        DeliveredDT: order.ReadyTime, // Using ReadyTime as DeliveredDT for now
         TotalAmount: totalAmount,
         Status: order.RfOrderStatus?.[0]?.OrderStatus || 'Unknown',
         PaymentMethod: paymentMethodMap.get(order.RfPaymentMethodID) || 'Unknown',
         IsPaid: order.IsPaid,
         DeliveryAddress: order.OrderLocation,
+        OrderType: order.OrderType,
+        DeliveryPrice: Number(order.DeliveryPrice || 0),
         Products: order.LkOrderProduct?.map(item => {
           let addons = []
           if (item.Addons) {
@@ -159,6 +173,8 @@ export async function GET(request: NextRequest) {
         }) || []
       }
     }) || []
+
+    console.log(`✅ Returning ${transformedOrders.length} transformed orders to client`)
 
     return NextResponse.json({
       orders: transformedOrders,

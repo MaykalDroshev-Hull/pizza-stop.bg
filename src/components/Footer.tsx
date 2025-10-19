@@ -175,7 +175,7 @@ export default function Footer() {
               </div>
               <div className={styles.creatorSection}>
                 <span className={styles.creatorText}>
-                  Изработка от <a href="https://hm-wspro.vercel.app/bg" target="_blank" rel="noopener noreferrer" className={styles.creatorLink}>H&M WS Pro</a>
+                  Изработка от <a href="https://www.hmwspro.com/bg" target="_blank" rel="noopener noreferrer" className={styles.creatorLink}>H&M WS Pro</a>
                 </span>
               </div>
             </div>
