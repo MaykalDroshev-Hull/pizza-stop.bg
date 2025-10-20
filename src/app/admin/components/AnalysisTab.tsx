@@ -1,4 +1,4 @@
-import { Package, BarChart3, Coffee, Star, Filter, Calendar, TrendingUp, TrendingDown, CreditCard, ShoppingBag, ChevronDown } from "lucide-react";
+import { Package, BarChart3, Coffee, Star, Filter, Calendar, TrendingUp, TrendingDown, CreditCard, ShoppingBag, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 
@@ -258,6 +258,7 @@ import {
   getPaymentMethodBreakdown,
   getSalesChartData,
   getFilterOptions,
+  getPaymentMethods,
   type ProductAnalytics,
   type PaymentMethodBreakdown,
   type DashboardMetrics,
@@ -278,6 +279,8 @@ const AnalysisTab = (): React.JSX.Element => {
   const [topN, setTopN] = useState<number>(10);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPaymentPage, setCurrentPaymentPage] = useState<number>(0);
+  const itemsPerPage = 1; // Show one payment method per page
 
   // State for real data
   const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetrics>({
@@ -293,8 +296,14 @@ const AnalysisTab = (): React.JSX.Element => {
 
   // Filter options from database
   const [orderStatuses, setOrderStatuses] = useState<Array<{ id: number; name: string }>>([]);
-  const [paymentMethods, setPaymentMethods] = useState<Array<{ id: number; name: string }>>([]);
   const [productTypes, setProductTypes] = useState<Array<{ id: number; name: string }>>([]);
+  
+  // Hardcoded payment methods from RfPaymentMethod table
+  const paymentMethodsData = getPaymentMethods();
+  const paymentMethods: Array<{ id: number; name: string }> = paymentMethodsData.map(method => ({
+    id: method.PaymentMethodID,
+    name: method.PaymentMethod
+  }));
 
   // Load filter options on component mount
   useEffect(() => {
@@ -305,17 +314,12 @@ const AnalysisTab = (): React.JSX.Element => {
           id: status.OrderStatusID,
           name: status.OrderStatus
         }));
-        const mappedPaymentMethods = options.paymentMethods.map(method => ({
-          id: method.PaymentMethodID,
-          name: method.PaymentMethod
-        }));
         const mappedProductTypes = options.productTypes.map(type => ({
           id: type.ProductTypeID,
           name: type.ProductType
         }));
 
         setOrderStatuses(mappedStatuses);
-        setPaymentMethods(mappedPaymentMethods);
         setProductTypes(mappedProductTypes);
 
         // Set default filter values based on loaded data
@@ -415,14 +419,16 @@ const AnalysisTab = (): React.JSX.Element => {
   const renderMetricCard = (metric: MetricCard): React.JSX.Element => {
     const Icon = metric.icon;
     return (
-      <div key={metric.id} className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl p-4 md:p-6 hover:border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10">
-        <div className="flex items-center space-x-3">
-          <div className={`p-2 md:p-3 ${metric.bgColor} rounded-xl shadow-lg`}>
-            <Icon className={`w-5 h-5 md:w-6 md:h-6 ${metric.iconColor}`} />
+      <div key={metric.id} className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-xl md:rounded-2xl p-3 md:p-4 lg:p-6 hover:border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10 hover:scale-105">
+        <div className="flex flex-col space-y-2 md:space-y-3">
+          <div className="flex items-center justify-between">
+            <div className={`p-2 md:p-2.5 lg:p-3 ${metric.bgColor} rounded-lg md:rounded-xl shadow-lg flex-shrink-0`}>
+              <Icon className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 ${metric.iconColor}`} />
+            </div>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-gray-400 text-xs md:text-sm font-medium uppercase tracking-wide">{metric.label}</p>
-            <p className="text-lg md:text-2xl font-bold text-white truncate mt-1">{metric.value}</p>
+            <p className="text-gray-400 text-[10px] md:text-xs font-medium uppercase tracking-wide mb-1">{metric.label}</p>
+            <p className="text-base md:text-xl lg:text-2xl font-bold text-white truncate">{metric.value}</p>
           </div>
         </div>
       </div>
@@ -572,32 +578,65 @@ const AnalysisTab = (): React.JSX.Element => {
     );
   };
 
-  const renderPaymentMatrix = (): React.JSX.Element => (
-    <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl p-4 md:p-6 shadow-xl">
-      <div className="flex items-center space-x-3 mb-6">
-        <div className="p-2 bg-purple-600/20 rounded-lg">
-          <CreditCard className="w-5 h-5 text-purple-400" />
-        </div>
-        <h3 className="text-lg font-bold text-white">Разбивка по начин на плащане</h3>
-      </div>
+  const renderPaymentMatrix = (): React.JSX.Element => {
+    const totalPages = Math.max(1, Math.ceil(paymentBreakdown.length / itemsPerPage));
+    const currentItems = paymentBreakdown.slice(
+      currentPaymentPage * itemsPerPage,
+      (currentPaymentPage + 1) * itemsPerPage
+    );
 
-      {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-400 mx-auto mb-4"></div>
-            <p className="text-gray-400">Зареждане...</p>
+    return (
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl p-4 md:p-6 shadow-xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-purple-600/20 rounded-lg">
+              <CreditCard className="w-5 h-5 text-purple-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Разбивка по начин на плащане</h3>
           </div>
+          
+          {paymentBreakdown.length > 1 && (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setCurrentPaymentPage(Math.max(0, currentPaymentPage - 1))}
+                disabled={currentPaymentPage === 0}
+                className="p-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                aria-label="Previous payment method"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-sm text-gray-400 min-w-[80px] text-center">
+                {currentPaymentPage + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPaymentPage(Math.min(totalPages - 1, currentPaymentPage + 1))}
+                disabled={currentPaymentPage >= totalPages - 1}
+                className="p-1.5 rounded-lg bg-gray-800 border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                aria-label="Next payment method"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
-      ) : paymentBreakdown.length === 0 ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="text-center">
-            <CreditCard className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">Няма данни за показване</p>
+
+        {loading ? (
+          <div className="flex items-center justify-center h-48">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-400 mx-auto mb-4"></div>
+              <p className="text-gray-400">Зареждане...</p>
+            </div>
           </div>
-        </div>
-      ) : (
+        ) : paymentBreakdown.length === 0 ? (
+          <div className="flex items-center justify-center h-48">
+            <div className="text-center">
+              <CreditCard className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-400">Няма данни за показване</p>
+            </div>
+          </div>
+        ) : (
         <div className="space-y-6">
-          {paymentBreakdown.map((payment, index) => {
+          {currentItems.map((payment, index) => {
             const colors = [
               { bg: 'bg-blue-600/20', text: 'text-blue-400', border: 'border-blue-500/30' },
               { bg: 'bg-green-600/20', text: 'text-green-400', border: 'border-green-500/30' },
@@ -647,7 +686,8 @@ const AnalysisTab = (): React.JSX.Element => {
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   const renderChart = (): React.JSX.Element => (
     <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl p-4 md:p-6 shadow-xl">
@@ -759,24 +799,24 @@ const AnalysisTab = (): React.JSX.Element => {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <div className="space-y-4 md:space-y-6">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-red-600/10 via-gray-900 to-green-600/10 border border-gray-700 rounded-2xl p-6 md:p-8 shadow-xl">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="bg-gradient-to-r from-red-600/10 via-gray-900 to-green-600/10 border border-gray-700 rounded-2xl p-4 md:p-6 lg:p-8 shadow-xl">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2 flex items-center space-x-3">
-              <BarChart3 className="w-8 h-8 text-red-400" />
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-2 flex items-center space-x-3">
+              <BarChart3 className="w-6 h-6 md:w-8 md:h-8 text-red-400" />
               <span>Анализ на продажбите</span>
             </h1>
-            <p className="text-gray-400 text-sm md:text-base">
+            <p className="text-gray-400 text-xs md:text-sm lg:text-base">
               Преглед на бизнес метрики и детайлна статистика за продуктите
             </p>
           </div>
-          <div className="flex items-center space-x-2 bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-700">
-            <Calendar className="w-5 h-5 text-gray-400" />
-            <div className="text-sm">
+          <div className="flex items-center space-x-2 bg-gray-800/50 px-3 md:px-4 py-2 rounded-xl border border-gray-700 w-full lg:w-auto">
+            <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-400 flex-shrink-0" />
+            <div className="text-xs md:text-sm">
               <div className="text-gray-400">Период</div>
-              <div className="text-white font-semibold">
+              <div className="text-white font-semibold truncate">
                 {new Date(filters.dateRange.start).toLocaleDateString('bg-BG')} - {new Date(filters.dateRange.end).toLocaleDateString('bg-BG')}
               </div>
             </div>
@@ -784,24 +824,28 @@ const AnalysisTab = (): React.JSX.Element => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      {/* KPI Cards - 2 columns on mobile, 4 on desktop */}
+      <div className="grid auto-rows-[1fr] grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {metrics.map(renderMetricCard)}
       </div>
 
       {/* Filters */}
       {renderFilters()}
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Chart Section - Full Width */}
+      <div className="w-full">
         {renderChart()}
-        {renderPaymentMatrix()}
       </div>
 
-      {/* Product Tables */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Product Tables - 2 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {renderProductTable(mostOrderedProducts, "Най-поръчвани продукти", TrendingUp, loading)}
         {renderProductTable(leastOrderedProducts, "Най-слабо поръчвани продукти", TrendingDown, loading)}
+      </div>
+
+      {/* Payment Breakdown - Full Width */}
+      <div className="w-full">
+        {renderPaymentMatrix()}
       </div>
     </div>
   );

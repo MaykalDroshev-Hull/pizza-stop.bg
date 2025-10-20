@@ -207,23 +207,16 @@ export async function getMostOrderedProducts(
       return [];
     }
 
-    // Get products data with relationships
+    // Get products data - only actual products (not 50/50 pizzas)
     const { data, error } = await client
       .from('LkOrderProduct')
       .select(`
-        "ProductID",
-        "ProductName",
-        "Quantity",
-        "TotalPrice",
-        "Product" (
-          "ProductTypeID",
-          "ProductType" (
-            "ProductType"
-          )
-        )
+        ProductID,
+        ProductName,
+        Quantity,
+        TotalPrice
       `)
       .in('OrderID', orderIds)
-      .eq('ProductID', null) // Only get actual products, not composite products
       .not('ProductID', 'is', null);
 
     if (error) {
@@ -231,13 +224,33 @@ export async function getMostOrderedProducts(
       return [];
     }
 
+    // Get product types for the products
+    const uniqueProductIds = [...new Set(data?.map((item: any) => item.ProductID).filter(Boolean))];
+
+    const { data: productsWithTypes, error: productTypeError } = await client
+      .from('Product')
+      .select(`
+        ProductID,
+        ProductType:ProductType!fk_product_producttype (
+          ProductType
+        )
+      `)
+      .in('ProductID', uniqueProductIds);
+
+    const productTypeMap = new Map(
+      productsWithTypes?.map((p: any) => [
+        p.ProductID,
+        p.ProductType?.ProductType || 'Неизвестен'
+      ]) || []
+    );
+
     // Process the data to aggregate by product
     const productMap = new Map<number, ProductAnalytics>();
 
     data?.forEach((item: any) => {
       const productId = item.ProductID;
       const productName = item.ProductName;
-      const productType = item.Product?.ProductType?.ProductType || 'Неизвестен';
+      const productType = productTypeMap.get(productId) || 'Неизвестен';
       const quantity = item.Quantity || 0;
       const revenue = item.TotalPrice || 0;
 
@@ -287,7 +300,7 @@ export async function getLeastOrderedProducts(
         ProductID,
         Product,
         ProductTypeID,
-        ProductType (
+        ProductType:ProductType!fk_product_producttype (
           ProductType
         )
       `)
@@ -386,15 +399,15 @@ export async function getPaymentMethodBreakdown(
       return [];
     }
 
-    // Get products data for these orders
+    // Get products data for these orders - only actual products
     const { data, error } = await client
       .from('LkOrderProduct')
       .select(`
-        "ProductID",
-        "ProductName",
-        "Quantity",
-        "TotalPrice",
-        "OrderID"
+        ProductID,
+        ProductName,
+        Quantity,
+        TotalPrice,
+        OrderID
       `)
       .in('OrderID', orderIds)
       .not('ProductID', 'is', null);
@@ -407,18 +420,10 @@ export async function getPaymentMethodBreakdown(
     // Group by payment method
     const paymentMap = new Map<number, PaymentMethodBreakdown>();
 
-    // Get payment method names for all payment method IDs
+    // Get payment method names using hardcoded data
     const paymentMethodIds = [...new Set(ordersData?.map(order => order.RfPaymentMethodID).filter(Boolean) || [])];
-    const { data: paymentMethods, error: paymentError } = await client
-      .from('RfPaymentMethod')
-      .select('PaymentMethodID, PaymentMethod')
-      .in('PaymentMethodID', paymentMethodIds);
-
-    if (paymentError) {
-      console.error('Error fetching payment methods:', paymentError);
-    }
-
-    const paymentMethodMap = new Map((paymentMethods || []).map(pm => [pm.PaymentMethodID, pm.PaymentMethod]));
+    const paymentMethods = getPaymentMethods();
+    const paymentMethodMap = new Map(paymentMethods.map(pm => [pm.PaymentMethodID, pm.PaymentMethod]));
 
     // First, create a map of order payment methods for quick lookup
     const orderPaymentMap = new Map(ordersData?.map(order => [order.OrderID, {
@@ -487,38 +492,67 @@ export async function getSalesChartData(
   try {
     const client = supabase;
 
-    // Build filters
-    let dateFilter = '';
-    if (filters.dateRange.start && filters.dateRange.end) {
-      dateFilter = `AND "OrderDT" >= '${filters.dateRange.start}' AND "OrderDT" <= '${filters.dateRange.end}'`;
-    }
-
-    const statusFilter = filters.orderStatus ? `AND "OrderStatusID" = ${filters.orderStatus}` : '';
-    const paymentFilter = filters.paymentMethod ? `AND "RfPaymentMethodID" = ${filters.paymentMethod}` : '';
-
-    const { data, error } = await client
+    // Build filters for orders
+    let ordersQuery = client
       .from('Order')
       .select(`
-        "OrderDT",
-        "OrderID",
-        "LkOrderProduct" (
-          "TotalPrice"
-        )
-      `)
-      .not('OrderID', 'is', null);
+        OrderDT,
+        OrderID,
+        OrderStatusID,
+        RfPaymentMethodID
+      `);
 
-    if (error) {
-      console.error('Error fetching chart data:', error);
+    if (filters.dateRange.start && filters.dateRange.end) {
+      ordersQuery = ordersQuery
+        .gte('OrderDT', filters.dateRange.start)
+        .lte('OrderDT', filters.dateRange.end);
+    }
+
+    if (filters.orderStatus) {
+      ordersQuery = ordersQuery.eq('OrderStatusID', filters.orderStatus);
+    }
+
+    if (filters.paymentMethod) {
+      ordersQuery = ordersQuery.eq('RfPaymentMethodID', filters.paymentMethod);
+    }
+
+    const { data: ordersData, error: ordersError } = await ordersQuery;
+
+    if (ordersError) {
+      console.error('Error fetching chart data:', ordersError);
       return [];
     }
+
+    if (!ordersData || ordersData.length === 0) {
+      return [];
+    }
+
+    // Get order IDs for revenue calculation
+    const orderIds = ordersData.map(order => order.OrderID);
+
+    // Get revenue data from LkOrderProduct
+    const { data: revenueData, error: revenueError } = await client
+      .from('LkOrderProduct')
+      .select('OrderID, TotalPrice')
+      .in('OrderID', orderIds);
+
+    if (revenueError) {
+      console.error('Error fetching revenue data:', revenueError);
+    }
+
+    // Create a map of order revenues
+    const revenueMap = new Map<number, number>();
+    revenueData?.forEach((item: any) => {
+      const current = revenueMap.get(item.OrderID) || 0;
+      revenueMap.set(item.OrderID, current + (item.TotalPrice || 0));
+    });
 
     // Group by date
     const dateMap = new Map<string, { orders: number; revenue: number }>();
 
-    data?.forEach((order: any) => {
+    ordersData.forEach((order: any) => {
       const orderDate = new Date(order.OrderDT).toISOString().split('T')[0];
-      const revenue = order.LkOrderProduct?.reduce((sum: number, product: any) =>
-        sum + (product.TotalPrice || 0), 0) || 0;
+      const revenue = revenueMap.get(order.OrderID) || 0;
 
       if (dateMap.has(orderDate)) {
         const existing = dateMap.get(orderDate)!;
@@ -545,6 +579,19 @@ export async function getSalesChartData(
 }
 
 /**
+ * Get hardcoded payment methods from RfPaymentMethod table data
+ */
+export function getPaymentMethods() {
+  return [
+    { PaymentMethodID: 1, PaymentMethod: 'С карта в ресторант' },
+    { PaymentMethodID: 2, PaymentMethod: 'В брой в ресторант' },
+    { PaymentMethodID: 3, PaymentMethod: 'С карта на адрес' },
+    { PaymentMethodID: 4, PaymentMethod: 'В брой на адрес' },
+    { PaymentMethodID: 5, PaymentMethod: 'Онлайн плащане' }
+  ];
+}
+
+/**
  * Get filter options from database
  */
 export async function getFilterOptions() {
@@ -557,12 +604,6 @@ export async function getFilterOptions() {
       .select('*')
       .order('OrderStatusID');
 
-    // Get payment methods
-    const { data: paymentMethods, error: paymentError } = await client
-      .from('RfPaymentMethod')
-      .select('*')
-      .order('PaymentMethodID');
-
     // Get product types
     const { data: productTypes, error: typeError } = await client
       .from('ProductType')
@@ -571,14 +612,12 @@ export async function getFilterOptions() {
 
     return {
       orderStatuses: orderStatuses || [],
-      paymentMethods: paymentMethods || [],
       productTypes: productTypes || []
     };
   } catch (error) {
     console.error('Error fetching filter options:', error);
     return {
       orderStatuses: [],
-      paymentMethods: [],
       productTypes: []
     };
   }
