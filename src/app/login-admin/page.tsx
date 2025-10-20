@@ -33,7 +33,7 @@ const LoginPage: React.FC = (): React.JSX.Element => {
     if (typeof window !== 'undefined') {
       const isLoggedIn = localStorage.getItem('admin_authenticated') === 'true';
       if (isLoggedIn) {
-        router.push('/admin');
+        router.push('/administraciq');
       }
     }
   }, [router]);
@@ -72,8 +72,8 @@ const LoginPage: React.FC = (): React.JSX.Element => {
         localStorage.setItem('admin_authenticated', 'true');
         localStorage.setItem('admin_login_time', new Date().toISOString());
         
-        // Redirect to admin panel
-        router.push('/admin');
+        // Redirect to administraciq panel
+        router.push('/administraciq');
       } else {
         setError({
           message: "Невалидно потребителско име или парола",

@@ -13,7 +13,7 @@ export interface DatabaseProduct {
 }
 
 export async function getProductsClient(): Promise<DatabaseProduct[]> {
-  const res = await fetch('/api/admin/products', { cache: 'no-store' });
+  const res = await fetch('/api/administraciq/products', { cache: 'no-store' });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json as DatabaseProduct[];
@@ -45,7 +45,7 @@ export async function getAddons(): Promise<DatabaseProduct[]> {
 }
 
 export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<DatabaseProduct> {
-  const res = await fetch('/api/admin/products', {
+  const res = await fetch('/api/administraciq/products', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(p),
   });
@@ -55,7 +55,7 @@ export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<
 }
 
 export async function setProductDisabledClient(id: number, isDisabled: boolean) {
-  const res = await fetch('/api/admin/products', {
+  const res = await fetch('/api/administraciq/products', {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, isDisabled }),
   });
@@ -73,7 +73,7 @@ export interface DeleteProductsResponse {
 }
 
 export async function deleteProductsClient(ids: number[]): Promise<DeleteProductsResponse> {
-  const res = await fetch('/api/admin/products', {
+  const res = await fetch('/api/administraciq/products', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids }),
@@ -84,7 +84,7 @@ export async function deleteProductsClient(ids: number[]): Promise<DeleteProduct
 }
 
 export async function softDeleteProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
-  const res = await fetch('/api/admin/products/soft-delete', {
+  const res = await fetch('/api/administraciq/products/soft-delete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids }),
@@ -95,7 +95,7 @@ export async function softDeleteProductsClient(ids: number[]): Promise<{ success
 }
 
 export async function restoreProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
-  const res = await fetch('/api/admin/products/restore', {
+  const res = await fetch('/api/administraciq/products/restore', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ids }),

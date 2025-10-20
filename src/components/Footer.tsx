@@ -84,7 +84,7 @@ export default function Footer() {
               <h3 className={styles.adminTitle}>Администрация</h3>
               
               <div className={styles.adminLinks}>
-                <Link href="/admin" className={styles.adminLink}>
+                <Link href="/administraciq" className={styles.adminLink}>
                   <Settings className={styles.adminIcon} />
                   <span>Управление</span>
                 </Link>

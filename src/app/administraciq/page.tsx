@@ -16,7 +16,6 @@ import ProductsTab from "./components/ProductsTab";
 import AddonsTab from "./components/AddonsTab";
 import BeverageTab from "./components/BeverageTab";
 import AnalysisTab from "./components/AnalysisTab";
-import ReviewManagement from "./components/ReviewManagement";
 
 interface Tab {
   id: string;
