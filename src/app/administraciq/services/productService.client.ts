@@ -12,65 +12,13 @@ export interface DatabaseProduct {
   isDeleted?: number | boolean;
 }
 
-/**
- * Get admin authentication token for API calls
- */
-async function getAdminAuthToken(): Promise<string> {
-  if (typeof window === 'undefined') {
-    throw new Error('Cannot get auth token on server side');
-  }
-
-  // Check if admin is logged in
-  const isAdminLoggedIn = localStorage.getItem('admin_authenticated') === 'true';
-
-  if (!isAdminLoggedIn) {
-    throw new Error('Unauthorized - Admin access required');
-  }
-
-  // Get Supabase session for access token
-  const { supabase } = await import('@/lib/supabase');
-  const { data: { session }, error } = await supabase.auth.getSession();
-
-  if (error || !session?.access_token) {
-    throw new Error('No valid session found - please log in again');
-  }
-
-  return session.access_token;
-}
-
-/**
- * Check if admin is authenticated for client-side validation
- */
-async function validateAdminAuth(): Promise<void> {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  // Check if admin is logged in
-  const isAdminLoggedIn = localStorage.getItem('admin_authenticated') === 'true';
-
-  if (!isAdminLoggedIn) {
-    throw new Error('Unauthorized - Admin access required');
-  }
-
-  // Validate session exists
-  await getAdminAuthToken();
-}
-
 export async function getProductsClient(): Promise<DatabaseProduct[]> {
-<<<<<<< HEAD:src/app/administraciq/services/productService.client.ts
-  const res = await fetch('/api/administraciq/products', { cache: 'no-store' });
-=======
-  await validateAdminAuth();
-  const authToken = await getAdminAuthToken();
-  const res = await fetch('/api/admin/products', {
+  const res = await fetch('/api/administraciq/products', { 
     cache: 'no-store',
     headers: {
-      'Content-Type': 'application/json',
-      'x-admin-auth': authToken
+      'x-admin-auth': 'admin-token' // Simple token for now
     }
   });
->>>>>>> origin/main:src/app/admin/services/productService.client.ts
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json as DatabaseProduct[];
@@ -102,19 +50,12 @@ export async function getAddons(): Promise<DatabaseProduct[]> {
 }
 
 export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<DatabaseProduct> {
-<<<<<<< HEAD:src/app/administraciq/services/productService.client.ts
   const res = await fetch('/api/administraciq/products', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-=======
-  await validateAdminAuth();
-  const authToken = await getAdminAuthToken();
-  const res = await fetch('/api/admin/products', {
-    method: 'POST',
-    headers: {
+    method: 'POST', 
+    headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': authToken
+      'x-admin-auth': 'admin-token'
     },
->>>>>>> origin/main:src/app/admin/services/productService.client.ts
     body: JSON.stringify(p),
   });
   const json = await res.json();
@@ -123,19 +64,12 @@ export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<
 }
 
 export async function setProductDisabledClient(id: number, isDisabled: boolean) {
-<<<<<<< HEAD:src/app/administraciq/services/productService.client.ts
   const res = await fetch('/api/administraciq/products', {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-=======
-  await validateAdminAuth();
-  const authToken = await getAdminAuthToken();
-  const res = await fetch('/api/admin/products', {
-    method: 'PUT',
-    headers: {
+    method: 'PUT', 
+    headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': authToken
+      'x-admin-auth': 'admin-token'
     },
->>>>>>> origin/main:src/app/admin/services/productService.client.ts
     body: JSON.stringify({ id, isDisabled }),
   });
   const json = await res.json();
@@ -152,17 +86,11 @@ export interface DeleteProductsResponse {
 }
 
 export async function deleteProductsClient(ids: number[]): Promise<DeleteProductsResponse> {
-<<<<<<< HEAD:src/app/administraciq/services/productService.client.ts
   const res = await fetch('/api/administraciq/products', {
-=======
-  await validateAdminAuth();
-  const authToken = await getAdminAuthToken();
-  const res = await fetch('/api/admin/products', {
->>>>>>> origin/main:src/app/admin/services/productService.client.ts
     method: 'DELETE',
-    headers: {
+    headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': authToken
+      'x-admin-auth': 'admin-token'
     },
     body: JSON.stringify({ ids }),
   });
@@ -172,17 +100,11 @@ export async function deleteProductsClient(ids: number[]): Promise<DeleteProduct
 }
 
 export async function softDeleteProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
-<<<<<<< HEAD:src/app/administraciq/services/productService.client.ts
   const res = await fetch('/api/administraciq/products/soft-delete', {
-=======
-  await validateAdminAuth();
-  const authToken = await getAdminAuthToken();
-  const res = await fetch('/api/admin/products/soft-delete', {
->>>>>>> origin/main:src/app/admin/services/productService.client.ts
     method: 'POST',
-    headers: {
+    headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': authToken
+      'x-admin-auth': 'admin-token'
     },
     body: JSON.stringify({ ids }),
   });
@@ -192,17 +114,11 @@ export async function softDeleteProductsClient(ids: number[]): Promise<{ success
 }
 
 export async function restoreProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
-<<<<<<< HEAD:src/app/administraciq/services/productService.client.ts
   const res = await fetch('/api/administraciq/products/restore', {
-=======
-  await validateAdminAuth();
-  const authToken = await getAdminAuthToken();
-  const res = await fetch('/api/admin/products/restore', {
->>>>>>> origin/main:src/app/admin/services/productService.client.ts
     method: 'POST',
-    headers: {
+    headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': authToken
+      'x-admin-auth': 'admin-token'
     },
     body: JSON.stringify({ ids }),
   });
