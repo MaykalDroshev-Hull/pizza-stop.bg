@@ -829,24 +829,15 @@ const AnalysisTab = (): React.JSX.Element => {
                   name === 'orders' ? 'Поръчки' : 'Приходи'
                 ]}
               />
-              <Line
-                type="monotone"
-                dataKey="revenue"
-                stroke="#10B981"
-                strokeWidth={3}
-                name="Приходи"
-                dot={{ fill: '#10B981', r: 4 }}
-                activeDot={{ r: 6, fill: '#10B981' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="orders"
-                stroke="#EF4444"
-                strokeWidth={3}
-                name="Поръчки"
-                dot={{ fill: '#EF4444', r: 4 }}
-                activeDot={{ r: 6, fill: '#EF4444' }}
-              />
+               <Line
+                 type="monotone"
+                 dataKey="revenue"
+                 stroke="#10B981"
+                 strokeWidth={3}
+                 name="Приходи"
+                 dot={{ fill: '#10B981', r: 4 }}
+                 activeDot={{ r: 6, fill: '#10B981' }}
+               />
             </LineChart>
           </ResponsiveContainer>
         </div>
