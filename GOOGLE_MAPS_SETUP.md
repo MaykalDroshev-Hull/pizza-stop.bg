@@ -6,9 +6,11 @@
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select an existing one
-3. Enable the following APIs:
-   - Maps JavaScript API
-   - Geocoding API
+3. Enable the following APIs (IMPORTANT - ALL ARE REQUIRED):
+   - **Maps Embed API** ⭐ (For delivery page)
+   - Maps JavaScript API (For interactive maps)
+   - Geocoding API (For address validation)
+   - Places API (Optional - for autocomplete)
 4. Go to Credentials → Create Credentials → API Key
 5. Copy your API key
 
@@ -23,8 +25,12 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_actual_api_key_here
 ### 3. API Key Restrictions (Recommended)
 
 For security, restrict your API key:
-- HTTP referrers: Only allow your domain
-- API restrictions: Only Maps JavaScript API and Geocoding API
+- HTTP referrers: Allow your domains (localhost:3000, your-domain.com)
+- API restrictions: Only enable these APIs:
+  - Maps Embed API
+  - Maps JavaScript API
+  - Geocoding API
+  - Places API (if using autocomplete)
 
 ### 4. Features Implemented
 
@@ -57,8 +63,28 @@ The component uses the existing design system:
 
 ### 7. Troubleshooting
 
-If the map doesn't load:
-- Check your API key is correct
-- Verify the API is enabled in Google Cloud Console
+#### Common Issues
+
+**Issue: "This API key is not authorized to use this service or API"**
+- **Solution:** Enable **Maps Embed API** in Google Cloud Console
+- The delivery page specifically requires this API
+
+**Issue: Map doesn't load**
+- Check your API key is correct in `.env.local`
+- Verify ALL required APIs are enabled in Google Cloud Console
 - Check browser console for errors
 - Ensure your domain is allowed in API key restrictions
+- Restart Next.js dev server after changing `.env.local`
+
+**Issue: "For development purposes only" watermark**
+- This appears if billing is not enabled in Google Cloud
+- Enable billing (you still get $200/month free credit)
+
+#### Where Each API is Used
+
+| API | Used In | Purpose |
+|-----|---------|---------|
+| Maps Embed API | `/delivery` page | Show map with driving directions |
+| Maps JavaScript API | `/checkout`, `/dashboard` | Interactive address selection |
+| Geocoding API | `/checkout` | Convert addresses to coordinates |
+| Places API | `/checkout` | Address autocomplete (optional) |

@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Removed deprecated experimental.turbo
+  // Fix workspace root detection
+  outputFileTracingRoot: __dirname,
 }
 
 module.exports = nextConfig 

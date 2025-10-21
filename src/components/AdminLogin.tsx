@@ -5,7 +5,7 @@ import { Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 interface AdminLoginProps {
   title: string
-  onLogin: (username: string, password: string) => boolean
+  onLogin: (username: string, password: string) => Promise<boolean>
   redirectPath?: string
 }
 
@@ -22,7 +22,7 @@ export default function AdminLogin({ title, onLogin, redirectPath }: AdminLoginP
     setIsLoading(true)
 
     try {
-      const success = onLogin(username, password)
+      const success = await onLogin(username, password)
       
       if (success) {
         // Store login state in sessionStorage with correct key
@@ -46,7 +46,7 @@ export default function AdminLogin({ title, onLogin, redirectPath }: AdminLoginP
           }
         }, 100)
       } else {
-        setError('Невалидно потребителско име или парола')
+        setError('Невалиден имейл адрес или парола')
       }
     } catch (err) {
       setError('Грешка при влизане')
@@ -77,16 +77,16 @@ export default function AdminLogin({ title, onLogin, redirectPath }: AdminLoginP
             <div className="flex items-center space-x-3 mb-2">
               <User className="text-red-400" size={24} />
               <label className="text-lg font-semibold text-white">
-              Админ Потребител
+              Имейл адрес
               </label>
             </div>
             <input
-              type="text"
+              type="email"
               required
-              placeholder="Въведете потребителско име..."
+              placeholder="Въведете имейл адрес..."
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
+              autoComplete="email"
               className="w-full px-4 py-4 bg-gray-800 border-2 border-gray-600 rounded-xl text-white text-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-300"
             />
           </div>

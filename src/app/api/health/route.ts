@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       nodeEnv: process.env.NODE_ENV || 'development',
       hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      hasEmailConfig: !!(process.env.NEXT_PUBLIC_EMAIL && process.env.NEXT_PUBLIC_EMAIL_PASS)
+      hasEmailConfig: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
     },
     uptime: process.uptime(),
     version: process.env.npm_package_version || '1.0.0'

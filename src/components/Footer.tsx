@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Facebook, Settings, MapPin, Car, Pizza } from 'lucide-react'
+import { Facebook, Settings, MapPin, Car, Pizza, Printer } from 'lucide-react'
 import styles from '../styles/Footer.module.css'
 import { isRestaurantOpen } from '../utils/openingHours'
 
@@ -96,6 +96,10 @@ export default function Footer() {
                   <Pizza className={styles.adminIcon} />
                   <span>Кухня</span>
                 </Link>
+                <Link href="/printer" className={styles.adminLink}>
+                  <Printer className={styles.adminIcon} />
+                  <span>Принтер</span>
+                </Link>
               </div>
             </div>
             
@@ -157,13 +161,23 @@ export default function Footer() {
       <div className={styles.bottomBar}>
         <div className={styles.container}>
           <div className={styles.bottomContent}>
-            <p className={styles.copyright}>
-              © {new Date().getFullYear()} Pizza Stop — Всички права запазени.
-            </p>
-            <div className={styles.creatorSection}>
-              <span className={styles.creatorText}>
-                Изработка от <a href="https://hm-wspro.vercel.app/bg" target="_blank" rel="noopener noreferrer" className={styles.creatorLink}>H&M WS Pro</a>
-              </span>
+            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-4">
+              <p className={styles.copyright}>
+                © {new Date().getFullYear()} Pizza Stop — Всички права запазени.
+              </p>
+              <div className="flex gap-6 text-sm text-text-secondary">
+                <Link href="/privacy-policy" className="hover:text-primary transition-colors">
+                  Политика за поверителност
+                </Link>
+                <Link href="/terms-of-service" className="hover:text-primary transition-colors">
+                  Общи условия
+                </Link>
+              </div>
+              <div className={styles.creatorSection}>
+                <span className={styles.creatorText}>
+                  Изработка от <a href="https://www.hmwspro.com/bg" target="_blank" rel="noopener noreferrer" className={styles.creatorLink}>H&M WS Pro</a>
+                </span>
+              </div>
             </div>
           </div>
         </div>

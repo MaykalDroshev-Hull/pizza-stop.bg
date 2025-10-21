@@ -106,7 +106,7 @@ export class EnvironmentValidator {
       hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       hasSupabaseServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      hasEmailConfig: !!(process.env.NEXT_PUBLIC_EMAIL && process.env.NEXT_PUBLIC_EMAIL_PASS),
+      hasEmailConfig: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
       supabaseUrlLength: process.env.NEXT_PUBLIC_SUPABASE_URL?.length || 0,
       supabaseAnonKeyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length || 0,
       supabaseServiceKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0

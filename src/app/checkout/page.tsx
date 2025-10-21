@@ -9,12 +9,14 @@ declare global {
   }
 }
 import { ArrowLeft, MapPin, User, Phone, CreditCard, Banknote, Clock, Calendar, LogIn, UserCheck, MessageSquare, RotateCcw, Database, Navigation, FileText, Map, CheckCircle, XCircle, Info, AlertTriangle, Lightbulb, Home, ShoppingCart, Pizza, Search, ClipboardList, Edit, Target, AlertCircle, HelpCircle, Truck, Store, Mail } from 'lucide-react'
+import PaymentForm from '../../components/PaymentForm'
 import { useCart } from '../../components/CartContext'
 import CartSummaryDisplay from '../../components/CartSummaryDisplay'
 import DrinksSuggestionBox from '../../components/DrinksSuggestionBox'
 import { isRestaurantOpen } from '../../utils/openingHours'
 import { useLoginID } from '../../components/LoginIDContext'
 import { encryptOrderId } from '../../utils/orderEncryption'
+import styles from './checkout.module.css'
 
 interface CustomerInfo {
   name: string
@@ -61,6 +63,7 @@ export default function CheckoutPage() {
   const [unavailableItems, setUnavailableItems] = useState<string[]>([])
   const [cachedProfileData, setCachedProfileData] = useState<any>(null)
   const [dateTimeError, setDateTimeError] = useState<string>('')
+  const [paymentData, setPaymentData] = useState<any>(null)
   const addressInputRef = useRef<HTMLInputElement>(null)
   
   // Map modal state (from dashboard)
@@ -105,31 +108,43 @@ export default function CheckoutPage() {
 
   // Load Google Maps script
   useEffect(() => {
-    const loadGoogleMaps = async () => {
-      if (window.google && window.google.maps && window.google.maps.places && window.google.maps.geometry) {
-        setMapLoaded(true)
-        initializeAutocomplete()
-        return
-      }
+    if (mapLoaded) return
 
-      // Check if script already exists to prevent duplicate loading
-      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
-      if (existingScript) {
-        // Wait for existing script to load
-        existingScript.addEventListener('load', initializeAutocomplete)
-        return
-      }
-
-      const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places,geometry`
-      script.async = true
-      script.defer = true
-      script.onload = initializeAutocomplete
-      document.head.appendChild(script)
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    
+    if (!apiKey) {
+      console.error('Google Maps API Key is missing! Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local')
+      return
     }
 
-    loadGoogleMaps()
-  }, [])
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.defer = true
+    
+    script.onload = () => {
+      setMapLoaded(true)
+    }
+
+    script.onerror = () => {
+      console.error('Failed to load Google Maps script')
+    }
+
+    document.head.appendChild(script)
+
+    return () => {
+      if (document.head.contains(script)) {
+        document.head.removeChild(script)
+      }
+    }
+  }, [mapLoaded])
+
+  // Initialize autocomplete when map is loaded
+  useEffect(() => {
+    if (mapLoaded) {
+      initializeAutocomplete()
+    }
+  }, [mapLoaded])
 
   // Initialize map modal when opened
   useEffect(() => {
@@ -1170,7 +1185,8 @@ export default function CheckoutPage() {
     (
       isCollection || // Collection orders don't need address validation
       (customerInfo.LocationText && customerInfo.LocationCoordinates && addressConfirmed && addressZone !== 'outside' && deliveryCost !== null)
-    ) // Delivery orders need full address validation
+    ) && // Delivery orders need full address validation
+    (paymentMethodId !== 5 || (paymentData && paymentData.isValid)) // Online payment requires valid payment data
 
   const handleSubmit = async (e: React.FormEvent) => {
       // Set loading state immediately
@@ -1179,6 +1195,24 @@ export default function CheckoutPage() {
   
     
     try{
+    
+    // CRITICAL: Validate cart is not empty
+    if (!items || items.length === 0) {
+      alert('❌ Вашата количка е празна! Моля, добавете продукти преди да поръчате.')
+      setIsLoading(false)
+      return
+    }
+    
+    // Validate all items have required data
+    const invalidItems = items.filter(item => !item.name || !item.price || item.quantity <= 0)
+    if (invalidItems.length > 0) {
+      console.error('❌ Invalid items in cart:', invalidItems)
+      alert('❌ Някои продукти в количката са невалидни. Моля, опреснете страницата.')
+      setIsLoading(false)
+      return
+    }
+    
+    console.log('✅ Cart validation passed:', items.length, 'items')
     
     // Validate minimum order amount
     if (totalPrice < 15) {
@@ -1258,34 +1292,61 @@ export default function CheckoutPage() {
      // Handle order submission
      const finalTotal = totalPrice + (isCollection ? 0 : deliveryCost)
      
-     console.log('📦 Order details:', {
-       customerInfo, 
-       orderItems: items,
-       orderTime, 
-       orderType,
-       deliveryCost: isCollection ? 0 : deliveryCost,
-       totalPrice,
-       finalTotal,
-       addressZone,
-       isCollection,
-       paymentMethodId
-     })
+    console.log('📦 Order details being sent to API:')
+    console.log('   - Customer:', customerInfo.name, customerInfo.email)
+    console.log('   - Items count:', items.length)
+    console.log('   - Items:', items.map(item => `${item.name} x${item.quantity}`).join(', '))
+    console.log('   - Total:', totalPrice, 'лв')
+    console.log('   - Delivery:', isCollection ? 0 : deliveryCost, 'лв')
+    console.log('   - Final total:', finalTotal, 'лв')
+    console.log('   - Type:', isCollection ? 'Collection' : 'Delivery')
+    console.log('   - Payment method:', paymentMethodId)
      
-     // Prepare order data for API
-     const orderData = {
-       customerInfo: {
-         ...customerInfo,
-         email: orderType === 'guest' ? customerInfo.email : (user?.email || `guest_${Date.now()}@pizza-stop.bg`)
-       },
-       orderItems: items,
-       orderTime,
-       orderType,
-       deliveryCost: isCollection ? 0 : deliveryCost,
-       totalPrice,
-       isCollection,
-       paymentMethodId,
-       loginId: user?.id || null
-     }
+    // Validate orderTime before sending (critical for API validation)
+    if (!orderTime.type) {
+      alert('❌ Моля, изберете кога искате да получите поръчката')
+      setIsLoading(false)
+      return
+    }
+    
+    // Ensure scheduledTime is a valid Date if type is scheduled
+    if (orderTime.type === 'scheduled' && (!orderTime.scheduledTime || !(orderTime.scheduledTime instanceof Date))) {
+      alert('❌ Моля, изберете валидна дата и час за доставката')
+      setIsLoading(false)
+      return
+    }
+    
+    // Prepare order data for API
+   const orderData = {
+     customerInfo: {
+       ...customerInfo,
+      email: orderType === 'guest' ? customerInfo.email : (user?.email || `guest_${Date.now()}@pizza-stop.bg`),
+      // For collection orders, ensure address fields are properly set
+      LocationText: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : customerInfo.LocationText
+     },
+     orderItems: items,
+     orderTime: {
+       type: orderTime.type as 'immediate' | 'scheduled', // Type assertion for Zod
+       // Convert Date to ISO string for Zod validation
+       scheduledTime: orderTime.scheduledTime ? orderTime.scheduledTime.toISOString() : undefined
+     },
+     orderType,
+     deliveryCost: isCollection ? 0 : deliveryCost,
+     totalPrice,
+     isCollection,
+     paymentMethodId,
+     paymentData: paymentMethodId === 5 ? paymentData : null, // Include payment data for online payments
+     loginId: user?.id || null
+   }
+   
+     console.log('🚀 Sending order data to API:')
+     console.log('   Full payload:', JSON.stringify(orderData, null, 2))
+     console.log('   CustomerInfo validation:')
+     console.log('     - name:', customerInfo.name, '(length:', customerInfo.name?.length, ')')
+     console.log('     - email:', customerInfo.email, '(valid:', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email || ''), ')')
+     console.log('     - phone:', customerInfo.phone, '(length:', customerInfo.phone?.length, ')')
+     console.log('     - LocationText:', customerInfo.LocationText, '(length:', customerInfo.LocationText?.length, ')')
+     console.log('     - LocationCoordinates:', customerInfo.LocationCoordinates)
      
      // Call order confirmation API
      const response = await fetch('/api/order/confirm', {
@@ -1299,12 +1360,62 @@ export default function CheckoutPage() {
      const result = await response.json()
      
     if (response.ok) {
+      console.log('✅ Order confirmed successfully:', result.orderId)
       // Redirect to order success page with encrypted order ID
       const encryptedOrderId = encryptOrderId(result.orderId.toString())
       // Don't stop loading, keep it running during redirect
       window.location.href = `/order-success?orderId=${encryptedOrderId}`
     } else {
+      console.error('❌ Order API returned error:', result)
+      console.error('   Status:', response.status)
+      console.error('   Error:', result.error)
+      console.error('   Details:', result.details)
       setIsLoading(false)
+      
+      // Show user-friendly error message
+      if (result.details) {
+        console.error('📋 Full validation details:', result.details)
+        
+        // Parse the validation errors
+        let errorMessage = '❌ Моля, коригирайте следните грешки:\n\n'
+        
+        if (result.details.customerInfo) {
+          errorMessage += 'Информация за клиента:\n'
+          result.details.customerInfo.forEach((err: string) => {
+            errorMessage += `  • ${err}\n`
+          })
+        }
+        
+        if (result.details.orderItems) {
+          errorMessage += '\nПродукти:\n'
+          result.details.orderItems.forEach((err: string) => {
+            errorMessage += `  • ${err}\n`
+          })
+        }
+        
+        if (result.details.orderTime) {
+          errorMessage += '\nВреме за доставка:\n'
+          result.details.orderTime.forEach((err: string) => {
+            errorMessage += `  • ${err}\n`
+          })
+        }
+        
+        // Show all other errors
+        Object.keys(result.details).forEach(key => {
+          if (!['customerInfo', 'orderItems', 'orderTime'].includes(key)) {
+            errorMessage += `\n${key}:\n`
+            if (Array.isArray(result.details[key])) {
+              result.details[key].forEach((err: string) => {
+                errorMessage += `  • ${err}\n`
+              })
+            }
+          }
+        })
+        
+        alert(errorMessage)
+      } else {
+        alert(`❌ ${result.error || 'Възникна грешка при потвърждаване на поръчката'}`)
+      }
       throw new Error(result.error || 'Failed to confirm order')
     }
    } catch (error) {
@@ -2297,6 +2408,12 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* Payment Form - Only show when online payment is selected */}
+              <PaymentForm 
+                isVisible={paymentMethodId === 5} 
+                onPaymentDataChange={setPaymentData}
+              />
+
               {/* Validation Messages */}
               <div className="space-y-2">
                 {/* Minimum order amount errors by zone */}
@@ -2351,6 +2468,14 @@ export default function CheckoutPage() {
                     <div>Моля, изберете кога искате да получите поръчката.</div>
                   </div>
                 )}
+
+                {/* Payment validation */}
+                {paymentMethodId === 5 && (!paymentData || !paymentData.isValid) && (
+                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
+                    <div className="font-medium mb-1">Данните за плащане не са валидни</div>
+                    <div>Моля, попълнете правилно всички данни за картата.</div>
+                  </div>
+                )}
                 
                 {/* Action Buttons for Low Order */}
                 {(totalPrice < 15 || (addressZone === 'blue' && totalPrice < 30)) && (
@@ -2389,57 +2514,50 @@ export default function CheckoutPage() {
 
       {/* Map Modal */}
       {isMapModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-white/12 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/12">
-              <h3 className="text-xl font-bold text-text">Изберете адрес на картата</h3>
+        <div className={styles.mapModalOverlay}>
+          <div className={styles.mapModal}>
+            <div className={styles.mapModalHeader}>
+              <h3>Изберете адрес на картата</h3>
               <button 
                 onClick={handleMapModalClose}
-                className="text-muted hover:text-text transition-colors p-2"
+                className={styles.closeButton}
               >
                 ×
               </button>
             </div>
-            
-            {/* Map Content */}
-            <div className="flex-1 flex flex-col min-h-0">
+            <div className={styles.mapModalContent}>
               {locationError && (
-                <div className="flex items-center gap-2 bg-red/10 border border-red text-red p-3 m-4 rounded-xl">
+                <div className={styles.locationError}>
                   <XCircle size={16} />
-                  <span className="text-sm">{locationError}</span>
+                  <span>{locationError}</span>
                 </div>
               )}
-              
               <div 
                 ref={mapModalRef} 
-                className="flex-1 min-h-[400px] w-full"
+                className={styles.mapContainer}
               />
-              
-              {/* Footer */}
-              <div className="p-6 border-t border-white/12 flex items-center justify-between gap-4">
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-yellow-400 rounded"></div>
-                    <span className="text-sm text-text">Зона 1 (3 лв.)</span>
+              <div className={styles.mapModalFooter}>
+                <div className={styles.zoneLegend}>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendColor} style={{ backgroundColor: '#fbbf24' }}></div>
+                    <span>Зона 1 (3 лв.)</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                    <span className="text-sm text-text">Зона 2 (7 лв.)</span>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendColor} style={{ backgroundColor: '#3b82f6' }}></div>
+                    <span>Зона 2 (7 лв.)</span>
                   </div>
                 </div>
-                
-                <div className="flex gap-3">
+                <div className={styles.mapModalActions}>
                   <button 
                     onClick={handleMapModalClose}
-                    className="px-6 py-3 border border-white/12 text-text rounded-xl hover:bg-white/6 transition-colors"
+                    className={styles.cancelButton}
                   >
                     Отказ
                   </button>
                   <button 
                     onClick={handleMapLocationSelect}
                     disabled={!hasMarker || addressZone === 'outside'}
-                    className="px-6 py-3 bg-gradient-to-r from-red to-orange text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
+                    className={styles.confirmButton}
                   >
                     Потвърди адрес
                   </button>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw } from 'lucide-react';
 import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_STATUS, KitchenOrder } from '../../lib/supabase';
+import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerator';
 // AdminLogin moved to separate page at /admin-kitchen-login
 
 interface Order {
@@ -19,6 +20,7 @@ interface Order {
     comment?: string;
   }>;
   totalPrice: number;
+  deliveryPrice: number;
   status: string;
   orderTime: Date;
   expectedTime: Date | null;
@@ -27,6 +29,7 @@ interface Order {
   completedTime: Date | null;
   estimatedTime: number;
   specialInstructions: string;
+  comments: string | null;
   isPaid: boolean;
   orderStatusId: number;
   orderType: number; // 1 = Restaurant collection, 2 = Delivery
@@ -126,15 +129,20 @@ const KitchenCommandCenter = () => {
           displayName = `${product.ProductName}${product.ProductSize ? ` (${product.ProductSize})` : ''}`;
         }
         
+        // Calculate correct unit price including add-ons
+        // TotalPrice already includes addons and is multiplied by quantity
+        const unitPriceWithAddons = product.TotalPrice / product.Quantity;
+        
         return {
           name: displayName,
           quantity: product.Quantity,
-          price: product.UnitPrice,
+          price: unitPriceWithAddons, // Price per unit including add-ons
           customizations,
           comment: product.Comment || undefined
         };
       }),
       totalPrice: kitchenOrder.TotalOrderPrice,
+      deliveryPrice: kitchenOrder.DeliveryPrice,
       status,
       orderTime,
       expectedTime,
@@ -143,6 +151,7 @@ const KitchenCommandCenter = () => {
       completedTime: status === 'completed' ? new Date(orderTime.getTime() + 15 * 60 * 1000) : null,
       estimatedTime: 15, // Default estimate
       specialInstructions: kitchenOrder.SpecialInstructions || '',
+      comments: kitchenOrder.Comments,
       isPaid: kitchenOrder.IsPaid,
       orderStatusId: kitchenOrder.OrderStatusID,
       orderType: kitchenOrder.OrderType
@@ -697,7 +706,16 @@ const KitchenCommandCenter = () => {
                   <div><span className="text-gray-400">Готово в:</span> <span className="text-white">{order.readyTime.toLocaleString('bg-BG')}</span></div>
                 )}
                 <div><span className="text-gray-400">Статус:</span> <span className="text-white">{order.status}</span></div>
-                <div><span className="text-gray-400">Обща сума:</span> <span className="text-orange font-semibold">{order.totalPrice.toFixed(2)} лв.</span></div>
+                <div><span className="text-gray-400">Артикули:</span> <span className="text-orange font-semibold">{order.totalPrice.toFixed(2)} лв.</span></div>
+                {order.deliveryPrice > 0 && (
+                  <div className="flex items-center space-x-2 bg-blue-900/40 border border-blue-500/30 rounded-lg px-3 py-2">
+                    <span className="text-blue-300 text-sm">🚚</span>
+                    <span className="text-blue-300 text-sm font-medium">Доставка: {order.deliveryPrice.toFixed(2)} лв.</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-white/10">
+                  <span className="text-gray-400">Обща сума:</span> <span className="text-green-400 font-bold text-lg">{(order.totalPrice + order.deliveryPrice).toFixed(2)} лв.</span>
+                </div>
               </div>
             </div>
 
@@ -1335,9 +1353,18 @@ const KitchenCommandCenter = () => {
           </div>
         )}
 
+        {order.deliveryPrice > 0 && (
+          <div className="flex items-center space-x-2 bg-blue-900/40 border border-blue-500/30 rounded-lg px-2 py-1 mb-2">
+            <span className="text-blue-300 text-xs">🚚</span>
+            <span className="text-blue-300 text-xs font-medium">
+              Доставка: {order.deliveryPrice.toFixed(2)} лв
+            </span>
+          </div>
+        )}
+
         <div className="flex justify-between items-center">
           <span className="text-green-400 font-bold">
-            {order.totalPrice.toFixed(2)} лв
+            Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} лв
           </span>
           <div className="flex space-x-2">
             <button
@@ -1347,6 +1374,7 @@ const KitchenCommandCenter = () => {
               🔥 Започвам
             </button>
             <button
+              onClick={() => printOrderTicket(order)}
               className="bg-gray-600 text-white font-bold py-1 px-3 rounded text-sm hover:bg-gray-700 transition-all flex items-center space-x-1"
             >
               <Printer className="w-4 h-4" />
@@ -1436,16 +1464,34 @@ const KitchenCommandCenter = () => {
           </div>
         )}
 
+        {order.deliveryPrice > 0 && (
+          <div className="flex items-center space-x-2 bg-blue-900/40 border border-blue-500/30 rounded-lg px-2 py-1 mb-2">
+            <span className="text-blue-300 text-xs">🚚</span>
+            <span className="text-blue-300 text-xs font-medium">
+              Доставка: {order.deliveryPrice.toFixed(2)} лв
+            </span>
+          </div>
+        )}
+
         <div className="flex justify-between items-center">
           <span className="text-green-400 font-bold text-sm">
-            {order.totalPrice.toFixed(2)} лв
+            Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} лв
           </span>
-          <button
-            onClick={() => updateOrderStatus(order.id, 'completed', true)}
-            className="bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-1 px-2 rounded text-xs hover:from-green-600 hover:to-green-700 transition-all"
-          >
-            ✅ Готова
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => printOrderTicket(order)}
+              className="bg-gray-600 text-white font-bold py-1 px-2 rounded text-xs hover:bg-gray-700 transition-all"
+              title="Принтирай"
+            >
+              <Printer className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => updateOrderStatus(order.id, 'completed', true)}
+              className="bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-1 px-2 rounded text-xs hover:from-green-600 hover:to-green-700 transition-all"
+            >
+              ✅ Готова
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1492,6 +1538,13 @@ const KitchenCommandCenter = () => {
             <div className="text-gray-400 text-xs">📍 {order.address}</div>
           </div>
           <div className="flex space-x-2">
+            <button
+              onClick={() => printOrderTicket(order)}
+              className={`bg-purple-500 hover:bg-purple-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
+              title="Принтирай"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
             <button
               onClick={() => updateOrderStatus(order.id, 'working', true)}
               className={`bg-orange-500 hover:bg-orange-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
@@ -1556,8 +1609,17 @@ const KitchenCommandCenter = () => {
           </div>
         )}
         
+        {order.deliveryPrice > 0 && (
+          <div className="flex items-center space-x-2 bg-blue-900/40 border border-blue-500/30 rounded-lg px-2 py-1 mb-2">
+            <span className="text-blue-300 text-xs">🚚</span>
+            <span className="text-blue-300 text-xs font-medium">
+              Доставка: {order.deliveryPrice.toFixed(2)} лв
+            </span>
+          </div>
+        )}
+        
         <div className="text-green-400 font-bold text-xs">
-          {order.totalPrice.toFixed(2)} лв
+          Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} лв
         </div>
       </div>
     );

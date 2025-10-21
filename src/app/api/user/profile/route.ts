@@ -24,8 +24,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const userIdNum = parseInt(userId, 10)
+    if (isNaN(userIdNum)) {
+      return NextResponse.json(
+        { error: 'Invalid user ID' },
+        { status: 400 }
+      )
+    }
+
     // Fetch user profile information
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError} = await supabase
       .from('Login')
       .select(`
         LoginID,
@@ -37,7 +45,7 @@ export async function GET(request: NextRequest) {
         addressInstructions,
         created_at
       `)
-      .eq('LoginID', userId)
+      .eq('LoginID', userIdNum)
       .single()
 
     if (userError || !user) {
@@ -89,6 +97,14 @@ export async function PUT(request: NextRequest) {
     if (!userId) {
       return NextResponse.json(
         { error: 'User ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const userIdNum = parseInt(userId, 10)
+    if (isNaN(userIdNum)) {
+      return NextResponse.json(
+        { error: 'Invalid user ID' },
         { status: 400 }
       )
     }
@@ -150,7 +166,7 @@ export async function PUT(request: NextRequest) {
         phone: phone,
         updated_at: new Date().toISOString()
       })
-      .eq('LoginID', userId)
+      .eq('LoginID', userIdNum)
       .select(`
         LoginID,
         Name,

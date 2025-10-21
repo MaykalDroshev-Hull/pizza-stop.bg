@@ -76,12 +76,15 @@ export function LoginIDProvider({ children }: { children: ReactNode }) {
     setUser(userData)
     setIsAuthenticated(true)
     localStorage.setItem('user', JSON.stringify(userData))
+    // Store user ID for authorization headers (temporary solution)
+    localStorage.setItem('user_id', userData.id.toString())
   }
 
   const logout = () => {
     setUser(null)
     setIsAuthenticated(false)
     localStorage.removeItem('user')
+    localStorage.removeItem('user_id')
   }
 
   const updateUser = (updates: Partial<User>) => {

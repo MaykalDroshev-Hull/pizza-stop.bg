@@ -1,6 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { emailService } from '@/utils/emailService'
+import { calculateServerSidePrice, validatePriceMatch } from '@/utils/priceCalculation'
+import { orderConfirmationSchema } from '@/utils/zodSchemas'
+import { withRateLimit, createRateLimitResponse } from '@/utils/rateLimit'
+
+// Simple in-memory rate limiting for price manipulation attempts
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+function checkRateLimit(identifier: string, maxAttempts: number = 5, windowMs: number = 15 * 60 * 1000): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(identifier)
+
+  if (!entry || now > entry.resetTime) {
+    // First attempt or window expired, reset counter
+    rateLimitMap.set(identifier, { count: 1, resetTime: now + windowMs })
+    return true
+  }
+
+  if (entry.count >= maxAttempts) {
+    console.error(`🚨 RATE LIMIT EXCEEDED for ${identifier} - ${entry.count} attempts`)
+    return false
+  }
+
+  entry.count++
+  rateLimitMap.set(identifier, entry)
+  return true
+}
+
+function getClientIdentifier(request: NextRequest): string {
+  // Use IP address as primary identifier, fallback to user agent hash
+  const ip = request.headers.get('x-forwarded-for') ||
+             request.headers.get('x-real-ip') ||
+             'unknown'
+
+  const userAgent = request.headers.get('user-agent') || 'unknown'
+  const userAgentHash = Buffer.from(userAgent).toString('base64').slice(0, 16)
+
+  return `${ip}:${userAgentHash}`
+}
 
 // Helper function to get payment method name
 function getPaymentMethodName(paymentMethodId: number): string {
@@ -15,8 +53,43 @@ function getPaymentMethodName(paymentMethodId: number): string {
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  console.log(`\n${'='.repeat(80)}`)
+  console.log(`🆕 NEW ORDER REQUEST [${requestId}] - ${new Date().toISOString()}`)
+  console.log('='.repeat(80))
+  
   try {
+    // Get client identifier for rate limiting
+    const clientIdentifier = getClientIdentifier(request)
+    
+    // Rate limiting - prevent order spam
+    const rateLimit = await withRateLimit(request, 'order')
+    if (!rateLimit.allowed) {
+      console.log(`⛔ [${requestId}] Rate limit exceeded`)
+      return createRateLimitResponse(rateLimit.headers)
+    }
+
+    // Parse and validate request body
+    console.log(`📥 [${requestId}] Parsing request body...`)
     const body = await request.json()
+    
+    // Validate with Zod
+    console.log(`✓ [${requestId}] Validating with Zod schema...`)
+    const validationResult = orderConfirmationSchema.safeParse(body)
+    if (!validationResult.success) {
+      console.error(`❌ [${requestId}] Order validation failed:`, validationResult.error.flatten())
+      return NextResponse.json(
+        { 
+          error: 'Invalid request data',
+          details: validationResult.error.flatten().fieldErrors
+        },
+        { 
+          status: 400,
+          headers: rateLimit.headers
+        }
+      )
+    }
+
     const { 
       customerInfo, 
       orderItems, 
@@ -27,45 +100,162 @@ export async function POST(request: NextRequest) {
       isCollection = false,
       paymentMethodId,
       loginId = null // For logged-in users
-    } = body
+    } = validationResult.data
 
-    console.log('📦 Order confirmation request:', {
-      customerInfo,
-      orderItems: orderItems?.length,
-      orderTime,
-      orderType,
-      deliveryCost,
-      totalPrice,
-      isCollection,
-      paymentMethodId,
-      loginId
-    })
+    console.log(`✅ [${requestId}] Validation passed`)
+    console.log(`📦 [${requestId}] Order details:`)
+    console.log(`   - Customer: ${customerInfo.name} (${customerInfo.email})`)
+    console.log(`   - Items: ${orderItems?.length || 0} items`)
+    console.log(`   - Total: ${totalPrice} лв + ${deliveryCost} лв delivery = ${totalPrice + deliveryCost} лв`)
+    console.log(`   - Type: ${isCollection ? 'Collection' : 'Delivery'}`)
+    console.log(`   - Payment: Method ${paymentMethodId}`)
+    console.log(`   - Login ID: ${loginId || 'Guest'}`)
+    
+    // Log each item for debugging
+    if (orderItems && orderItems.length > 0) {
+      console.log(`📋 [${requestId}] Order items breakdown:`)
+      orderItems.forEach((item: any, index: number) => {
+        console.log(`   ${index + 1}. ${item.name} x${item.quantity} - ${item.price} лв (${item.category || 'unknown'})`)
+        if (item.addons && item.addons.length > 0) {
+          console.log(`      Addons: ${item.addons.map((a: any) => a.Name || a.name).join(', ')}`)
+        }
+      })
+    }
 
     // Create server-side Supabase client (bypasses RLS)
     const supabase = createServerClient()
+
+    // ===== CRITICAL SECURITY: Server-Side Price Validation =====
+    console.log('💰 Calculating and validating prices on server...')
+    const priceCalculation = await calculateServerSidePrice(
+      orderItems,
+      isCollection,
+      customerInfo.LocationCoordinates ? 
+        (typeof customerInfo.LocationCoordinates === 'string' ? 
+          JSON.parse(customerInfo.LocationCoordinates) : customerInfo.LocationCoordinates) 
+        : undefined
+    )
+
+    // Log warnings if any products were invalid
+    if (priceCalculation.warnings.length > 0) {
+      console.warn('⚠️ Price calculation warnings:', priceCalculation.warnings)
+    }
+
+    // Validate client price vs server price
+    const clientTotal = totalPrice + (isCollection ? 0 : deliveryCost)
+    const serverTotal = priceCalculation.totalPrice
+    const priceValidation = validatePriceMatch(clientTotal, serverTotal)
+
+    if (!priceValidation.isValid) {
+      console.error('🚨 SECURITY ALERT: PRICE MANIPULATION DETECTED!')
+      console.error('🚨 ORDER REJECTED - Price mismatch detected!')
+      console.error(`   Client sent: ${clientTotal} лв`)
+      console.error(`   Server calculated: ${serverTotal} лв`)
+      console.error(`   Difference: ${priceValidation.difference} лв`)
+
+      // Log for security audit
+      console.error('🚨 PRICE MANIPULATION ATTEMPT BLOCKED:', {
+        timestamp: new Date().toISOString(),
+        customerEmail: customerInfo.email,
+        customerName: customerInfo.name,
+        clientTotal,
+        serverTotal,
+        difference: priceValidation.difference,
+        orderItems: orderItems?.map(item => ({
+          id: item.id,
+          name: item.name,
+          clientPrice: item.price,
+          quantity: item.quantity
+        })),
+        userAgent: request.headers.get('user-agent'),
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      })
+
+      // Increment rate limit counter for manipulation attempt
+      const currentEntry = rateLimitMap.get(clientIdentifier)
+      if (currentEntry) {
+        currentEntry.count += 2 // Double penalty for manipulation attempts
+        rateLimitMap.set(clientIdentifier, currentEntry)
+      }
+
+      // Reject the order due to price manipulation
+      return NextResponse.json({
+        error: 'Order rejected: Price verification failed',
+        message: 'There was an issue with your order pricing. Please refresh and try again.'
+      }, { status: 400 })
+    }
+
+    // Additional validation: Check for obviously manipulated individual item prices
+    const obviousManipulationDetected = orderItems?.some(item => {
+      // Check for prices that are suspiciously low (less than 0.50 лв)
+      if (item.price < 0.50 && item.price > 0) {
+        console.error(`🚨 SUSPICIOUSLY LOW PRICE DETECTED: ${item.name} priced at ${item.price} лв`)
+        return true
+      }
+      // Check for zero prices on non-free items
+      if (item.price === 0 && !item.name.toLowerCase().includes('free')) {
+        console.error(`🚨 ZERO PRICE DETECTED: ${item.name} priced at 0 лв`)
+        return true
+      }
+      return false
+    })
+
+    if (obviousManipulationDetected) {
+      console.error('🚨 OBVIOUS PRICE MANIPULATION DETECTED - ORDER REJECTED')
+      console.error('Order items with suspicious prices:', orderItems?.filter(item =>
+        item.price < 0.50 || (item.price === 0 && !item.name.toLowerCase().includes('free'))
+      ))
+
+      // Increment rate limit counter for manipulation attempt
+      const currentEntry = rateLimitMap.get(clientIdentifier)
+      if (currentEntry) {
+        currentEntry.count += 2 // Double penalty for manipulation attempts
+        rateLimitMap.set(clientIdentifier, currentEntry)
+      }
+
+      return NextResponse.json({
+        error: 'Order rejected: Invalid pricing detected',
+        message: 'Some items have invalid prices. Please refresh your cart and try again.'
+      }, { status: 400 })
+    }
+
+    // Use SERVER-CALCULATED prices (not client prices!)
+    const validatedTotalPrice = serverTotal
+    const validatedDeliveryCost = priceCalculation.deliveryCost
+    const validatedItemsTotal = priceCalculation.itemsTotal
+
+    console.log('✅ Server-side price validation complete:')
+    console.log(`   Items total: ${validatedItemsTotal.toFixed(2)} лв`)
+    console.log(`   Delivery: ${validatedDeliveryCost.toFixed(2)} лв`)
+    console.log(`   Final total: ${validatedTotalPrice.toFixed(2)} лв`)
+
+    // Helper function to safely convert coordinates (used multiple times below)
+    const safeConvertCoordinates = (coords: any): string | null => {
+      if (!coords) return null
+      if (typeof coords === 'string') {
+        try {
+          const parsed = JSON.parse(coords)
+          return JSON.stringify(parsed)
+        } catch (error) {
+          return coords
+        }
+      }
+      return JSON.stringify(coords)
+    }
 
     let finalLoginId = loginId
 
     // Handle guest orders - create guest user in Login table only if no loginId provided
     if (!loginId) {
       console.log('👤 Creating guest user...')
-      
+
       const guestUserData = {
         email: customerInfo.email || `guest_${Date.now()}@pizza-stop.bg`,
         Password: 'guest_password', // Placeholder for guests
         Name: customerInfo.name,
         phone: customerInfo.phone,
         LocationText: customerInfo.LocationText || customerInfo.address,
-        LocationCoordinates: (customerInfo.LocationCoordinates || customerInfo.coordinates) ? 
-          (typeof (customerInfo.LocationCoordinates || customerInfo.coordinates) === 'string' ? 
-            (() => {
-              try {
-                const parsed = JSON.parse(customerInfo.LocationCoordinates || customerInfo.coordinates)
-                return JSON.stringify(parsed)
-              } catch (error) {
-                return customerInfo.LocationCoordinates || customerInfo.coordinates
-              }
-            })() : JSON.stringify(customerInfo.LocationCoordinates || customerInfo.coordinates)) : null,
+        LocationCoordinates: safeConvertCoordinates(customerInfo.LocationCoordinates || customerInfo.coordinates),
         NumberOfOrders: 0,
         PreferedPaymentMethodID: paymentMethodId,
         isGuest: true,
@@ -99,16 +289,7 @@ export async function POST(request: NextRequest) {
       // Only update address-related fields for delivery orders
       if (!isCollection) {
         updateData.LocationText = customerInfo.LocationText || customerInfo.address
-        updateData.LocationCoordinates = (customerInfo.LocationCoordinates || customerInfo.coordinates) ? 
-          (typeof (customerInfo.LocationCoordinates || customerInfo.coordinates) === 'string' ? 
-            (() => {
-              try {
-                const parsed = JSON.parse(customerInfo.LocationCoordinates || customerInfo.coordinates)
-                return JSON.stringify(parsed)
-              } catch (error) {
-                return customerInfo.LocationCoordinates || customerInfo.coordinates
-              }
-            })() : JSON.stringify(customerInfo.LocationCoordinates || customerInfo.coordinates)) : null
+        updateData.LocationCoordinates = safeConvertCoordinates(customerInfo.LocationCoordinates || customerInfo.coordinates)
         updateData.addressInstructions = customerInfo.deliveryInstructions || null
       }
 
@@ -133,10 +314,13 @@ export async function POST(request: NextRequest) {
     if (orderTime.type === 'immediate') {
       // ASAP orders: always now + 45 minutes
       expectedDT = minDeliveryTime
-    } else {
+    } else if (orderTime.scheduledTime) {
       // Scheduled orders: use customer time but ensure it's at least 45 minutes away
       const scheduledTime = new Date(orderTime.scheduledTime)
       expectedDT = scheduledTime < minDeliveryTime ? minDeliveryTime : scheduledTime
+    } else {
+      // Fallback to minimum delivery time if scheduled time is missing
+      expectedDT = minDeliveryTime
     }
 
     // Restaurant location for collection orders
@@ -150,27 +334,18 @@ export async function POST(request: NextRequest) {
       LoginID: finalLoginId,
       OrderDT: orderTime.type === 'immediate' 
         ? new Date().toISOString() 
-        : new Date(orderTime.scheduledTime).toISOString(),
+        : (orderTime.scheduledTime ? new Date(orderTime.scheduledTime).toISOString() : new Date().toISOString()),
       OrderLocation: isCollection ? restaurantLocation.address : (customerInfo.LocationText || customerInfo.address),
       OrderLocationCoordinates: isCollection 
         ? JSON.stringify(restaurantLocation.coordinates)
-        : ((customerInfo.LocationCoordinates || customerInfo.coordinates) ? 
-            (typeof (customerInfo.LocationCoordinates || customerInfo.coordinates) === 'string' ? 
-              (() => {
-                try {
-                  const parsed = JSON.parse(customerInfo.LocationCoordinates || customerInfo.coordinates)
-                  return JSON.stringify(parsed)
-                } catch (error) {
-                  return customerInfo.LocationCoordinates || customerInfo.coordinates
-                }
-              })() : JSON.stringify(customerInfo.LocationCoordinates || customerInfo.coordinates)) : null),
+        : safeConvertCoordinates(customerInfo.LocationCoordinates || customerInfo.coordinates),
       OrderStatusID: 1, // Assuming 1 = "New Order" status
       RfPaymentMethodID: paymentMethodId,
       IsPaid: false, // Orders start as unpaid
       ExpectedDT: expectedDT.toISOString(),
       OrderType: isCollection ? 1 : 2, // 1 = Restaurant collection, 2 = Delivery
-      DeliveryPrice: isCollection ? 0 : deliveryCost, // Add delivery charge
-      TotalAmount: totalPrice + (isCollection ? 0 : deliveryCost) // Add total amount for the order
+      DeliveryPrice: validatedDeliveryCost, // Use server-validated delivery cost
+      TotalAmount: validatedTotalPrice // Use server-validated total (SECURITY: Never trust client)
     }
 
     console.log('📋 Creating order with data:', orderData)
@@ -189,19 +364,54 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Order created with ID:', order.OrderID)
 
-    // Save order items to LkOrderProduct table
-    if (orderItems && orderItems.length > 0) {
-      console.log('📦 Saving order items:', orderItems.length)
-      
-      const orderItemsData: any[] = []
-      
+    // CRITICAL: Save order items to LkOrderProduct table
+    // This is a critical step - if it fails, the order is invalid and must be deleted
+    if (!orderItems || orderItems.length === 0) {
+      console.error('🚨 CRITICAL ERROR: No order items provided for order', order.OrderID)
+      // Delete the order we just created
+      await supabase.from('Order').delete().eq('OrderID', order.OrderID)
+      return NextResponse.json(
+        { error: 'Order must contain at least one item' },
+        { status: 400, headers: rateLimit.headers }
+      )
+    }
+    
+    console.log('📦 Saving order items:', orderItems.length, 'items for order', order.OrderID)
+    
+    const orderItemsData: any[] = []
+    
+    try {
       for (const item of orderItems) {
-        // Calculate addon prices
+        // Calculate addon prices with same logic as CartContext
         let addonTotal = 0
         if (item.addons && Array.isArray(item.addons)) {
-          addonTotal = item.addons.reduce((sum: number, addon: any) => {
-            return sum + (addon.price || 0)
-          }, 0)
+          // For pizzas (including 50/50), all addons are paid
+          if (item.category === 'pizza' || item.category === 'pizza-5050') {
+            addonTotal = item.addons.reduce((sum: number, addon: any) => {
+              return sum + (addon.Price || addon.price || 0)
+            }, 0)
+          } else {
+            // For other products (burgers, doners, sauces), first 3 of each type are free
+            const itemAddons = item.addons || []
+            addonTotal = itemAddons
+              .map((addon: any) => {
+                const addonPrice = addon.Price || addon.price || 0
+                const addonType = addon.AddonType || addon.addonType
+                
+                // Count how many addons of this type are selected
+                const typeSelected = itemAddons.filter((a: any) => 
+                  (a.AddonType || a.addonType) === addonType
+                )
+                const addonId = addon.AddonID || addon.addonId || addon.id
+                const positionInType = typeSelected.findIndex((a: any) => 
+                  (a.AddonID || a.addonId || a.id) === addonId
+                )
+                
+                // First 3 of each type are free
+                return positionInType < 3 ? 0 : addonPrice
+              })
+              .reduce((sum: number, price: number) => sum + price, 0)
+          }
         }
         
         // Check if this is a 50/50 pizza (category: 'pizza-5050')
@@ -329,9 +539,37 @@ export async function POST(request: NextRequest) {
         } else {
           // Regular product with addon calculation
           const itemTotal = (item.price + addonTotal) * item.quantity
+          
+          // Extract ProductID: handle both simple IDs and composite IDs (productId_timestamp)
+          let productId: number | null = null
+          if (item.productId) {
+            // Use explicit productId if available
+            productId = item.productId
+          } else if (typeof item.id === 'number') {
+            // If id is a number, use it directly
+            productId = item.id
+          } else if (typeof item.id === 'string' && item.id.includes('_')) {
+            // If id is a string like "123_timestamp", extract the first part
+            const idParts = item.id.split('_')
+            productId = parseInt(idParts[0], 10)
+            if (isNaN(productId)) {
+              console.warn(`⚠️ Could not extract ProductID from item.id: ${item.id}`)
+              productId = null
+            }
+          } else {
+            // Try to parse string id as number
+            productId = parseInt(item.id as string, 10)
+            if (isNaN(productId)) {
+              console.warn(`⚠️ Could not parse ProductID from item.id: ${item.id}`)
+              productId = null
+            }
+          }
+          
+          console.log(`   Item "${item.name}": id=${item.id}, productId=${item.productId}, extracted=${productId}`)
+          
           orderItemsData.push({
             OrderID: order.OrderID,
-            ProductID: item.id,
+            ProductID: productId,
             ProductName: item.name,
             ProductSize: item.size || 'Medium',
             Quantity: item.quantity,
@@ -343,17 +581,55 @@ export async function POST(request: NextRequest) {
           })
         }
       }
-
-      const { error: itemsError } = await supabase
+      
+      // Validate that we have items to insert
+      if (orderItemsData.length === 0) {
+        throw new Error('No valid order items to save')
+      }
+      
+      console.log(`💾 Inserting ${orderItemsData.length} items into LkOrderProduct for order ${order.OrderID}`)
+      
+      const { data: insertedItems, error: itemsError } = await supabase
         .from('LkOrderProduct')
         .insert(orderItemsData)
+        .select()
 
       if (itemsError) {
-        console.error('❌ Error saving order items:', itemsError)
-        // Don't fail the order if items can't be saved, just log the error
-      } else {
-        console.log('✅ Order items saved successfully')
+        console.error('🚨 CRITICAL ERROR saving order items:', itemsError)
+        console.error('   Order ID:', order.OrderID)
+        console.error('   Error details:', JSON.stringify(itemsError, null, 2))
+        throw new Error(`Failed to save order items: ${itemsError.message}`)
       }
+      
+      console.log('✅ Order items saved successfully:', insertedItems?.length || orderItemsData.length, 'items')
+      
+    } catch (itemsProcessingError: any) {
+      console.error('🚨 FATAL ERROR processing order items for order', order.OrderID)
+      console.error('   Error:', itemsProcessingError.message)
+      console.error('   Stack:', itemsProcessingError.stack)
+      
+      // CRITICAL: Delete the order since items couldn't be saved
+      console.log('🗑️ Rolling back - deleting order', order.OrderID)
+      const { error: deleteError } = await supabase
+        .from('Order')
+        .delete()
+        .eq('OrderID', order.OrderID)
+      
+      if (deleteError) {
+        console.error('❌ FAILED to delete order during rollback:', deleteError)
+        // Log this for manual cleanup
+        console.error(`⚠️ MANUAL CLEANUP REQUIRED: Order ${order.OrderID} exists without items!`)
+      } else {
+        console.log('✅ Order', order.OrderID, 'successfully deleted (rollback)')
+      }
+      
+      return NextResponse.json(
+        { 
+          error: 'Failed to save order items',
+          details: itemsProcessingError.message 
+        },
+        { status: 500, headers: rateLimit.headers }
+      )
     }
 
     // Send order confirmation email
@@ -365,31 +641,75 @@ export async function POST(request: NextRequest) {
         to: customerInfo.email,
         name: customerInfo.name,
         orderId: order.OrderID.toString(),
-        orderDetails: {
-          items: orderItems.map((item: any) => ({
-            name: item.name,
-            size: item.size,
-            quantity: item.quantity,
-            price: item.price,
-            addons: item.addons?.map((addon: any) => ({
-              name: addon.Name || addon.name,
-              price: addon.Price || addon.price
-            })),
-            comment: item.comment
-          })),
-          totalAmount: totalPrice + (isCollection ? 0 : deliveryCost),
-          orderTime: new Date().toLocaleString('bg-BG'),
-          orderType: isCollection ? 'Вземане от ресторанта' : 'Доставка',
-          paymentMethod: getPaymentMethodName(paymentMethodId),
-          location: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : (customerInfo.LocationText || customerInfo.address),
-          estimatedTime: expectedDT.toLocaleString('bg-BG', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+        orderDetails: (() => {
+          // Calculate email items with correct pricing
+          const emailItems = orderItems.map((item: any) => {
+            // Calculate addon cost for this specific item (same logic as CartContext)
+            let itemAddonCost = 0
+            if (item.addons && Array.isArray(item.addons)) {
+              if (item.category === 'pizza' || item.category === 'pizza-5050') {
+                // For pizzas, all addons are paid
+                itemAddonCost = item.addons.reduce((sum: number, addon: any) => {
+                  return sum + (addon.Price || addon.price || 0)
+                }, 0)
+              } else {
+                // For other products, first 3 of each type are free
+                const itemAddons = item.addons || []
+                itemAddonCost = itemAddons
+                  .map((addon: any) => {
+                    const addonPrice = addon.Price || addon.price || 0
+                    const addonType = addon.AddonType || addon.addonType
+                    const typeSelected = itemAddons.filter((a: any) => 
+                      (a.AddonType || a.addonType) === addonType
+                    )
+                    const addonId = addon.AddonID || addon.addonId || addon.id
+                    const positionInType = typeSelected.findIndex((a: any) => 
+                      (a.AddonID || a.addonId || a.id) === addonId
+                    )
+                    return positionInType < 3 ? 0 : addonPrice
+                  })
+                  .reduce((sum: number, price: number) => sum + price, 0)
+              }
+            }
+            
+            return {
+              name: item.name,
+              size: item.size,
+              quantity: item.quantity,
+              price: item.price + itemAddonCost,  // Include addons in displayed price
+              addons: item.addons?.map((addon: any) => ({
+                name: addon.Name || addon.name,
+                price: addon.Price || addon.price
+              })),
+              comment: item.comment
+            }
           })
-        }
+          
+          // Calculate total from email items (more reliable than server validation)
+          const emailItemsTotal = emailItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+          const emailTotal = emailItemsTotal + validatedDeliveryCost
+          
+          console.log('📧 Email price calculation:')
+          console.log(`   Items total: ${emailItemsTotal.toFixed(2)} лв`)
+          console.log(`   Delivery: ${validatedDeliveryCost.toFixed(2)} лв`)
+          console.log(`   Email total: ${emailTotal.toFixed(2)} лв`)
+          
+          return {
+            items: emailItems,
+            totalAmount: emailTotal,  // Use email-calculated total instead of server validation
+            orderTime: new Date().toLocaleString('bg-BG'),
+            orderType: isCollection ? 'Вземане от ресторанта' : 'Доставка',
+            paymentMethod: getPaymentMethodName(paymentMethodId),
+            location: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : (customerInfo.LocationText || customerInfo.address || 'Адрес не е указан'),
+            estimatedTime: expectedDT.toLocaleString('bg-BG', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          }
+        })()
       }
 
       await emailService.sendOrderConfirmationEmail(emailData)
@@ -422,14 +742,27 @@ export async function POST(request: NextRequest) {
       // Don't fail the order if email can't be sent, just log the error
     }
 
+    console.log(`\n${'='.repeat(80)}`)
+    console.log(`✅ [${requestId}] ORDER SUCCESSFULLY CREATED`)
+    console.log(`   - Order ID: ${order.OrderID}`)
+    console.log(`   - Customer: ${customerInfo.name}`)
+    console.log(`   - Items saved: ${orderItemsData.length}`)
+    console.log(`   - Total amount: ${validatedTotalPrice.toFixed(2)} лв`)
+    console.log(`   - Timestamp: ${new Date().toISOString()}`)
+    console.log('='.repeat(80) + '\n')
+
     return NextResponse.json({ 
       success: true, 
       orderId: order.OrderID,
       message: 'Order confirmed successfully' 
     })
 
-  } catch (error) {
-    console.error('❌ Order confirmation error:', error)
+  } catch (error: any) {
+    console.error(`\n${'='.repeat(80)}`)
+    console.error(`❌ [${requestId}] FATAL ERROR - Order confirmation failed`)
+    console.error(`   Error: ${error.message}`)
+    console.error(`   Stack: ${error.stack}`)
+    console.error('='.repeat(80) + '\n')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

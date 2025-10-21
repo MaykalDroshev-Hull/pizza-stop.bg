@@ -1,22 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ProductAddon } from '../lib/menuData'
 
 interface AddonSelectorProps {
   addons: ProductAddon[]
   onAddonChange: (selectedAddons: ProductAddon[]) => void
   selectedAddons: ProductAddon[]
+  category?: string
 }
 
-export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSelectorProps) {
+export function AddonSelector({ addons, onAddonChange, selectedAddons, category }: AddonSelectorProps) {
   const [selectedAddonIds, setSelectedAddonIds] = useState<number[]>(
     selectedAddons.map(addon => addon.AddonID)
   )
 
+  // Sync local state with prop changes to prevent double selection
+  useEffect(() => {
+    setSelectedAddonIds(selectedAddons.map(addon => addon.AddonID))
+  }, [selectedAddons])
+
   // Group addons by type
   const sauces = addons.filter(addon => addon.AddonType === 'sauce')
   const vegetables = addons.filter(addon => addon.AddonType === 'vegetable')
+  const meats = addons.filter(addon => addon.AddonType === 'meat')
+  const cheeses = addons.filter(addon => addon.AddonType === 'cheese')
+  const pizzaAddons = addons.filter(addon => addon.AddonType === 'pizza-addon')
 
   const handleAddonToggle = (addonId: number) => {
     const newSelectedIds = selectedAddonIds.includes(addonId)
@@ -30,8 +39,13 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
     onAddonChange(newSelectedAddons)
   }
 
-  const getAddonPrice = (addon: ProductAddon, index: number, addonType: string) => {
-    // First 3 addons of each type (sauce/vegetable) are free
+  const getAddonPrice = (addon: ProductAddon, index: number, addonType: string, category?: string) => {
+    // For pizzas, all addons are paid
+    if (category === 'pizza') {
+      return addon.Price
+    }
+    
+    // For other products, first 3 addons of each type are free
     const typeAddons = selectedAddons.filter(a => a.AddonType === addonType)
     const typeIndex = typeAddons.indexOf(addon)
     const isFree = typeIndex < 3
@@ -39,7 +53,7 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
   }
 
   const totalAddonCost = selectedAddons
-    .map((addon, index) => getAddonPrice(addon, index, addon.AddonType))
+    .map((addon, index) => getAddonPrice(addon, index, addon.AddonType, category))
     .reduce((sum, price) => sum + price, 0)
 
   const renderAddonGroup = (addons: ProductAddon[], title: string) => {
@@ -48,13 +62,16 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
     return (
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-white mb-3">{title}</h3>
-        <div className="grid gap-3 grid-cols-4 md:grid-cols-2 sm:grid-cols-1">
+        <div className={`grid gap-3 ${category === 'pizza' ? 'grid-cols-2' : 'grid-cols-4 md:grid-cols-2 sm:grid-cols-1'}`}>
           {addons.map((addon) => {
             const isSelected = selectedAddonIds.includes(addon.AddonID)
             
-            // HARDCODE: Always show "Безплатно" for now
-            let displayText = 'Безплатно'
-            let textColor = isSelected ? 'text-green-300' : 'text-green-400'
+            // Calculate price based on category and selection
+            const price = getAddonPrice(addon, 0, addon.AddonType, category)
+            const displayText = price === 0 ? 'Безплатно' : `${addon.Price.toFixed(2)} лв.`
+            const textColor = price === 0 
+              ? (isSelected ? 'text-green-300' : 'text-green-400')
+              : 'text-red-400'
             
             return (
               <button
@@ -102,19 +119,22 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons }: AddonSe
       <div className="mb-4">
         <h2 className="text-xl font-bold text-white mb-2">Добавки</h2>
         <p className="text-sm text-muted">
-          Първите 3 съса и първите 3 салата са безплатни. След избора на 3-ти със/салат ще се покажат цените за останалите.
+          Първите 3 добавки от всеки тип са безплатни. След избора на 3-та добавка от даден тип ще се покажат цените за останалите.
         </p>
       </div>
 
       {renderAddonGroup(sauces, 'Сосове')}
       {renderAddonGroup(vegetables, 'Салати')}
+      {renderAddonGroup(meats, 'Колбаси')}
+      {renderAddonGroup(cheeses, 'Сирена')}
+      {renderAddonGroup(pizzaAddons, 'Добавки')}
 
       {selectedAddons.length > 0 && (
         <div className="mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
           <div className="flex justify-between items-center mb-2">
             <span className="text-white font-medium">Избрани добавки:</span>
             <span className="text-sm text-muted">
-              {selectedAddons.filter(a => a.AddonType === 'sauce').length}/3 съса, {selectedAddons.filter(a => a.AddonType === 'vegetable').length}/3 салата
+              {selectedAddons.filter(a => a.AddonType === 'sauce').length}/3 съса, {selectedAddons.filter(a => a.AddonType === 'vegetable').length}/3 салата, {selectedAddons.filter(a => a.AddonType === 'meat').length}/3 колбаси, {selectedAddons.filter(a => a.AddonType === 'cheese').length}/3 сирена, {selectedAddons.filter(a => a.AddonType === 'pizza-addon').length}/3 добавки
             </span>
           </div>
           

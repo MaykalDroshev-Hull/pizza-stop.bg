@@ -86,8 +86,8 @@ export class EmailService {
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.NEXT_PUBLIC_EMAIL,
-        pass: process.env.NEXT_PUBLIC_EMAIL_PASS,
+        user: process.env.EMAIL,
+        pass: process.env.EMAIL_PASS,
       },
     })
   }
@@ -193,8 +193,12 @@ export class EmailService {
           </p>
           
           <div class="footer">
+            <p>Телефон: <a href="tel:+359686700070" style="color: #ff7f11; text-decoration: none; font-weight: 700;">068 670 070</a></p>
             <p>Този имейл е изпратен автоматично. Моля, не отговаряйте на него.</p>
-            <p>© 2024 Pizza Stop. Всички права запазени.</p>
+            <p>© 2025 Pizza Stop. Всички права запазени.</p>
+            <p style="margin-top: 10px; font-size: 12px;">
+              Изработка от <a href="https://www.hmwspro.com/bg" target="_blank" rel="noopener noreferrer" style="color: #ff7f11; text-decoration: none; font-weight: 700;">H&M WS Pro</a>
+            </p>
           </div>
         </div>
       </body>
@@ -202,7 +206,7 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
       to,
       subject: 'Добре дошли в Pizza Stop! 🍕',
       html: htmlContent,
@@ -332,8 +336,12 @@ export class EmailService {
           </p>
           
           <div class="footer">
+            <p>Телефон: <a href="tel:+359686700070" style="color: #ff7f11; text-decoration: none; font-weight: 700;">068 670 070</a></p>
             <p>Този имейл е изпратен автоматично. Моля, не отговаряйте на него.</p>
-            <p>© 2024 Pizza Stop. Всички права запазени.</p>
+            <p>© 2025 Pizza Stop. Всички права запазени.</p>
+            <p style="margin-top: 10px; font-size: 12px;">
+              Изработка от <a href="https://www.hmwspro.com/bg" target="_blank" rel="noopener noreferrer" style="color: #ff7f11; text-decoration: none; font-weight: 700;">H&M WS Pro</a>
+            </p>
           </div>
         </div>
       </body>
@@ -341,7 +349,7 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
       to,
       subject: 'Възстановяване на парола - Pizza Stop 🔐',
       html: htmlContent,
@@ -615,12 +623,16 @@ export class EmailService {
           
           <p style="text-align: center; font-size: 14px; color: #cbd5e1;">
             Ако имате въпроси относно поръчката, моля свържете се с нас на 
-            <a href="tel:+359888123456" style="color: #ff7f11; text-decoration: none; font-weight: 700;">+359 888 123 456</a>
+            <a href="tel:+359686700070" style="color: #ff7f11; text-decoration: none; font-weight: 700;">068 670 070</a>
           </p>
           
           <div class="footer">
+            <p>Телефон: <a href="tel:+359686700070" style="color: #ff7f11; text-decoration: none; font-weight: 700;">068 670 070</a></p>
             <p>Този имейл е изпратен автоматично. Моля, не отговаряйте на него.</p>
-            <p>© 2024 Pizza Stop. Всички права запазени.</p>
+            <p>© 2025 Pizza Stop. Всички права запазени.</p>
+            <p style="margin-top: 10px; font-size: 12px;">
+              Изработка от <a href="https://www.hmwspro.com/bg" target="_blank" rel="noopener noreferrer" style="color: #ff7f11; text-decoration: none; font-weight: 700;">H&M WS Pro</a>
+            </p>
           </div>
         </div>
       </body>
@@ -628,7 +640,7 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
       to,
       subject: `Потвърждение за поръчка #${orderId} - Pizza Stop 🍕`,
       html: htmlContent,
@@ -886,13 +898,17 @@ export class EmailService {
 
           <div class="contact-info">
             <div class="contact-title">📞 Нужда от помощ?</div>
-            <div class="contact-text">Телефон: 068 670070</div>
+            <div class="contact-text">Телефон: <a href="tel:+359686700070" style="color: #3b82f6; text-decoration: none; font-weight: 700;">068 670 070</a></div>
             <div class="contact-text">Email: info@pizza-stop.bg</div>
           </div>
 
           <div class="footer">
             <p>Благодарим ви, че избрахте <span class="highlight">Pizza Stop</span>!</p>
             <p>Насладете се на вкусната храна! 🍕</p>
+            <p>© 2025 Pizza Stop. Всички права запазени.</p>
+            <p style="margin-top: 10px; font-size: 12px; color: #666;">
+              Изработка от <a href="https://www.hmwspro.com/bg" target="_blank" rel="noopener noreferrer" style="color: #ff7f11; text-decoration: none; font-weight: 700;">H&M WS Pro</a>
+            </p>
           </div>
         </div>
       </body>
@@ -901,7 +917,7 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail({
-        from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+        from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
         to,
         subject: `Вашата поръчка е на път - ETA: ${etaMinutes} минути | Pizza Stop`,
         html: htmlContent,
@@ -1119,12 +1135,16 @@ export class EmailService {
           
           <p style="text-align: center; font-size: 14px; color: #666;">
             Ако имате въпроси относно поръчката, моля свържете се с нас на 
-            <a href="tel:+359888123456" style="color: #d32f2f; text-decoration: none;">+359 888 123 456</a>
+            <a href="tel:+359686700070" style="color: #d32f2f; text-decoration: none; font-weight: 700;">068 670 070</a>
           </p>
           
           <div class="footer">
+            <p>Телефон: <a href="tel:+359686700070" style="color: #d32f2f; text-decoration: none; font-weight: 700;">068 670 070</a></p>
             <p>Този имейл е изпратен автоматично. Моля, не отговаряйте на него.</p>
-            <p>© 2024 Pizza Stop. Всички права запазени.</p>
+            <p>© 2025 Pizza Stop. Всички права запазени.</p>
+            <p style="margin-top: 10px; font-size: 12px; color: #888;">
+              Изработка от <a href="https://www.hmwspro.com/bg" target="_blank" rel="noopener noreferrer" style="color: #d32f2f; text-decoration: none; font-weight: 700;">H&M WS Pro</a>
+            </p>
           </div>
         </div>
       </body>
@@ -1132,7 +1152,7 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.NEXT_PUBLIC_EMAIL}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
       to,
       subject: `Поръчката започва да се приготвя - #${orderId} - Pizza Stop 🍕`,
       html: htmlContent,

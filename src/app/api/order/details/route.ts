@@ -121,17 +121,32 @@ export async function GET(request: NextRequest) {
     }
 
     const itemsWithParsedAddons = orderItems?.map((item) => {
+      // Helper function to safely parse JSON (handles both strings and objects)
+      const safeJSONParse = (data: any) => {
+        if (!data) return null
+        if (typeof data === 'string') {
+          try {
+            return JSON.parse(data)
+          } catch (e) {
+            console.warn('Failed to parse JSON string:', data)
+            return null
+          }
+        }
+        // If it's already an object (JSONB from Supabase), return as-is
+        return data
+      }
+
       const parsedItem = {
         ...item,
-        Addons: item.Addons ? JSON.parse(item.Addons) : null
+        Addons: safeJSONParse(item.Addons)
       }
       
       // If this is a composite product, parse the Parts data
       if (item.CompositeProduct) {
         parsedItem.CompositeProduct = {
           ...item.CompositeProduct,
-          Parts: item.CompositeProduct.Parts ? JSON.parse(item.CompositeProduct.Parts) : null,
-          Addons: item.CompositeProduct.Addons ? JSON.parse(item.CompositeProduct.Addons) : null
+          Parts: safeJSONParse(item.CompositeProduct.Parts),
+          Addons: safeJSONParse(item.CompositeProduct.Addons)
         }
       }
       

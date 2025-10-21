@@ -51,7 +51,7 @@ const LoginPage: React.FC = (): React.JSX.Element => {
     
     if (!formData.username.trim() || !formData.password.trim()) {
       setError({
-        message: "Моля, въведете потребителско име и парола",
+        message: "Моля, въведете имейл адрес и парола",
         type: "warning"
       });
       return;
@@ -61,13 +61,22 @@ const LoginPage: React.FC = (): React.JSX.Element => {
     setError(null);
 
     try {
-      // Simulate network delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Call secure API endpoint for authentication
+      const response = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          password: formData.password,
+          type: 'admin'
+        }),
+      });
 
-      const adminUsername = process.env.NEXT_PUBLIC_ADMIN;
-      const adminPassword = process.env.NEXT_PUBLIC_PASSWORD;
+      const result = await response.json();
 
-      if (formData.username === adminUsername && formData.password === adminPassword) {
+      if (response.ok && result.success) {
         // Store authentication state
         localStorage.setItem('admin_authenticated', 'true');
         localStorage.setItem('admin_login_time', new Date().toISOString());
@@ -76,7 +85,7 @@ const LoginPage: React.FC = (): React.JSX.Element => {
         router.push('/administraciq');
       } else {
         setError({
-          message: "Невалидно потребителско име или парола",
+          message: result.error || "Невалиден имейл адрес или парола",
           type: "error"
         });
       }
@@ -141,23 +150,23 @@ const LoginPage: React.FC = (): React.JSX.Element => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username Field */}
+            {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Потребителско име
+                Имейл адрес
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="w-5 h-5 text-gray-500" />
                 </div>
                 <input
-                  type="text"
+                  type="email"
                   value={formData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Въведете потребителско име"
+                  placeholder="Въведете имейл адрес"
                   disabled={isLoading}
-                  autoComplete="username"
+                  autoComplete="email"
                 />
               </div>
             </div>
