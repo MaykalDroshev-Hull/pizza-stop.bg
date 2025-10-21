@@ -527,7 +527,7 @@ const AnalysisTab = (): React.JSX.Element => {
     const isTopProducts = icon === TrendingUp;
     return (
       <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl p-4 md:p-6 shadow-xl">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <div className="flex items-center space-x-3">
             <div className={`p-2 ${isTopProducts ? 'bg-green-600/20' : 'bg-orange-600/20'} rounded-lg`}>
               <Icon className={`w-5 h-5 ${isTopProducts ? 'text-green-400' : 'text-orange-400'}`} />
@@ -539,7 +539,8 @@ const AnalysisTab = (): React.JSX.Element => {
             <select
               value={topN}
               onChange={(e) => setTopN(Number(e.target.value))}
-              className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 text-white text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
+              className="bg-gray-800 border border-gray-600 rounded-lg px-2 py-1 text-white text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
+              aria-label="Show top products count"
             >
               <option value={5}>Топ 5</option>
               <option value={10}>Топ 10</option>
@@ -563,39 +564,65 @@ const AnalysisTab = (): React.JSX.Element => {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b-2 border-gray-700 bg-gray-800/50">
-                  <th className="text-left text-gray-300 font-semibold py-3 px-3">Продукт</th>
-                  <th className="text-left text-gray-300 font-semibold py-3 px-3">Категория</th>
-                  <th className="text-right text-gray-300 font-semibold py-3 px-3">Количество</th>
-                  <th className="text-right text-gray-300 font-semibold py-3 px-3">Приходи</th>
-                  <th className="text-right text-gray-300 font-semibold py-3 px-3">Поръчки</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product, index) => (
-                  <tr key={product.productId} className="border-b border-gray-800 hover:bg-gray-800/70 transition-colors">
-                    <td className="py-3 px-3">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-gray-500 font-mono text-xs">#{index + 1}</span>
-                        <span className="text-white font-medium">{product.productName}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-600/20 text-blue-300 text-xs font-medium">
-                        {product.productType}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-white text-right font-semibold">{product.totalQuantity} бр</td>
-                    <td className="py-3 px-3 text-green-400 text-right font-bold">{product.totalRevenue.toFixed(2)} лв</td>
-                    <td className="py-3 px-3 text-gray-300 text-right">{product.orderCount}</td>
+          <>
+            {/* Mobile list (≤640px) */}
+            <div className="sm:hidden divide-y divide-gray-800">
+              {products.map((product, index) => (
+                <div key={product.productId} className="py-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 font-mono">#{index + 1}</span>
+                      <span className="text-white font-medium truncate">{product.productName}</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-[11px] px-2 py-0.5 rounded bg-blue-600/20 text-blue-300">{product.productType}</span>
+                      <span className="text-[11px] text-gray-400">Поръчки: {product.orderCount}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0 whitespace-nowrap">
+                    <div className="text-green-400 font-bold tabular-nums">{product.totalRevenue.toFixed(2)} лв</div>
+                    <div className="text-xs text-gray-300 tabular-nums">{product.totalQuantity} бр</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop/tablet table (≥640px) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-700 bg-gray-800/50">
+                    <th className="text-left text-gray-300 font-semibold py-3 px-3">Продукт</th>
+                    <th className="text-left text-gray-300 font-semibold py-3 px-3">Категория</th>
+                    <th className="text-right text-gray-300 font-semibold py-3 px-3">Количество</th>
+                    <th className="text-right text-gray-300 font-semibold py-3 px-3">Приходи</th>
+                    <th className="text-right text-gray-300 font-semibold py-3 px-3">Поръчки</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {products.map((product, index) => (
+                    <tr key={product.productId} className="border-b border-gray-800 hover:bg-gray-800/70 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-gray-500 font-mono text-xs">#{index + 1}</span>
+                          <span className="text-white font-medium">{product.productName}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-600/20 text-blue-300 text-xs font-medium">
+                          {product.productType}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-white text-right font-semibold tabular-nums whitespace-nowrap">{product.totalQuantity} бр</td>
+                      <td className="py-3 px-3 text-green-400 text-right font-bold tabular-nums whitespace-nowrap">{product.totalRevenue.toFixed(2)} лв</td>
+                      <td className="py-3 px-3 text-gray-300 text-right tabular-nums whitespace-nowrap">{product.orderCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     );
