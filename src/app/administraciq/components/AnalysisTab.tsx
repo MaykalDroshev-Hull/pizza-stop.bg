@@ -171,14 +171,14 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ startDate, endDate, o
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm flex items-center justify-between hover:bg-gray-700 transition-colors"
+        className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-3 text-white text-sm flex items-center justify-between hover:bg-gray-700 transition-colors"
       >
-        <span className="truncate">{displayText()}</span>
-        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="truncate max-w-[85%] text-left">{displayText()}</span>
+        <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50 w-72 md:w-80 max-w-[calc(100vw-2rem)]">
+        <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50 w-[calc(100vw-2rem)] sm:w-80 max-w-[90vw]">
           <div className="p-3 md:p-4">
             {/* Month Navigation */}
             <div className="flex items-center justify-between mb-3 md:mb-4">
@@ -280,6 +280,7 @@ const AnalysisTab = (): React.JSX.Element => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPaymentPage, setCurrentPaymentPage] = useState<number>(0);
+
   const itemsPerPage = 1; // Show one payment method per page
 
   // State for real data
@@ -435,6 +436,7 @@ const AnalysisTab = (): React.JSX.Element => {
     );
   };
 
+
   const renderFilters = (): React.JSX.Element => (
     <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl p-4 md:p-6 shadow-xl">
       <div className="flex items-center space-x-2 mb-6">
@@ -444,7 +446,8 @@ const AnalysisTab = (): React.JSX.Element => {
         <h3 className="text-lg font-bold text-white">Филтриране на данни</h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Responsive filter fields - all in one line */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">📅 Период</label>
           <DateRangePicker
@@ -465,7 +468,7 @@ const AnalysisTab = (): React.JSX.Element => {
               ...prev,
               paymentMethod: e.target.value ? Number(e.target.value) : null
             }))}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
+            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-3 text-white text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
           >
             <option value="">Всички методи</option>
             {paymentMethods.map(method => (
@@ -482,7 +485,7 @@ const AnalysisTab = (): React.JSX.Element => {
               ...prev,
               productCategory: e.target.value ? Number(e.target.value) : null
             }))}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2.5 text-white text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
+            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-3 text-white text-sm focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
           >
             <option value="">Всички категории</option>
             {productTypes.map(type => (
@@ -490,6 +493,26 @@ const AnalysisTab = (): React.JSX.Element => {
             ))}
           </select>
         </div>
+      </div>
+
+      {/* Clear filters button */}
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={() => {
+            setFilters(prev => ({
+              ...prev,
+              dateRange: {
+                start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                end: new Date().toISOString().split('T')[0]
+              },
+              paymentMethod: null,
+              productCategory: null
+            }));
+          }}
+          className="px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 transition-colors text-sm"
+        >
+          Изчисти филтрите
+        </button>
       </div>
     </div>
   );
@@ -803,7 +826,7 @@ const AnalysisTab = (): React.JSX.Element => {
       {/* Header Section */}
       <div className="bg-gradient-to-r from-red-600/10 via-gray-900 to-green-600/10 border border-gray-700 rounded-2xl p-4 md:p-6 lg:p-8 shadow-xl">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div>
+          <div className="w-full lg:w-auto">
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-2 flex items-center space-x-3">
               <BarChart3 className="w-6 h-6 md:w-8 md:h-8 text-red-400" />
               <span>Анализ на продажбите</span>
@@ -847,6 +870,7 @@ const AnalysisTab = (): React.JSX.Element => {
       <div className="w-full">
         {renderPaymentMatrix()}
       </div>
+
     </div>
   );
 };
