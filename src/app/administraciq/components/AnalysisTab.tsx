@@ -417,19 +417,45 @@ const AnalysisTab = (): React.JSX.Element => {
     }
   ];
 
+  // Number formatting utilities
+  const fmtBG = new Intl.NumberFormat('bg-BG', { maximumFractionDigits: 2 });
+
+  const formatMoney = (v: number): string => {
+    if (v >= 1_000_000) return `${(v/1_000_000).toFixed(2)}M лв`;
+    if (v >= 1_000) return `${(v/1_000).toFixed(2)}K лв`;
+    return `${fmtBG.format(v)} лв`;
+  };
+
+  const MetricValue = ({ children }: { children: React.ReactNode }): React.JSX.Element => (
+    <div className="text-white font-bold leading-none tabular-nums tracking-tight text-[clamp(16px,4.6vw,20px)]">
+      {children}
+    </div>
+  );
+
   const renderMetricCard = (metric: MetricCard): React.JSX.Element => {
     const Icon = metric.icon;
+    
+    // Format values based on metric type
+    let formattedValue = metric.value;
+    if (metric.id === 'revenue' || metric.id === 'avgOrder') {
+      formattedValue = formatMoney(typeof metric.value === 'string' ? parseFloat(metric.value.replace(/[^\d.-]/g, '')) : metric.value as number);
+    } else if (metric.id === 'orders') {
+      formattedValue = fmtBG.format(typeof metric.value === 'string' ? parseInt(metric.value.replace(/[^\d]/g, '')) : metric.value as number);
+    }
+
     return (
-      <div key={metric.id} className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-xl md:rounded-2xl p-3 md:p-4 lg:p-6 hover:border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10 hover:scale-105">
-        <div className="flex flex-col space-y-2 md:space-y-3">
-          <div className="flex items-center justify-between">
-            <div className={`p-2 md:p-2.5 lg:p-3 ${metric.bgColor} rounded-lg md:rounded-xl shadow-lg flex-shrink-0`}>
-              <Icon className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 ${metric.iconColor}`} />
-            </div>
+      <div className="rounded-2xl bg-gray-800/80 border border-gray-700 p-3 min-h-[90px] flex flex-col justify-center shadow-sm hover:border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className={`p-2 ${metric.bgColor} rounded-lg flex-shrink-0`}>
+              <Icon className={`w-4 h-4 ${metric.iconColor}`} />
+            </span>
+            <span className="text-[11px] text-gray-400 uppercase tracking-wide leading-none truncate">
+              {metric.label}
+            </span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-gray-400 text-[10px] md:text-xs font-medium uppercase tracking-wide mb-1">{metric.label}</p>
-            <p className="text-base md:text-xl lg:text-2xl font-bold text-white truncate">{metric.value}</p>
+          <div className="text-white font-bold leading-none tabular-nums tracking-tight text-[clamp(14px,4vw,18px)] flex-shrink-0">
+            {formattedValue}
           </div>
         </div>
       </div>
@@ -874,8 +900,8 @@ const AnalysisTab = (): React.JSX.Element => {
         </div>
       </div>
 
-      {/* KPI Cards - 2 columns on mobile, 4 on desktop */}
-      <div className="grid auto-rows-[1fr] grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+      {/* KPI Cards - 2x2 grid on mobile, 4 on desktop */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
         {metrics.map(renderMetricCard)}
       </div>
 
