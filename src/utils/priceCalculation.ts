@@ -187,6 +187,7 @@ export async function calculateServerSidePrice(
       console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       console.log(`🔍 Processing item: ${item.name}`)
       console.log(`   - ID: ${item.id}`)
+      console.log(`   - ProductID: ${item.productId}`)
       console.log(`   - Category: ${item.category}`)
       console.log(`   - Size: ${item.size}`)
       console.log(`   - Quantity: ${item.quantity}`)
@@ -194,16 +195,31 @@ export async function calculateServerSidePrice(
       console.log(`   - Addons count: ${item.addons?.length || 0}`)
       
       // 1. Fetch product from database by ID
+      // Use productId if available, otherwise extract from composite ID (e.g., "38_1761128826863" -> 38)
+      let productIdToLookup = item.productId
+      if (!productIdToLookup) {
+        // Extract numeric part from composite IDs like "38_1761128826863"
+        const idStr = String(item.id)
+        if (idStr.includes('_')) {
+          productIdToLookup = parseInt(idStr.split('_')[0])
+          console.log(`   - Extracted ProductID from composite ID: ${productIdToLookup}`)
+        } else {
+          productIdToLookup = item.id
+        }
+      }
+      
+      console.log(`   - Looking up ProductID: ${productIdToLookup}`)
+      
       const { data: product, error: productError } = await supabase
         .from('Product')
         .select('ProductID, Product, SmallPrice, MediumPrice, LargePrice, IsDisabled')
-        .eq('ProductID', item.id)
+        .eq('ProductID', productIdToLookup)
         .single()
 
       if (productError || !product) {
-        console.log(`❌ SKIPPED: Product ID ${item.id} not found in database`)
+        console.log(`❌ SKIPPED: Product ID ${productIdToLookup} (from item.id: ${item.id}) not found in database`)
         console.log(`   Error:`, productError)
-        warnings.push(`Product ID ${item.id} not found`)
+        warnings.push(`Product ID ${productIdToLookup} not found`)
         continue
       }
 
@@ -264,21 +280,35 @@ export async function calculateServerSidePrice(
         if (addonIds.length > 0) {
           const { data: addons, error: addonError } = await supabase
             .from('Addon')
-            .select('AddonID, Name, Price, AddonType')
+            .select('AddonID, Name, Price, ProductTypeID')
             .in('AddonID', addonIds)
 
           console.log(`   Database returned ${addons?.length || 0} addons`)
           if (addonError) console.log(`   Addon error:`, addonError)
 
           if (!addonError && addons) {
-            // Store validated addons with their types
-            addons.forEach(addon => {
+            // Store validated addons and enrich with client-provided AddonType
+            const enrichedAddons = addons.map(dbAddon => {
+              // Find the matching addon from client to get AddonType
+              const clientAddon = item.addons.find((a: any) => 
+                (a.AddonID || a.id) === dbAddon.AddonID
+              )
+              
+              return {
+                AddonID: dbAddon.AddonID,
+                Name: dbAddon.Name,
+                Price: dbAddon.Price || 0,
+                AddonType: clientAddon?.AddonType || 'unknown'
+              }
+            })
+            
+            enrichedAddons.forEach(addon => {
               validatedAddons.push({
                 AddonID: addon.AddonID,
                 Name: addon.Name,
-                Price: addon.Price || 0
+                Price: addon.Price
               })
-              console.log(`      → ${addon.Name} (${addon.AddonType}): ${addon.Price} лв`)
+              console.log(`      → ${addon.Name}: ${addon.Price} лв`)
             })
             
             console.log(`🔍 Calculating addon costs for category: ${item.category}`)
@@ -286,17 +316,17 @@ export async function calculateServerSidePrice(
             // Calculate addon total using same logic as CartContext
             // For pizzas (including 50/50), all addons are paid
             if (item.category === 'pizza' || item.category === 'pizza-5050') {
-              addonTotal = addons.reduce((sum, addon) => sum + (addon.Price || 0), 0)
+              addonTotal = enrichedAddons.reduce((sum, addon) => sum + (addon.Price || 0), 0)
               console.log(`   → Pizza: ALL addons paid = ${addonTotal} лв`)
             } else {
               // For other products (burgers, doners, sauces), first 3 of each type are free
-              const addonBreakdown = addons
+              const addonBreakdown = enrichedAddons
                 .map((addon: any) => {
                   const addonPrice = addon.Price || 0
                   const addonType = addon.AddonType
                   
                   // Count how many addons of this type are selected
-                  const typeSelected = addons.filter((a: any) => a.AddonType === addonType)
+                  const typeSelected = enrichedAddons.filter((a: any) => a.AddonType === addonType)
                   const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
                   
                   // First 3 of each type are free
