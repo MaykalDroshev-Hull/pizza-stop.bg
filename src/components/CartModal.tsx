@@ -160,6 +160,9 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
     addItem(cartItem)
     onClose()
     
+    // Scroll to top after adding to cart
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    
     // Reset form
     setSize('')
     setSelectedAddons([])
