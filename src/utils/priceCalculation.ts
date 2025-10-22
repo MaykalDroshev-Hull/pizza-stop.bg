@@ -6,9 +6,10 @@
 import { createServerClient } from '@/lib/supabase'
 
 export interface ValidatedOrderItem {
-  productId: number
+  productId: number | null // null for 50/50 pizzas which don't have a single ProductID
   productName: string
-  productPrice: number
+  productPrice?: number
+  basePrice?: number // For 50/50 pizzas
   size: string
   quantity: number
   addons: Array<{
@@ -350,18 +351,13 @@ export async function calculateServerSidePrice(
           if (addonError) console.log(`   Addon error:`, addonError)
 
           if (!addonError && addons) {
-            // Store validated addons and enrich with client-provided AddonType
+            // Store validated addons with database-provided ProductTypeID (NEVER trust client for pricing logic)
             const enrichedAddons = addons.map(dbAddon => {
-              // Find the matching addon from client to get AddonType
-              const clientAddon = item.addons.find((a: any) => 
-                (a.AddonID || a.id) === dbAddon.AddonID
-              )
-              
               return {
                 AddonID: dbAddon.AddonID,
                 Name: dbAddon.Name,
                 Price: dbAddon.Price || 0,
-                AddonType: clientAddon?.AddonType || 'unknown'
+                ProductTypeID: dbAddon.ProductTypeID // Use database value for security
               }
             })
             
@@ -371,12 +367,12 @@ export async function calculateServerSidePrice(
                 Name: addon.Name,
                 Price: addon.Price
               })
-              console.log(`      → ${addon.Name}: ${addon.Price} лв`)
+              console.log(`      → ${addon.Name}: ${addon.Price} лв (ProductTypeID: ${addon.ProductTypeID})`)
             })
             
             console.log(`🔍 Calculating addon costs for category: ${item.category}`)
             
-            // Calculate addon total using same logic as CartContext
+            // Calculate addon total using database ProductTypeID
             // For pizzas (including 50/50), all addons are paid
             if (item.category === 'pizza' || item.category === 'pizza-5050') {
               addonTotal = enrichedAddons.reduce((sum, addon) => sum + (addon.Price || 0), 0)
@@ -386,15 +382,15 @@ export async function calculateServerSidePrice(
               const addonBreakdown = enrichedAddons
                 .map((addon: any) => {
                   const addonPrice = addon.Price || 0
-                  const addonType = addon.AddonType
+                  const productTypeId = addon.ProductTypeID
                   
                   // Count how many addons of this type are selected
-                  const typeSelected = enrichedAddons.filter((a: any) => a.AddonType === addonType)
+                  const typeSelected = enrichedAddons.filter((a: any) => a.ProductTypeID === productTypeId)
                   const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
                   
                   // First 3 of each type are free
                   const finalPrice = positionInType < 3 ? 0 : addonPrice
-                  console.log(`      → ${addon.Name} (${addonType}): position ${positionInType + 1} = ${finalPrice === 0 ? 'FREE' : finalPrice + ' лв'}`)
+                  console.log(`      → ${addon.Name} (ProductTypeID: ${productTypeId}): position ${positionInType + 1} = ${finalPrice === 0 ? 'FREE' : finalPrice + ' лв'}`)
                   return finalPrice
                 })
               
