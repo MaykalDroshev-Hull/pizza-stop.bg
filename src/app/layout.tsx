@@ -9,6 +9,7 @@ import { LoginIDProvider } from '../components/LoginIDContext'
 import ConditionalFooter from '../components/ConditionalFooter'
 import CookieConsent from '../components/CookieConsent'
 import ConditionalNavBar from '../components/ConditionalNavBar'
+import { Suspense } from 'react'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -96,7 +97,9 @@ export default function RootLayout({
                   </main>
                   <ConditionalFooter />
                   <LoadingOverlay />
-                  <CookieConsent />
+                  <Suspense fallback={null}>
+                    <CookieConsent />
+                  </Suspense>
                 </div>
               </CartProvider>
             </LoginIDProvider>

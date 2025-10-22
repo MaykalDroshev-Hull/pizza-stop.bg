@@ -634,4 +634,227 @@ For issues, questions, or support:
 
 ---
 
+## 📧 Email Testing Guide
+
+### Overview
+Pizza Stop includes a comprehensive email system that sends automated notifications for various order events. All emails are beautifully designed with Bulgarian localization and responsive HTML templates.
+
+### Email Types
+
+| Email Type | Trigger | Template | API Endpoint |
+|------------|---------|----------|--------------|
+| **Registration** | New user signup | Welcome message with login link | `POST /api/test-email` |
+| **Password Reset** | Forgot password request | Secure reset link with token | `POST /api/test-emails` |
+| **Order Confirmation** | Order placement | Complete order details with items | `POST /api/test-emails` |
+| **Order Ready** | Kitchen preparation complete | Ready for pickup/collection | `POST /api/send-ready-time-email` |
+| **Delivery ETA** | Driver starts delivery | Estimated arrival time | `POST /api/delivery/update-eta` |
+
+### Testing Emails
+
+#### 1. Prerequisites
+- Development server running on `http://localhost:3000`
+- Gmail account configured in environment variables
+- All environment variables properly set
+
+#### 2. Quick Email Testing
+
+**Test all email types at once:**
+```bash
+# Create a test script
+cat > test-all-emails.js << 'EOF'
+require('dotenv').config({ path: '.env.local' })
+
+const http = require('http');
+
+const TEST_EMAIL = 'hm.websiteprovisioning@gmail.com';
+const TEST_NAME = 'Pizza Stop Test User';
+
+const orderDetails = {
+  items: [
+    {
+      name: 'Маргарита',
+      size: 'Голяма',
+      quantity: 1,
+      price: 18.50,
+      addons: [{ name: 'Допълнително сирене', price: 2.00 }],
+      comment: 'Без лук, моля'
+    }
+  ],
+  totalAmount: 20.50,
+  orderTime: 'Веднага',
+  orderType: 'Доставка',
+  paymentMethod: 'С карта на адрес',
+  location: 'ул. Главна №15, Ловеч'
+};
+
+async function testEmail(endpoint, data, description) {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify(data);
+    const options = {
+      hostname: 'localhost',
+      port: 3000,
+      path: `/api/${endpoint}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    };
+
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        console.log(`${description}: ${res.statusCode === 200 ? '✅' : '❌'}`);
+        resolve();
+      });
+    });
+
+    req.on('error', reject);
+    req.write(postData);
+    req.end();
+  });
+}
+
+async function testAllEmails() {
+  console.log('🚀 Testing all Pizza Stop email types...\n');
+
+  try {
+    await testEmail('test-email', {}, 'Registration Email');
+    await testEmail('test-emails', { to: TEST_EMAIL, name: TEST_NAME, orderDetails, orderId: 'TEST-' + Date.now() }, 'Password Reset & Order Emails');
+    await testEmail('send-ready-time-email', { to: TEST_EMAIL, name: TEST_NAME, orderId: 'TEST-' + Date.now(), readyTimeMinutes: 25, orderDetails }, 'Order Ready Email');
+
+    console.log('\n🎉 All emails sent successfully!');
+    console.log(`📧 Check ${TEST_EMAIL} for all email types`);
+  } catch (error) {
+    console.error('❌ Email test failed:', error.message);
+  }
+}
+
+testAllEmails();
+EOF
+
+# Run the test
+node test-all-emails.js
+```
+
+#### 3. Individual Email Testing
+
+**Registration Email:**
+```bash
+curl -X POST http://localhost:3000/api/test-email \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**Password Reset & Order Confirmation:**
+```bash
+curl -X POST http://localhost:3000/api/test-emails \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "hm.websiteprovisioning@gmail.com",
+    "name": "Test User",
+    "orderId": "TEST-12345",
+    "orderDetails": {
+      "items": [
+        {
+          "name": "Маргарита",
+          "size": "Голяма",
+          "quantity": 1,
+          "price": 18.50,
+          "addons": []
+        }
+      ],
+      "totalAmount": 18.50,
+      "orderTime": "Веднага",
+      "orderType": "Доставка",
+      "paymentMethod": "С карта на адрес",
+      "location": "ул. Главна №15, Ловеч"
+    }
+  }'
+```
+
+**Order Ready Notification:**
+```bash
+curl -X POST http://localhost:3000/api/send-ready-time-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "hm.websiteprovisioning@gmail.com",
+    "name": "Test User",
+    "orderId": "TEST-12345",
+    "readyTimeMinutes": 25,
+    "orderDetails": {
+      "items": [
+        {
+          "name": "Маргарита",
+          "size": "Голяма",
+          "quantity": 1,
+          "price": 18.50,
+          "addons": []
+        }
+      ],
+      "totalAmount": 18.50,
+      "orderTime": "Веднага",
+      "orderType": "Доставка",
+      "paymentMethod": "С карта на адрес",
+      "location": "ул. Главна №15, Ловеч"
+    }
+  }'
+```
+
+**Delivery ETA Update (requires real order):**
+```bash
+curl -X POST http://localhost:3000/api/delivery/update-eta \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orderId": 12345,
+    "etaMinutes": 15,
+    "driverId": "driver-001"
+  }'
+```
+
+#### 4. Email Template Features
+
+All email templates include:
+- **📱 Responsive Design**: Optimized for mobile, tablet, and desktop
+- **🇧🇬 Bulgarian Language**: Complete localization
+- **🎨 Brand Styling**: Pizza Stop colors and logo
+- **🔗 Interactive Elements**: Order tracking and reorder buttons
+- **📋 Rich Content**: Complete order details with pricing
+- **⏰ Timestamps**: Bulgarian date/time formatting
+
+#### 5. Troubleshooting
+
+**Email Not Sending:**
+- Verify Gmail app password (not regular password)
+- Check `EMAIL` and `EMAIL_PASS` environment variables
+- Ensure 2FA is enabled on Gmail account
+- Test with `/api/test-email` first
+
+**Email Not Received:**
+- Check spam/junk folder
+- Verify recipient email address
+- Test with different email provider (Gmail recommended)
+
+**Template Issues:**
+- Check browser developer tools for HTML errors
+- Verify all CSS is inline (no external stylesheets)
+- Test responsive design on mobile devices
+
+### Email Configuration
+
+**Environment Variables:**
+```env
+# Gmail Configuration (required for email testing)
+EMAIL=your-gmail@gmail.com
+EMAIL_PASS=your-gmail-app-password
+
+# Site URL (for email links)
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+**Gmail Setup:**
+1. Enable 2-Factor Authentication
+2. Generate App Password: Google Account → Security → App passwords
+3. Use app password in `EMAIL_PASS` (not regular password)
+
+---
+
 **Built with ❤️ and 🍕 in Lovech, Bulgaria**

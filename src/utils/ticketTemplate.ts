@@ -211,11 +211,13 @@ export function generateTicketHTML(data: TicketData): string {
     
     .total-line.final {
       font-weight: bold;
-      font-size: 13pt;
-      border-top: 2px solid #000;
-      border-bottom: 2px solid #000;
-      padding: 5px 0;
-      margin-top: 8px;
+      font-size: 18pt;
+      border-top: 3px solid #000;
+      border-bottom: 3px solid #000;
+      padding: 10px 0;
+      margin-top: 12px;
+      letter-spacing: 1px;
+      background: #f0f0f0;
     }
     
     .payment-status {
@@ -370,34 +372,63 @@ export function downloadTicket(data: TicketData, format: 'html' | 'print' = 'htm
   }
 }
 
-// Future: Thermal printer integration
-// This function will be used when integrating with actual thermal printer
-// Printer specs: Citizen ST-S2010, 78mm width, thermal direct printing
-// Communication: RS-232C, USB, or LAN
-// Supported formats: QR codes, barcodes (ITF, Data Matrix, PDF417, EAN-13, etc.)
+/**
+ * Send ticket to thermal printer
+ * 
+ * This function attempts to print using available methods:
+ * 1. Network printer (if configured)
+ * 2. USB printer via print server (if running)
+ * 3. Browser print dialog (fallback)
+ * 
+ * @param data - Ticket data to print
+ * @returns Promise<boolean> - Success status
+ */
 export async function sendToThermalPrinter(data: TicketData): Promise<boolean> {
   try {
-    // TODO: Implement thermal printer integration
-    // 
-    // Integration options:
-    // 1. Direct connection via USB/Serial (requires backend service)
-    //    - Use ESC/POS commands for formatting
-    //    - Send raw bytes to printer device
-    //    - Example endpoint: POST /api/printer/order with orderData
-    //
-    // 2. Network printer (LAN)
-    //    - Send formatted data to printer IP address
-    //    - Use printer's native protocol
-    //
-    // 3. Print server/cloud service
-    //    - Send data to intermediate print server
-    //    - Server handles device communication
-    //
-    // For now, use browser print dialog as fallback
+    // Try network printer first (if IP is configured)
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_PRINTER_IP) {
+      try {
+        console.log('🖨️ Attempting network printer...');
+        const { printToNetworkPrinter } = await import('./printerService');
+        const success = await printToNetworkPrinter(data);
+        if (success) {
+          console.log('✅ Printed via network printer');
+          return true;
+        }
+      } catch (error) {
+        console.warn('⚠️ Network printer failed, trying USB print server...', error);
+      }
+    }
+    
+    // Try USB print server (localhost:3001)
+    if (typeof window !== 'undefined') {
+      try {
+        console.log('🖨️ Attempting USB print server...');
+        const response = await fetch('http://localhost:3001/print', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ticketData: data }),
+        });
+        
+        if (response.ok) {
+          console.log('✅ Printed via USB print server');
+          return true;
+        }
+      } catch (error) {
+        console.warn('⚠️ USB print server not available, falling back to browser print...', error);
+      }
+    }
+    
+    // Fallback to browser print dialog
+    console.log('🖨️ Using browser print dialog (fallback)');
     downloadTicket(data, 'print');
     return true;
   } catch (error) {
-    console.error('Error sending to thermal printer:', error);
+    console.error('❌ Error sending to thermal printer:', error);
+    // Still try browser print as last resort
+    downloadTicket(data, 'print');
     return false;
   }
 }
