@@ -1,12 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Debug environment variables
-console.log('Environment check:', {
-  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'FOUND' : 'NOT FOUND',
-  urlLength: process.env.NEXT_PUBLIC_SUPABASE_URL?.length,
-  keyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length
-});
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -42,10 +35,6 @@ export function createServerClient() {
 // Test database connection (client-side version)
 export async function testDatabaseConnection() {
   try {
-    console.log('Testing database connection...');
-    console.log('Supabase URL:', supabaseUrl);
-    console.log('Using placeholder URL:', supabaseUrl === 'https://placeholder.supabase.co');
-    console.log('Using placeholder key:', supabaseAnonKey === 'placeholder_key');
     
     // Use API endpoint for testing from client-side
     const response = await fetch('/api/test-db');
@@ -56,7 +45,6 @@ export async function testDatabaseConnection() {
       return false;
     }
     
-    console.log('Database connection test successful:', result);
     return true;
   } catch (error) {
     console.error('Database connection test exception:', error);
@@ -262,7 +250,6 @@ export async function getKitchenOrders(): Promise<KitchenOrder[]> {
 
 export async function updateOrderStatusInDB(orderId: number, statusId: number) {
   try {
-    console.log(`Attempting to update order ${orderId} to status ${statusId}`);
     
     // Use API route to update order status (server-side with service role key)
     const response = await fetch('/api/kitchen-and-delivery', {
@@ -283,7 +270,6 @@ export async function updateOrderStatusInDB(orderId: number, statusId: number) {
     }
 
     const result = await response.json();
-    console.log('Successfully updated order status via API:', result);
     return true;
   } catch (error) {
     console.error('Exception in updateOrderStatus:', error);
@@ -298,7 +284,6 @@ export async function updateOrderStatusInDB(orderId: number, statusId: number) {
 
 export async function updateOrderReadyTime(orderId: number, readyTime: Date): Promise<boolean> {
   try {
-    console.log(`Attempting to update order ${orderId} ready time to ${readyTime.toISOString()}`);
     
     // Use API route to update order ready time (server-side with service role key)
     const response = await fetch('/api/kitchen-and-delivery', {
@@ -319,7 +304,6 @@ export async function updateOrderReadyTime(orderId: number, readyTime: Date): Pr
     }
 
     const result = await response.json();
-    console.log('Successfully updated order ready time via API:', result);
     return true;
   } catch (error) {
     console.error('Exception in updateOrderReadyTime:', error);

@@ -221,11 +221,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
           isAnimating: false,
           isDeleted: product.isDeleted === 1 || product.isDeleted === true
         }));
-        
-        console.table(productsWithType);
-        
+         
         const deletedProductsCount = productsWithType.filter(p => p.isDeleted).length;
-        console.log(`📊 Products with isDeleted: true = ${deletedProductsCount} out of ${productsWithType.length} total ${tabName}`);
         
         setProducts(productsWithType);
       } catch (error) {
