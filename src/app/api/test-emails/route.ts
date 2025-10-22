@@ -3,35 +3,17 @@ import { emailService } from '../../../utils/emailService'
 
 export async function POST(request: NextRequest) {
   try {
-    const testEmail = 'hm.websiteprovisioning@gmail.com'
-    const testName = 'Pizza Stop Test User'
+    // Get parameters from request body or use defaults
+    const body = await request.json().catch(() => ({}))
+    const testEmail = body.to || 'hm.websiteprovisioning@gmail.com'
+    const testName = body.name || 'Pizza Stop Test User'
+    const orderId = body.orderId || 'TEST-' + Date.now()
+    const customOrderDetails = body.orderDetails
 
-    console.log('🚀 Sending test emails...')
+    console.log('🚀 Sending test emails to:', testEmail)
 
-    // Test 1: Welcome Email
-    console.log('📧 Sending welcome email...')
-    await emailService.sendWelcomeEmail({
-      to: testEmail,
-      name: testName
-    })
-    console.log('✅ Welcome email sent')
-
-    // Test 2: Password Reset Email
-    console.log('📧 Sending password reset email...')
-    const resetToken = 'test-token-12345'
-    const resetUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://pizza-stop.bg'}/reset-password?token=${resetToken}`
-    
-    await emailService.sendPasswordResetEmail({
-      to: testEmail,
-      name: testName,
-      resetToken: resetToken,
-      resetUrl: resetUrl
-    })
-    console.log('✅ Password reset email sent')
-
-    // Test 3: Order Confirmation Email
-    console.log('📧 Sending order confirmation email...')
-    const orderDetails = {
+    // Use custom order details if provided, otherwise use default
+    const orderDetails = customOrderDetails || {
       items: [
         {
           name: 'Маргарита',
@@ -70,17 +52,40 @@ export async function POST(request: NextRequest) {
       estimatedTime: '30-45 минути'
     }
 
+    // Test 1: Welcome Email
+    console.log('📧 Sending welcome email...')
+    await emailService.sendWelcomeEmail({
+      to: testEmail,
+      name: testName
+    })
+    console.log('✅ Welcome email sent')
+
+    // Test 2: Password Reset Email
+    console.log('📧 Sending password reset email...')
+    const resetToken = 'test-token-12345'
+    const resetUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://pizza-stop.bg'}/reset-password?token=${resetToken}`
+    
+    await emailService.sendPasswordResetEmail({
+      to: testEmail,
+      name: testName,
+      resetToken: resetToken,
+      resetUrl: resetUrl
+    })
+    console.log('✅ Password reset email sent')
+
+    // Test 3: Order Confirmation Email
+    console.log('📧 Sending order confirmation email...')
     await emailService.sendOrderConfirmationEmail({
       to: testEmail,
       name: testName,
-      orderId: '12345',
+      orderId: orderId,
       orderDetails: orderDetails
     })
     console.log('✅ Order confirmation email sent')
 
     return NextResponse.json({
       success: true,
-      message: 'All test emails sent successfully!',
+      message: `All test emails sent successfully to ${testEmail}!`,
       details: {
         recipient: testEmail,
         emailsSent: [
@@ -91,7 +96,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error sending test emails:', error)
     return NextResponse.json(
       { 

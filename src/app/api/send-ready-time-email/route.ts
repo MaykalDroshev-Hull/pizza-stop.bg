@@ -31,10 +31,13 @@ export async function POST(request: NextRequest) {
     console.log(`API: Ready time email sent successfully for order ${orderId}`)
     return NextResponse.json({ success: true })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('API: Error sending ready time email:', error)
     return NextResponse.json(
-      { error: 'Failed to send ready time email' },
+      { 
+        error: 'Failed to send ready time email',
+        details: error.message 
+      },
       { status: 500 }
     )
   }

@@ -3,22 +3,23 @@ import { emailService } from '@/utils/emailService'
 
 export async function POST(request: NextRequest) {
   try {
-    // Send test email to hm.websiteprovisioning@gmail.com
-    const email = 'hm.websiteprovisioning@gmail.com'
-    const name = 'Pizza Stop Test User'
+    // Get email from request body or use default
+    const body = await request.json().catch(() => ({}))
+    const email = body.to || 'hm.websiteprovisioning@gmail.com'
+    const name = body.name || 'Pizza Stop Test User'
 
     console.log('🚀 Sending welcome/registration email to:', email)
 
     await emailService.sendWelcomeEmail({ to: email, name })
 
     return NextResponse.json({
-      message: 'Registration email sent successfully to hm.websiteprovisioning@gmail.com',
+      message: `Registration email sent successfully to ${email}`,
       sentTo: email,
       timestamp: new Date().toISOString(),
       emailType: 'registration'
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration email error:', error)
     return NextResponse.json(
       {
