@@ -25,6 +25,8 @@ You'll need to create a `users` table in your Supabase database with the followi
 -- Table order and constraints may not be valid for execution.
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
 CREATE TABLE public.Addon (
   AddonID integer NOT NULL DEFAULT nextval('"ProductAddons_AddonID_seq"'::regclass),

@@ -194,6 +194,69 @@ export async function calculateServerSidePrice(
       console.log(`   - Base Price (client): ${item.price}`)
       console.log(`   - Addons count: ${item.addons?.length || 0}`)
       
+      // Special handling for 50/50 pizzas - they don't exist in Product table
+      if (item.category === 'pizza-5050') {
+        console.log(`🍕 50/50 Pizza detected - using client-provided base price: ${item.price}`)
+        
+        // For 50/50 pizzas, we trust the client's base price (already calculated from two halves)
+        // but we still validate and calculate addon prices
+        let addonTotal = 0
+        const validatedAddons: Array<{ AddonID: number; Name: string; Price: number }> = []
+        
+        if (item.addons && Array.isArray(item.addons) && item.addons.length > 0) {
+          console.log(`   Client sent ${item.addons.length} addons`)
+          const addonIds = item.addons.map((addon: any) => 
+            typeof addon === 'number' ? addon : (addon.AddonID || addon.id)
+          ).filter((id: any) => id)
+          
+          if (addonIds.length > 0) {
+            const { data: addons, error: addonError } = await supabase
+              .from('Addon')
+              .select('AddonID, Name, Price, ProductTypeID')
+              .in('AddonID', addonIds)
+            
+            if (!addonError && addons) {
+              // For pizzas, all addons are paid
+              addonTotal = addons.reduce((sum, addon) => sum + (addon.Price || 0), 0)
+              console.log(`   → 50/50 Pizza: ALL addons paid = ${addonTotal} лв`)
+              
+              addons.forEach(addon => {
+                validatedAddons.push({
+                  AddonID: addon.AddonID,
+                  Name: addon.Name,
+                  Price: addon.Price || 0
+                })
+              })
+            }
+          }
+        }
+        
+        const itemTotal = (item.price + addonTotal) * item.quantity
+        totalItemsPrice += itemTotal
+        
+        validatedItems.push({
+          productId: null, // 50/50 pizzas don't have a single ProductID
+          productName: item.name,
+          size: item.size,
+          quantity: item.quantity,
+          basePrice: item.price,
+          addons: validatedAddons,
+          addonTotal,
+          itemTotal,
+          comment: item.comment
+        })
+        
+        console.log(`💵 Item calculation:`)
+        console.log(`   Base price: ${item.price} лв`)
+        console.log(`   Addon total: ${addonTotal} лв`)
+        console.log(`   Quantity: ${item.quantity}`)
+        console.log(`   Item total: (${item.price} + ${addonTotal}) × ${item.quantity} = ${itemTotal} лв`)
+        console.log(`✅ SUCCESSFULLY VALIDATED: ${item.name} = ${itemTotal} лв`)
+        console.log(`   Running total: ${totalItemsPrice} лв`)
+        
+        continue // Skip regular product lookup
+      }
+      
       // 1. Fetch product from database by ID
       // Use productId if available, otherwise extract from composite ID (e.g., "38_1761128826863" -> 38)
       let productIdToLookup = item.productId
@@ -241,18 +304,18 @@ export async function calculateServerSidePrice(
       console.log(`🔍 Determining price for size: "${item.size}" (lowercase: "${sizeLower}")`)
       
       if (sizeLower.includes('малка') || sizeLower.includes('малък')) {
-        productPrice = product.SmallPrice || 0
+        productPrice = product.SmallPrice || product.MediumPrice || product.LargePrice || 0
         console.log(`   → Using SmallPrice: ${productPrice}`)
       } else if (sizeLower.includes('средна') || sizeLower.includes('среден')) {
-        productPrice = product.MediumPrice || product.SmallPrice || 0
+        productPrice = product.MediumPrice || product.SmallPrice || product.LargePrice || 0
         console.log(`   → Using MediumPrice: ${productPrice}`)
       } else if (sizeLower.includes('голяма') || sizeLower.includes('голям')) {
-        productPrice = product.LargePrice || product.SmallPrice || 0
+        productPrice = product.LargePrice || product.MediumPrice || product.SmallPrice || 0
         console.log(`   → Using LargePrice: ${productPrice}`)
       } else {
-        // No size or unrecognized size - use small price
-        productPrice = product.SmallPrice || 0
-        console.log(`   → No/unrecognized size, using SmallPrice: ${productPrice}`)
+        // No size or unrecognized size - use any available price
+        productPrice = product.SmallPrice || product.MediumPrice || product.LargePrice || 0
+        console.log(`   → No/unrecognized size, using available price: ${productPrice}`)
       }
 
       if (productPrice === 0) {
