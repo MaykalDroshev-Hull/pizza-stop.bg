@@ -281,6 +281,9 @@ export default function MenuPage() {
     if (categoryKey !== 'pizza-5050') {
       resetFiftyFiftySelection()
     }
+    
+    // Scroll to top when changing categories
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const filteredItems = activeCategory === 'pizza-5050' 
@@ -328,6 +331,8 @@ export default function MenuPage() {
       }
 
       addItem(cartItem)
+      // Scroll to top after adding to cart
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
     
@@ -355,6 +360,8 @@ export default function MenuPage() {
       }
 
       addItem(cartItem)
+      // Scroll to top after adding to cart
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
     
