@@ -6,9 +6,10 @@
 import { createServerClient } from '@/lib/supabase'
 
 export interface ValidatedOrderItem {
-  productId: number
+  productId: number | null // null for 50/50 pizzas which don't have a single ProductID
   productName: string
-  productPrice: number
+  productPrice?: number
+  basePrice?: number // For 50/50 pizzas
   size: string
   quantity: number
   addons: Array<{
@@ -187,23 +188,102 @@ export async function calculateServerSidePrice(
       console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       console.log(`🔍 Processing item: ${item.name}`)
       console.log(`   - ID: ${item.id}`)
+      console.log(`   - ProductID: ${item.productId}`)
       console.log(`   - Category: ${item.category}`)
       console.log(`   - Size: ${item.size}`)
       console.log(`   - Quantity: ${item.quantity}`)
       console.log(`   - Base Price (client): ${item.price}`)
       console.log(`   - Addons count: ${item.addons?.length || 0}`)
       
+      // Special handling for 50/50 pizzas - they don't exist in Product table
+      if (item.category === 'pizza-5050') {
+        console.log(`🍕 50/50 Pizza detected - using client-provided base price: ${item.price}`)
+        
+        // For 50/50 pizzas, we trust the client's base price (already calculated from two halves)
+        // but we still validate and calculate addon prices
+        let addonTotal = 0
+        const validatedAddons: Array<{ AddonID: number; Name: string; Price: number }> = []
+        
+        if (item.addons && Array.isArray(item.addons) && item.addons.length > 0) {
+          console.log(`   Client sent ${item.addons.length} addons`)
+          const addonIds = item.addons.map((addon: any) => 
+            typeof addon === 'number' ? addon : (addon.AddonID || addon.id)
+          ).filter((id: any) => id)
+          
+          if (addonIds.length > 0) {
+            const { data: addons, error: addonError } = await supabase
+              .from('Addon')
+              .select('AddonID, Name, Price, ProductTypeID')
+              .in('AddonID', addonIds)
+            
+            if (!addonError && addons) {
+              // For pizzas, all addons are paid
+              addonTotal = addons.reduce((sum, addon) => sum + (addon.Price || 0), 0)
+              console.log(`   → 50/50 Pizza: ALL addons paid = ${addonTotal} лв`)
+              
+              addons.forEach(addon => {
+                validatedAddons.push({
+                  AddonID: addon.AddonID,
+                  Name: addon.Name,
+                  Price: addon.Price || 0
+                })
+              })
+            }
+          }
+        }
+        
+        const itemTotal = (item.price + addonTotal) * item.quantity
+        totalItemsPrice += itemTotal
+        
+        validatedItems.push({
+          productId: null, // 50/50 pizzas don't have a single ProductID
+          productName: item.name,
+          size: item.size,
+          quantity: item.quantity,
+          basePrice: item.price,
+          addons: validatedAddons,
+          addonTotal,
+          itemTotal,
+          comment: item.comment
+        })
+        
+        console.log(`💵 Item calculation:`)
+        console.log(`   Base price: ${item.price} лв`)
+        console.log(`   Addon total: ${addonTotal} лв`)
+        console.log(`   Quantity: ${item.quantity}`)
+        console.log(`   Item total: (${item.price} + ${addonTotal}) × ${item.quantity} = ${itemTotal} лв`)
+        console.log(`✅ SUCCESSFULLY VALIDATED: ${item.name} = ${itemTotal} лв`)
+        console.log(`   Running total: ${totalItemsPrice} лв`)
+        
+        continue // Skip regular product lookup
+      }
+      
       // 1. Fetch product from database by ID
+      // Use productId if available, otherwise extract from composite ID (e.g., "38_1761128826863" -> 38)
+      let productIdToLookup = item.productId
+      if (!productIdToLookup) {
+        // Extract numeric part from composite IDs like "38_1761128826863"
+        const idStr = String(item.id)
+        if (idStr.includes('_')) {
+          productIdToLookup = parseInt(idStr.split('_')[0])
+          console.log(`   - Extracted ProductID from composite ID: ${productIdToLookup}`)
+        } else {
+          productIdToLookup = item.id
+        }
+      }
+      
+      console.log(`   - Looking up ProductID: ${productIdToLookup}`)
+      
       const { data: product, error: productError } = await supabase
         .from('Product')
         .select('ProductID, Product, SmallPrice, MediumPrice, LargePrice, IsDisabled')
-        .eq('ProductID', item.id)
+        .eq('ProductID', productIdToLookup)
         .single()
 
       if (productError || !product) {
-        console.log(`❌ SKIPPED: Product ID ${item.id} not found in database`)
+        console.log(`❌ SKIPPED: Product ID ${productIdToLookup} (from item.id: ${item.id}) not found in database`)
         console.log(`   Error:`, productError)
-        warnings.push(`Product ID ${item.id} not found`)
+        warnings.push(`Product ID ${productIdToLookup} not found`)
         continue
       }
 
@@ -225,18 +305,18 @@ export async function calculateServerSidePrice(
       console.log(`🔍 Determining price for size: "${item.size}" (lowercase: "${sizeLower}")`)
       
       if (sizeLower.includes('малка') || sizeLower.includes('малък')) {
-        productPrice = product.SmallPrice || 0
+        productPrice = product.SmallPrice || product.MediumPrice || product.LargePrice || 0
         console.log(`   → Using SmallPrice: ${productPrice}`)
       } else if (sizeLower.includes('средна') || sizeLower.includes('среден')) {
-        productPrice = product.MediumPrice || product.SmallPrice || 0
+        productPrice = product.MediumPrice || product.SmallPrice || product.LargePrice || 0
         console.log(`   → Using MediumPrice: ${productPrice}`)
       } else if (sizeLower.includes('голяма') || sizeLower.includes('голям')) {
-        productPrice = product.LargePrice || product.SmallPrice || 0
+        productPrice = product.LargePrice || product.MediumPrice || product.SmallPrice || 0
         console.log(`   → Using LargePrice: ${productPrice}`)
       } else {
-        // No size or unrecognized size - use small price
-        productPrice = product.SmallPrice || 0
-        console.log(`   → No/unrecognized size, using SmallPrice: ${productPrice}`)
+        // No size or unrecognized size - use any available price
+        productPrice = product.SmallPrice || product.MediumPrice || product.LargePrice || 0
+        console.log(`   → No/unrecognized size, using available price: ${productPrice}`)
       }
 
       if (productPrice === 0) {
@@ -264,44 +344,53 @@ export async function calculateServerSidePrice(
         if (addonIds.length > 0) {
           const { data: addons, error: addonError } = await supabase
             .from('Addon')
-            .select('AddonID, Name, Price, AddonType')
+            .select('AddonID, Name, Price, ProductTypeID')
             .in('AddonID', addonIds)
 
           console.log(`   Database returned ${addons?.length || 0} addons`)
           if (addonError) console.log(`   Addon error:`, addonError)
 
           if (!addonError && addons) {
-            // Store validated addons with their types
-            addons.forEach(addon => {
+            // Store validated addons with database-provided ProductTypeID (NEVER trust client for pricing logic)
+            const enrichedAddons = addons.map(dbAddon => {
+              return {
+                AddonID: dbAddon.AddonID,
+                Name: dbAddon.Name,
+                Price: dbAddon.Price || 0,
+                ProductTypeID: dbAddon.ProductTypeID // Use database value for security
+              }
+            })
+            
+            enrichedAddons.forEach(addon => {
               validatedAddons.push({
                 AddonID: addon.AddonID,
                 Name: addon.Name,
-                Price: addon.Price || 0
+                Price: addon.Price
               })
-              console.log(`      → ${addon.Name} (${addon.AddonType}): ${addon.Price} лв`)
+              console.log(`      → ${addon.Name}: ${addon.Price} лв (ProductTypeID: ${addon.ProductTypeID})`)
             })
             
             console.log(`🔍 Calculating addon costs for category: ${item.category}`)
             
-            // Calculate addon total using same logic as CartContext
+            // Calculate addon total using database ProductTypeID
             // For pizzas (including 50/50), all addons are paid
             if (item.category === 'pizza' || item.category === 'pizza-5050') {
-              addonTotal = addons.reduce((sum, addon) => sum + (addon.Price || 0), 0)
+              addonTotal = enrichedAddons.reduce((sum, addon) => sum + (addon.Price || 0), 0)
               console.log(`   → Pizza: ALL addons paid = ${addonTotal} лв`)
             } else {
               // For other products (burgers, doners, sauces), first 3 of each type are free
-              const addonBreakdown = addons
+              const addonBreakdown = enrichedAddons
                 .map((addon: any) => {
                   const addonPrice = addon.Price || 0
-                  const addonType = addon.AddonType
+                  const productTypeId = addon.ProductTypeID
                   
                   // Count how many addons of this type are selected
-                  const typeSelected = addons.filter((a: any) => a.AddonType === addonType)
+                  const typeSelected = enrichedAddons.filter((a: any) => a.ProductTypeID === productTypeId)
                   const positionInType = typeSelected.findIndex((a: any) => a.AddonID === addon.AddonID)
                   
                   // First 3 of each type are free
                   const finalPrice = positionInType < 3 ? 0 : addonPrice
-                  console.log(`      → ${addon.Name} (${addonType}): position ${positionInType + 1} = ${finalPrice === 0 ? 'FREE' : finalPrice + ' лв'}`)
+                  console.log(`      → ${addon.Name} (ProductTypeID: ${productTypeId}): position ${positionInType + 1} = ${finalPrice === 0 ? 'FREE' : finalPrice + ' лв'}`)
                   return finalPrice
                 })
               
