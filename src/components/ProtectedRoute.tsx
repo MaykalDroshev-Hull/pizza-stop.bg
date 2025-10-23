@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAuthenticated } from '@/utils/auth';
+import { isAuthenticated, getAccessToken, clearAuth } from '@/utils/auth';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -19,6 +19,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }): React.JSX.
       if (typeof window === 'undefined') return;
       
       const authenticated = isAuthenticated();
+      const hasToken = getAccessToken() !== null;
+      
+      // If user is marked as authenticated but doesn't have a token,
+      // they logged in before the JWT token update - force re-login
+      if (authenticated && !hasToken) {
+        clearAuth();
+        router.push('/login-admin');
+        return;
+      }
       
       if (!authenticated) {
         router.push('/login-admin');

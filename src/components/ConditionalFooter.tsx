@@ -6,9 +6,9 @@ import Footer from './Footer';
 export default function ConditionalFooter() {
   const pathname = usePathname();
   
-  // Don't show footer on kitchen and delivery pages
+  // Don't show footer on kitchen, delivery, printer and admin pages
 
-  const hideFooterPages = ['/kitchen', '/delivery', '/administraciq', '/admin-delivery-login', '/admin-kitchen-login'];
+  const hideFooterPages = ['/kitchen', '/delivery', '/printer', '/administraciq', '/admin-delivery-login', '/admin-kitchen-login'];
 
   
   const shouldHideFooter = hideFooterPages.some(page => pathname.startsWith(page));
