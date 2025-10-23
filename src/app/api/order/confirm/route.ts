@@ -708,8 +708,8 @@ export async function POST(request: NextRequest) {
               hour: '2-digit',
               minute: '2-digit'
             }),
-            addressInstructions: customerInfo.deliveryInstructions || null,
-            specialInstructions: order.Comments || null
+            addressInstructions: customerInfo.deliveryInstructions || undefined,
+            specialInstructions: undefined
           }
         })()
       }

@@ -2392,8 +2392,7 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">Тип на поръчка:</span>
                   <span className="text-white font-medium">
-                    {selectedDeliveryType === 'pickup' ? 'Вземане от ресторанта' :
-                     selectedDeliveryType === 'delivery-yellow' ? 'Доставка - Жълта зона' :
+                    {selectedDeliveryType === 'delivery-yellow' ? 'Доставка - Жълта зона' :
                      selectedDeliveryType === 'delivery-blue' ? 'Доставка - Синя зона' :
                      'Не е избран'}
                   </span>
