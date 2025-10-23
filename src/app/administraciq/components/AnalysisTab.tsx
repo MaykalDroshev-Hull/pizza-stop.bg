@@ -891,8 +891,8 @@ const AnalysisTab = (): React.JSX.Element => {
         </div>
       </div>
 
-      {/* KPI Cards - 2x2 grid on mobile, 4 on desktop */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
+      {/* KPI Cards - 4 columns on all screen sizes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {metrics.map(renderMetricCard)}
       </div>
 
