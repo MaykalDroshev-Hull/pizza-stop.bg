@@ -79,29 +79,7 @@ export default function Footer() {
               </div>
             </div>
             
-            {/* Administration */}
-            <div className={styles.adminSection}>
-              <h3 className={styles.adminTitle}>Администрация</h3>
-              
-              <div className={styles.adminLinks}>
-                <Link href="/administraciq" className={styles.adminLink}>
-                  <Settings className={styles.adminIcon} />
-                  <span>Управление</span>
-                </Link>
-                <Link href="/delivery" className={styles.adminLink}>
-                  <Car className={styles.adminIcon} />
-                  <span>Доставка</span>
-                </Link>
-                <Link href="/kitchen" className={styles.adminLink}>
-                  <Pizza className={styles.adminIcon} />
-                  <span>Кухня</span>
-                </Link>
-                <Link href="/printer" className={styles.adminLink}>
-                  <Printer className={styles.adminIcon} />
-                  <span>Принтер</span>
-                </Link>
-              </div>
-            </div>
+           
             
             {/* Payment Methods */}
             <div className={styles.paymentMethods}>
