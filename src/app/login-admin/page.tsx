@@ -33,7 +33,7 @@ const LoginPage: React.FC = (): React.JSX.Element => {
     if (typeof window !== 'undefined') {
       const isLoggedIn = localStorage.getItem('admin_authenticated') === 'true';
       if (isLoggedIn) {
-        router.push('/adminstaciq');
+        router.push('/administraciq');
       }
     }
   }, [router]);
@@ -82,7 +82,7 @@ const LoginPage: React.FC = (): React.JSX.Element => {
         localStorage.setItem('admin_login_time', new Date().toISOString());
         
         // Redirect to admin panel
-        router.push('/adminstaciq');
+        router.push('/administraciq');
       } else {
         setError({
           message: result.error || "Невалиден имейл адрес или парола",
