@@ -82,7 +82,7 @@ const LoginPage: React.FC = (): React.JSX.Element => {
         localStorage.setItem('admin_login_time', new Date().toISOString());
         
         // Redirect to admin panel
-        router.push('/admin');
+        router.push('/adminstaciq');
       } else {
         setError({
           message: result.error || "Невалиден имейл адрес или парола",
