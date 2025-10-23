@@ -33,7 +33,7 @@ const LoginPage: React.FC = (): React.JSX.Element => {
     if (typeof window !== 'undefined') {
       const isLoggedIn = localStorage.getItem('admin_authenticated') === 'true';
       if (isLoggedIn) {
-        router.push('/admin');
+        router.push('/adminstaciq');
       }
     }
   }, [router]);
@@ -244,6 +244,3 @@ const LoginPage: React.FC = (): React.JSX.Element => {
 };
 
 export default LoginPage;
-
-
-

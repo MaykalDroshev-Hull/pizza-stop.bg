@@ -221,11 +221,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
           isAnimating: false,
           isDeleted: product.isDeleted === 1 || product.isDeleted === true
         }));
-        
-        console.table(productsWithType);
-        
+         
         const deletedProductsCount = productsWithType.filter(p => p.isDeleted).length;
-        console.log(`📊 Products with isDeleted: true = ${deletedProductsCount} out of ${productsWithType.length} total ${tabName}`);
         
         setProducts(productsWithType);
       } catch (error) {
@@ -445,7 +442,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         mediumPrice: savedProduct.MediumPrice,
         largePrice: savedProduct.LargePrice,
         productTypeId: savedProduct.ProductTypeID,
-        productType: getProductTypeName(savedProduct.ProductTypeID || 0),
+        productType: updatedProduct.productType || getProductTypeName(savedProduct.ProductTypeID || 0),
         isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
       
@@ -780,7 +777,12 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       setCurrentPage(currentPage + 1);
     }
   };
-
+  const inflect = (name) => {
+    const n = (name ?? "").trim();
+    if (!n) return "";
+    if (n.toLowerCase() === "продукти") return n.slice(0, -1);     
+    return  `${n.slice(0, -1)}а`; 
+  };
   // Generate pagination items
   const generatePaginationItems = (): (number | string)[] => {
     const items: (number | string)[] = [];
@@ -812,6 +814,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         items.push(totalPages);
       }
     }
+ 
     
     return items;
   };
@@ -908,15 +911,15 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
               </button>
               <button
                 onClick={toggleDeletedProducts}
-                className={`inline-flex h-10 sm:h-12 items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl px-3 sm:px-4 text-white text-sm sm:text-base font-medium leading-none transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 w-full sm:w-auto mt-7 sm:mt-0 ${
+                className={`inline-flex h-10 sm:h-12 items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl px-2 sm:px-4 text-white text-sm sm:text-base font-medium leading-none transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 w-full sm:w-auto mt-7 sm:mt-0 ${
                   showDeletedProducts 
                     ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
                     : 'bg-gray-600 hover:bg-gray-700 focus:ring-gray-500'
                 }`}
               >
                 <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span className="hidden xs:inline">{showDeletedProducts ? 'Покажи активни' : 'Изтрити'}</span>
-                <span className="xs:hidden">{showDeletedProducts ? 'Активни' : 'Изтрити'}</span>
+                <span className="hidden sm:inline">{showDeletedProducts ? 'Покажи активни' : 'Изтрити'}</span>
+                <span className="sm:hidden">{showDeletedProducts ? 'Активни' : 'Изтр.'}</span>
               </button>
             </div>
           </div>
@@ -959,8 +962,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-600 hover:bg-orange-700 px-4 py-3 sm:px-6 text-white font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 w-full sm:w-auto text-sm sm:text-base"
         >
           <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="hidden xs:inline">Добави {tabName.slice(0, -1)}</span>
-          <span className="xs:hidden">Добави {tabName.slice(0, -1)}</span>
+          <span className="hidden xs:inline">Добави {inflect(tabName)}</span>
+          <span className="xs:hidden">Добави {inflect(tabName)}</span>
         </button>
       </div>
 
@@ -1104,11 +1107,12 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       )}
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+      <div className="w-full grid min-[360px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4 lg:gap-6">
+
         {currentProducts.map((product: Product) => (
           <div 
             key={product.id} 
-            className={`bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm border-2 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 transition-all duration-300 group flex flex-col shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-2 ${
+            className={`bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm border-2 rounded-lg sm:rounded-xl lg:rounded-2xl p-2 sm:p-4 lg:p-6 transition-all duration-300 group flex flex-col shadow-lg hover:shadow-2xl transform hover:scale-105 hover:-translate-y-2 ${
               product.isDisabled ? 'border-gray-600/50 opacity-60' : `border-gray-700/50 ${colors.border} hover:border-orange/30`
             } ${
               product.isAnimating ? 'animate-pulse scale-95 opacity-50' : ''
@@ -1120,13 +1124,13 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
             }}
           >
             {/* Product Image */}
-            <div className="relative w-full h-32 sm:h-40 lg:h-48 bg-gradient-to-br from-gray-800/80 to-gray-700/80 rounded-xl sm:rounded-2xl mb-4 sm:mb-5 flex items-center justify-center overflow-hidden group-hover:shadow-lg transition-all duration-300">
+            <div className="relative w-full h-24 sm:h-32 lg:h-48 bg-gradient-to-br from-gray-800/80 to-gray-700/80 rounded-lg sm:rounded-xl lg:rounded-2xl mb-2 sm:mb-4 lg:mb-5 flex items-center justify-center overflow-hidden group-hover:shadow-lg transition-all duration-300">
               {product.imageUrl ? (
                 <>
                   <img 
                     src={product.imageUrl} 
                     alt={product.name}
-                    className="w-full h-full object-cover rounded-xl sm:rounded-2xl transition-transform duration-300 group-hover:scale-110"
+                    className="w-full h-full object-cover rounded-lg sm:rounded-xl lg:rounded-2xl transition-transform duration-300 group-hover:scale-110"
                     onError={(e) => {
                       const target = e.currentTarget as HTMLImageElement;
                       const nextElement = target.nextElementSibling as HTMLElement;
@@ -1136,11 +1140,11 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                       }
                     }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl sm:rounded-2xl"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg sm:rounded-xl lg:rounded-2xl"></div>
                 </>
               ) : null}
               <div className={`w-full h-full items-center justify-center ${product.imageUrl ? 'hidden' : 'flex'}`}>
-                <Package className={`w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 transition-all duration-300 group-hover:scale-110 ${
+                <Package className={`w-8 h-8 sm:w-12 sm:h-12 lg:w-20 lg:h-20 transition-all duration-300 group-hover:scale-110 ${
                   product.isDisabled 
                     ? 'text-gray-500' 
                     : `text-gray-600 ${colors.text} group-hover:text-orange`
@@ -1151,21 +1155,21 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
             {/* Product Info - Flex container to push actions to bottom */}
             <div className="flex-1 flex flex-col">
               {/* Content Section */}
-              <div className="flex-1 space-y-2 sm:space-y-3">
+              <div className="flex-1 space-y-1 sm:space-y-2 lg:space-y-3">
                 {/* Product Name and Type - Single Line */}
                 <div className="space-y-1">
                   <h3 className={`font-bold leading-tight transition-colors duration-300 overflow-hidden ${
                     product.isDisabled ? 'text-gray-500' : `text-white ${colors.text} group-hover:text-orange`
-                  } text-sm sm:text-base lg:text-lg`} style={{display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical'}}>
+                  } text-xs sm:text-sm lg:text-lg`} style={{display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'}}>
                     {product.name}
                   </h3>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange opacity-60"></span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <div className="flex items-center gap-1">
+                      <span className="inline-block w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-orange opacity-60"></span>
                       <p className="text-xs text-gray-400 font-medium">{product.productType}</p>
                     </div>
                     {product.description && (
-                      <p className="text-xs text-gray-500 truncate max-w-[100px]" title={product.description}>
+                      <p className="text-xs text-gray-500 truncate max-w-full sm:max-w-[100px]" title={product.description}>
                         {product.description}
                       </p>
                     )}
@@ -1173,12 +1177,12 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                 </div>
                 
                 {/* Price Fields - Individual Row Layout */}
-                <div className="space-y-2">
+                <div className="space-y-1 sm:space-y-2">
                   {/* Small Price - Full Width Row */}
-                  <div className="flex items-center justify-between p-2 sm:p-3 lg:p-4 bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-lg border border-gray-600/30 hover:border-green-500/50 transition-all duration-300 group/price">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center shadow-lg group-hover/price:shadow-green-500/30 transition-all duration-300">
-                        <span className="text-white text-xs sm:text-sm font-bold">S</span>
+                  <div className="flex items-center justify-between p-1.5 sm:p-2 lg:p-4 bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-md sm:rounded-lg border border-gray-600/30 hover:border-green-500/50 transition-all duration-300 group/price">
+                    <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 lg:w-7 lg:h-7 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center shadow-lg group-hover/price:shadow-green-500/30 transition-all duration-300">
+                        <span className="text-white text-xs font-bold">S</span>
                       </div>
                       <span className="text-xs sm:text-sm lg:text-base text-gray-300 font-semibold">Малка</span>
                     </div>
@@ -1189,10 +1193,10 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                   
                   {/* Medium Price - Full Width Row */}
                   {product.mediumPrice && (
-                    <div className="flex items-center justify-between p-2 sm:p-3 lg:p-4 bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-lg border border-gray-600/30 hover:border-orange-500/50 transition-all duration-300 group/price">
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 bg-gradient-to-r from-orange-600 to-red-600 rounded-full flex items-center justify-center shadow-lg group-hover/price:shadow-orange-500/30 transition-all duration-300">
-                          <span className="text-white text-xs sm:text-sm font-bold">M</span>
+                    <div className="flex items-center justify-between p-1.5 sm:p-2 lg:p-4 bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-md sm:rounded-lg border border-gray-600/30 hover:border-orange-500/50 transition-all duration-300 group/price">
+                      <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2">
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 lg:w-7 lg:h-7 bg-gradient-to-r from-orange-600 to-red-600 rounded-full flex items-center justify-center shadow-lg group-hover/price:shadow-orange-500/30 transition-all duration-300">
+                          <span className="text-white text-xs font-bold">M</span>
                         </div>
                         <span className="text-xs sm:text-sm lg:text-base text-gray-300 font-semibold">Средна</span>
                       </div>
@@ -1204,10 +1208,10 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                   
                   {/* Large Price - Full Width Row */}
                   {product.largePrice && (
-                    <div className="flex items-center justify-between p-2 sm:p-3 lg:p-4 bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-lg border border-gray-600/30 hover:border-red-500/50 transition-all duration-300 group/price">
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 bg-gradient-to-r from-red-600 to-rose-600 rounded-full flex items-center justify-center shadow-lg group-hover/price:shadow-red-500/30 transition-all duration-300">
-                          <span className="text-white text-xs sm:text-sm font-bold">L</span>
+                    <div className="flex items-center justify-between p-1.5 sm:p-2 lg:p-4 bg-gradient-to-r from-gray-800/60 to-gray-700/60 rounded-md sm:rounded-lg border border-gray-600/30 hover:border-red-500/50 transition-all duration-300 group/price">
+                      <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2">
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 lg:w-7 lg:h-7 bg-gradient-to-r from-red-600 to-rose-600 rounded-full flex items-center justify-center shadow-lg group-hover/price:shadow-red-500/30 transition-all duration-300">
+                          <span className="text-white text-xs font-bold">L</span>
                         </div>
                         <span className="text-xs sm:text-sm lg:text-base text-gray-300 font-semibold">Голяма</span>
                       </div>
@@ -1220,40 +1224,37 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
               </div>
               
               {/* Actions - Always at bottom */}
-              <div className="flex flex-col space-y-3 sm:space-y-4 mt-4 sm:mt-6">
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="flex flex-col space-y-2 sm:space-y-3 lg:space-y-4 mt-2 sm:mt-4 lg:mt-6">
+                <div className="flex flex-col gap-1.5 sm:gap-2 lg:gap-3">
                   <button 
-                    className="flex-1 inline-flex h-10 sm:h-12 items-center justify-center gap-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-3 sm:px-6 text-sm sm:text-base font-semibold text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-lg hover:shadow-xl hover:shadow-green-500/25 transform hover:scale-105 active:scale-95"
+                    className="w-full inline-flex h-8 sm:h-10 lg:h-12 items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl lg:rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-2 sm:px-3 lg:px-6 text-xs sm:text-sm lg:text-base font-semibold text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none shadow-lg hover:shadow-xl hover:shadow-green-500/25 transform hover:scale-105 active:scale-95"
                     onClick={(): void => handleEditProduct(product.id)}
                     disabled={product.isDisabled || false}
                   >
                     <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span className="hidden xs:inline">Промени</span>
-                    <span className="xs:hidden">Промени</span>
+                    <span>Промени</span>
                   </button>
                   {product.isDeleted ? (
                     <button 
-                      className="flex-1 inline-flex h-10 sm:h-12 items-center justify-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-3 sm:px-6 text-sm sm:text-base font-semibold text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 shadow-lg hover:shadow-xl hover:shadow-blue-500/25 transform hover:scale-105 active:scale-95"
+                      className="w-full inline-flex h-8 sm:h-10 lg:h-12 items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl lg:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-2 sm:px-3 lg:px-6 text-xs sm:text-sm lg:text-base font-semibold text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 shadow-lg hover:shadow-xl hover:shadow-blue-500/25 transform hover:scale-105 active:scale-95"
                       onClick={(): void => { handleRestoreProduct(product.id); }}
                     >
                       <Undo2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden xs:inline">Отмяна</span>
-                      <span className="xs:hidden">Отмяна</span>
+                      <span>Отмяна</span>
                     </button>
                   ) : (
                     <button 
-                      className="flex-1 inline-flex h-10 sm:h-12 items-center justify-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 px-3 sm:px-6 text-sm sm:text-base font-semibold text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 shadow-lg hover:shadow-xl hover:shadow-red-500/25 transform hover:scale-105 active:scale-95"
+                      className="w-full inline-flex h-8 sm:h-10 lg:h-12 items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl lg:rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 px-2 sm:px-3 lg:px-6 text-xs sm:text-sm lg:text-base font-semibold text-white transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 shadow-lg hover:shadow-xl hover:shadow-red-500/25 transform hover:scale-105 active:scale-95"
                       onClick={(): void => handleDeleteProduct(product.id)}
                     >
                       <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden xs:inline">Изтрий</span>
-                      <span className="xs:hidden">Изтрий</span>
+                      <span>Изтрий</span>
                     </button>
                   )}
                 </div>
 
                 {/* Disable Checkbox */}
-                <label className="flex items-center justify-center space-x-2 sm:space-x-3 cursor-pointer p-3 sm:p-4 bg-gray-800/30 rounded-xl border border-gray-600/30 hover:border-gray-500/50 transition-all duration-300 group/toggle">
+                <label className="flex items-center justify-center space-x-1.5 sm:space-x-2 lg:space-x-3 cursor-pointer p-2 sm:p-3 lg:p-4 bg-gray-800/30 rounded-lg sm:rounded-xl border border-gray-600/30 hover:border-gray-500/50 transition-all duration-300 group/toggle">
                   <input
                     type="checkbox"
                     checked={product.isDisabled || false}
@@ -1261,7 +1262,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                     className="w-3 h-3 sm:w-4 sm:h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2"
                   />
                   <span className="text-xs sm:text-sm text-gray-400">
-                    {product.isDisabled ? 'Скрий' : 'Покажи'}
+                    {'Скрито'}
                   </span>
                 </label>
               </div>
@@ -1355,158 +1356,188 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
 
       {/* Add Product Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 sm:p-6 w-full max-w-md max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-lg sm:text-xl font-bold text-white">Добавяне на нов {tabName.slice(0, -1)}</h2>
-              <button
-                onClick={handleCloseModal}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50">
+    {/* Панелът е flex колона; header и footer са фиксирани, body се скролира */}
+    <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md max-h-[95dvh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-800">
+        <h2 className="text-lg sm:text-xl font-bold text-white">
+          Добавяне на {inflect(tabName)}
+        </h2>
+        <button
+          onClick={handleCloseModal}
+          className="text-gray-400 hover:text-white transition-colors"
+        >
+          <X className="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
+      </div>
+
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <form
+          id="addProductForm"
+          onSubmit={async (e: React.FormEvent<HTMLFormElement>) => {
+            e.preventDefault();
+            await handleAddProduct();
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Име на {tabName.slice(0, -1)}а
+            </label>
+            <input
+              type="text"
+              value={newProduct.name}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleInputChange('name', e.target.value)
+              }
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+              placeholder={`Име на ${tabName.slice(0, -1)}а`}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Описание (опционално)
+            </label>
+            <textarea
+              value={newProduct.description}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                handleInputChange('description', e.target.value)
+              }
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+              placeholder={`Описание на ${tabName.slice(0, -1)}а`}
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Тип продукт
+            </label>
+            <select
+              value={newProduct.productTypeId}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                handleInputChange('productTypeId', e.target.value)
+              }
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+              required
+            >
+              <option value="">Изберете тип</option>
+              {categoryOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Малка цена
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={newProduct.smallPrice}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleInputChange('smallPrice', e.target.value)
+                }
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                placeholder="0.00"
+                required
+              />
             </div>
 
-            <form onSubmit={async (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); await handleAddProduct(); }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Име на {tabName.slice(0, -1)}а
-                </label>
-                <input
-                  type="text"
-                  value={newProduct.name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('name', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
-                  placeholder={`Име на ${tabName.slice(0, -1)}а`}
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Средна цена (опционално)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={newProduct.mediumPrice}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleInputChange('mediumPrice', e.target.value)
+                }
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                placeholder="0.00"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Описание (опционално)
-                </label>
-                <textarea
-                  value={newProduct.description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('description', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
-                  placeholder={`Описание на ${tabName.slice(0, -1)}а`}
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Тип продукт
-                </label>
-                <select
-                  value={newProduct.productTypeId}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleInputChange('productTypeId', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
-                  required
-                >
-                  <option value="">Изберете тип</option>
-                  {categoryOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Малка цена
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newProduct.smallPrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('smallPrice', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Средна цена (опционално)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newProduct.mediumPrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('mediumPrice', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Голяма цена (опционално)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newProduct.largePrice}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('largePrice', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Изображение на {tabName.slice(0, -1)}а (опционално)
-                </label>
-                <ImageUpload
-                  value={newProduct.imageUrl}
-                  onChange={handleImageUpload}
-                  onError={handleImageUploadError}
-                  placeholder={`Качете изображение на ${tabName.slice(0, -1)}а`}
-                  maxSize={5}
-                  className="w-full"
-                />
-                {imageUploadError && (
-                  <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
-                    <X className="w-4 h-4" />
-                    {imageUploadError}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-3 pt-4">
-                <button
-                  type="submit"
-                  disabled={isAddingProduct}
-                  className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-orange-800 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 text-sm sm:text-base flex items-center justify-center gap-2"
-                >
-                  {isAddingProduct ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Добавяне...
-                    </>
-                  ) : (
-                    'Добави'
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  disabled={isAddingProduct}
-                  className="w-full bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm sm:text-base"
-                >
-                  Прекратяване
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Голяма цена (опционално)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={newProduct.largePrice}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleInputChange('largePrice', e.target.value)
+                }
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                placeholder="0.00"
+              />
+            </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Изображение на {tabName.slice(0, -1)}а (опционално)
+            </label>
+            <ImageUpload
+              value={newProduct.imageUrl}
+              onChange={handleImageUpload}
+              onError={handleImageUploadError}
+              placeholder={`Качете изображение на ${tabName.slice(0, -1)}а`}
+              maxSize={5}
+              className="w-full"
+            />
+            {imageUploadError && (
+              <p className="mt-2 text-sm text-red-400 flex items-center gap-1">
+                <X className="w-4 h-4" />
+                {imageUploadError}
+              </p>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {/* Footer – винаги видим на телефон */}
+      <div className="shrink-0 sticky bottom-0 inset-x-0 bg-gray-900/95 backdrop-blur border-t border-gray-800 p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            form="addProductForm"
+            type="submit"
+            disabled={isAddingProduct}
+            className="min-h-11 sm:min-h-12 rounded-xl w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white font-semibold px-4 flex items-center justify-center gap-2"
+          >
+            {isAddingProduct ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Добавяне.
+              </>
+            ) : (
+              'Добави'
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleCloseModal}
+            disabled={isAddingProduct}
+            className="min-h-11 sm:min-h-12 rounded-xl w-full bg-gray-800 hover:bg-gray-700 disabled:opacity-60 text-gray-100 font-semibold px-4"
+          >
+            Прекратяване
+          </button>
         </div>
-      )}
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Edit Product Modal */}
       <EditProductModal

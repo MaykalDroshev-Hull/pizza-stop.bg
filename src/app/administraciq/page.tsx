@@ -16,7 +16,6 @@ import ProductsTab from "./components/ProductsTab";
 import AddonsTab from "./components/AddonsTab";
 import BeverageTab from "./components/BeverageTab";
 import AnalysisTab from "./components/AnalysisTab";
-import ReviewManagement from "./components/ReviewManagement";
 
 interface Tab {
   id: string;
@@ -102,8 +101,6 @@ const AdminPage = (): React.JSX.Element => {
           {renderTabContent()}
         </div>
 
-          {/* Review Management */}
-          <ReviewManagement />
         </div>
       </div>
     </ProtectedRoute>

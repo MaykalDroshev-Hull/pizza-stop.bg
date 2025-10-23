@@ -11,9 +11,9 @@ const categoryOptions = [
 const getProductTypeName = (productTypeId: number): string => {
   switch (productTypeId) {
     case 5:
-      return 'Сосове';
+      return 'Сос';
     case 6:
-      return 'Добавки';
+      return 'Добавка';
     default:
       return 'Неизвестно';
   }
