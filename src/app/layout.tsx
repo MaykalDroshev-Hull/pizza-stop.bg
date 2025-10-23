@@ -10,6 +10,7 @@ import ConditionalFooter from '../components/ConditionalFooter'
 import CookieConsent from '../components/CookieConsent'
 import ConditionalNavBar from '../components/ConditionalNavBar'
 import { Suspense } from 'react'
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -104,6 +105,7 @@ export default function RootLayout({
               </CartProvider>
             </LoginIDProvider>
           </LoadingProvider>
+          <Analytics />
       </body>
     </html>
   )
