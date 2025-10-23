@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Printer, LogOut, ArrowLeft } from "lucide-react";
-import { fetchMenuData } from "@/lib/menuData";
+import { fetchMenuData, fetchAddons } from "@/lib/menuData";
 
 interface Category {
   id: string;
@@ -31,12 +31,16 @@ interface ProductModalData {
   addons: any[];
   selectedSize: any;
   selectedPrice: number;
+  availableAddons: any[];
+  isLoadingAddons: boolean;
 }
 
 interface CustomerInfo {
   name: string;
   phone: string;
   address: string;
+  orderType: number; // 1 = Collection (3BGN), 2 = Delivery (7BGN)
+  deliveryPrice: number;
 }
 
 export default function PrinterPage() {
@@ -53,7 +57,9 @@ export default function PrinterPage() {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: "",
     phone: "",
-    address: ""
+    address: "",
+    orderType: 1, // Default to Pickup (free)
+    deliveryPrice: 0
   });
   const [isPrinting, setIsPrinting] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -251,7 +257,7 @@ export default function PrinterPage() {
     }
   };
 
-  const handleProductSelect = (product: Product) => {
+  const handleProductSelect = async (product: Product) => {
     // Get the first available size (or use base price if no sizes)
     const firstSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : null;
     const price = firstSize ? firstSize.price : product.basePrice;
@@ -262,9 +268,39 @@ export default function PrinterPage() {
       comment: "",
       addons: [],
       selectedSize: firstSize,
-      selectedPrice: price
+      selectedPrice: price,
+      availableAddons: [],
+      isLoadingAddons: true
     });
     setShowProductModal(true);
+    
+    // Load addons based on product category
+    try {
+      let addons: any[] = [];
+      
+      // Determine product type ID based on category
+      if (selectedCategory === 'pizza') {
+        const sizeName = firstSize?.name || 'Малка';
+        addons = await fetchAddons(1, sizeName);
+      } else if (selectedCategory === 'burgers') {
+        addons = await fetchAddons(2);
+      } else if (selectedCategory === 'doners') {
+        addons = await fetchAddons(3);
+      }
+      
+      setProductModalData(prev => prev ? {
+        ...prev,
+        availableAddons: addons,
+        isLoadingAddons: false
+      } : null);
+    } catch (error) {
+      console.error('Error loading addons:', error);
+      setProductModalData(prev => prev ? {
+        ...prev,
+        availableAddons: [],
+        isLoadingAddons: false
+      } : null);
+    }
   };
 
   const handleProductModalSubmit = () => {
@@ -339,7 +375,8 @@ export default function PrinterPage() {
         price: product.price,
         quantity: product.quantity,
         addons: product.addons || [],
-        comment: product.comment || ""
+        comment: product.comment || "",
+        size: product.size || 'Standard'
       }));
 
       const response = await fetch('/api/printer/order', {
@@ -350,7 +387,9 @@ export default function PrinterPage() {
         body: JSON.stringify({
           customerInfo,
           orderItems,
-          totalPrice: calculateTotal()
+          totalPrice: calculateTotal(),
+          orderType: customerInfo.orderType,
+          deliveryPrice: customerInfo.deliveryPrice
         }),
       });
 
@@ -358,7 +397,13 @@ export default function PrinterPage() {
         alert(`Поръчката е създадена успешно!`);
         // Reset form
         setSelectedProducts([]);
-        setCustomerInfo({ name: "", phone: "", address: "" });
+        setCustomerInfo({ 
+          name: "", 
+          phone: "", 
+          address: "",
+          orderType: 1,
+          deliveryPrice: 3
+        });
         setCurrentView("categories");
       } else {
         throw new Error('Failed to create order');
@@ -392,100 +437,162 @@ export default function PrinterPage() {
   // Product Modal
   if (showProductModal && productModalData) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
-        <div className="w-full max-w-lg">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">{productModalData.product.name}</h1>
-            <p className="text-red-500 font-bold text-2xl">{productModalData.selectedPrice.toFixed(2)} лв</p>
+      <div className="min-h-screen bg-black p-3 md:p-4 overflow-y-auto">
+        <div className="w-full max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-3 md:mb-4">
+            <h1 className="text-xl md:text-3xl font-bold text-white mb-1">{productModalData.product.name}</h1>
+            <p className="text-red-500 font-bold text-lg md:text-2xl">{productModalData.selectedPrice.toFixed(2)} лв</p>
           </div>
           
-          <div className="space-y-6">
-            {/* Size Selection */}
-            {productModalData.product.sizes && productModalData.product.sizes.length > 0 && (
+          {/* Responsive Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+            {/* Left Column - Product Details & Actions */}
+            <div className="space-y-3 md:space-y-4">
+              {/* Size Selection */}
+              {productModalData.product.sizes && productModalData.product.sizes.length > 0 && (
+                <div>
+                  <label className="block text-white text-sm md:text-base font-medium mb-2">Размер</label>
+                  <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
+                    {productModalData.product.sizes.map((size) => (
+                      <button
+                        key={size.name}
+                        onClick={() => setProductModalData(prev => prev ? { 
+                          ...prev, 
+                          selectedSize: size, 
+                          selectedPrice: size.price 
+                        } : null)}
+                        className={`w-full p-2 border transition-colors duration-200 ${
+                          productModalData.selectedSize?.name === size.name
+                            ? 'bg-red-600 border-red-600 text-white'
+                            : 'bg-gray-900 border-gray-700 text-white hover:border-red-500'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{size.name}</div>
+                        <div className="text-xs text-red-400">{size.price.toFixed(2)} лв</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quantity */}
               <div>
-                <label className="block text-white text-lg font-medium mb-3">Размер</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {productModalData.product.sizes.map((size) => (
-                    <button
-                      key={size.name}
-                      onClick={() => setProductModalData(prev => prev ? { 
-                        ...prev, 
-                        selectedSize: size, 
-                        selectedPrice: size.price 
-                      } : null)}
-                      className={`p-3 border transition-colors duration-200 ${
-                        productModalData.selectedSize?.name === size.name
-                          ? 'bg-red-600 border-red-600 text-white'
-                          : 'bg-gray-900 border-gray-700 text-white hover:border-red-500'
-                      }`}
-                    >
-                      <div className="font-medium">{size.name}</div>
-                      <div className="text-sm text-red-400">{size.price.toFixed(2)} лв</div>
-                    </button>
-                  ))}
+                <label className="block text-white text-sm md:text-base font-medium mb-2">Брой</label>
+                <div className="flex items-center justify-center gap-2 md:gap-3">
+                  <button
+                    onClick={() => setProductModalData(prev => prev ? { ...prev, quantity: Math.max(1, prev.quantity - 1) } : null)}
+                    className="w-10 h-10 md:w-12 md:h-12 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-lg md:text-xl"
+                  >
+                    -
+                  </button>
+                  <span className="text-white font-bold text-2xl md:text-3xl min-w-[50px] md:min-w-[60px] text-center">
+                    {productModalData.quantity}
+                  </span>
+                  <button
+                    onClick={() => setProductModalData(prev => prev ? { ...prev, quantity: prev.quantity + 1 } : null)}
+                    className="w-10 h-10 md:w-12 md:h-12 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center text-lg md:text-xl"
+                  >
+                    +
+                  </button>
                 </div>
               </div>
-            )}
 
-            {/* Quantity */}
-            <div>
-              <label className="block text-white text-lg font-medium mb-3">Брой</label>
-              <div className="flex items-center justify-center gap-4">
+              {/* Comment */}
+              <div>
+                <label className="block text-white text-sm md:text-base font-medium mb-2">Коментар</label>
+                <textarea
+                  value={productModalData.comment}
+                  onChange={(e) => setProductModalData(prev => prev ? { ...prev, comment: e.target.value } : null)}
+                  className="w-full px-2 md:px-3 py-2 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-sm md:text-base"
+                  placeholder="Добавете коментар..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => setProductModalData(prev => prev ? { ...prev, quantity: Math.max(1, prev.quantity - 1) } : null)}
-                  className="w-12 h-12 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-xl"
+                  onClick={() => {
+                    setShowProductModal(false);
+                    setProductModalData(null);
+                  }}
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-2 transition-colors duration-200 text-sm"
                 >
-                  -
+                  Отказ
                 </button>
-                <span className="text-white font-bold text-3xl min-w-[60px] text-center">
-                  {productModalData.quantity}
-                </span>
                 <button
-                  onClick={() => setProductModalData(prev => prev ? { ...prev, quantity: prev.quantity + 1 } : null)}
-                  className="w-12 h-12 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center text-xl"
+                  onClick={handleProductModalSubmit}
+                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-2 transition-colors duration-200 text-sm"
                 >
-                  +
+                  Добави
                 </button>
               </div>
             </div>
 
-            {/* Comment */}
-            <div>
-              <label className="block text-white text-lg font-medium mb-3">Коментар</label>
-              <textarea
-                value={productModalData.comment}
-                onChange={(e) => setProductModalData(prev => prev ? { ...prev, comment: e.target.value } : null)}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-                placeholder="Добавете коментар..."
-                rows={3}
-              />
-            </div>
-
-            {/* Addons (placeholder for now) */}
-            <div>
-              <label className="block text-white text-lg font-medium mb-3">Добавки</label>
-              <div className="bg-gray-900 border border-gray-700 p-4">
-                <p className="text-gray-400 text-center">Добавките ще бъдат добавени скоро</p>
+            {/* Right Column - Addons (spans 2 columns on desktop) */}
+            <div className="lg:col-span-2">
+              <label className="block text-white text-base md:text-lg font-medium mb-2">Добавки</label>
+              <div className="bg-gray-900 border border-gray-700 p-2 md:p-3 max-h-[calc(100vh-180px)] md:max-h-[calc(100vh-200px)] overflow-y-auto">
+                {productModalData.isLoadingAddons ? (
+                  <p className="text-gray-400 text-center py-6">Зареждане на добавки...</p>
+                ) : productModalData.availableAddons.length > 0 ? (
+                  <div className="space-y-3 md:space-y-4">
+                    {/* Group addons by type */}
+                    {['sauce', 'vegetable', 'meat', 'cheese', 'pizza-addon'].map(addonType => {
+                      const typeAddons = productModalData.availableAddons.filter((a: any) => a.AddonType === addonType);
+                      if (typeAddons.length === 0) return null;
+                      
+                      const typeNames: any = {
+                        sauce: 'Сосове',
+                        vegetable: 'Салати',
+                        meat: 'Колбаси',
+                        cheese: 'Сирена',
+                        'pizza-addon': 'Добавки'
+                      };
+                      
+                      return (
+                        <div key={addonType}>
+                          <h5 className="text-xs md:text-sm text-white font-medium mb-2">{typeNames[addonType]}:</h5>
+                          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                            {typeAddons.map((addon: any) => {
+                              const isSelected = productModalData.addons.some((a: any) => a.AddonID === addon.AddonID);
+                              return (
+                                <button
+                                  key={addon.AddonID}
+                                  type="button"
+                                  onClick={() => {
+                                    setProductModalData(prev => {
+                                      if (!prev) return null;
+                                      const newAddons = isSelected
+                                        ? prev.addons.filter((a: any) => a.AddonID !== addon.AddonID)
+                                        : [...prev.addons, addon];
+                                      return { ...prev, addons: newAddons };
+                                    });
+                                  }}
+                                  className={`p-2 md:p-3 border transition-colors duration-200 text-left ${
+                                    isSelected
+                                      ? 'bg-green-600 border-green-600 text-white'
+                                      : 'bg-gray-800 border-gray-600 text-white hover:border-green-500'
+                                  }`}
+                                >
+                                  <div className="font-medium text-xs md:text-sm leading-tight">{addon.Name}</div>
+                                  <div className={`text-xs mt-1 ${isSelected ? 'text-white' : 'text-red-400'}`}>
+                                    {addon.Price.toFixed(2)} лв.
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-center py-6">Няма налични добавки</p>
+                )}
               </div>
             </div>
-          </div>
-          
-          <div className="flex gap-4 mt-8">
-            <button
-              onClick={() => {
-                setShowProductModal(false);
-                setProductModalData(null);
-              }}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-4 px-4 transition-colors duration-200"
-            >
-              Отказ
-            </button>
-            <button
-              onClick={handleProductModalSubmit}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-4 px-4 transition-colors duration-200"
-            >
-              Добави
-            </button>
           </div>
         </div>
       </div>
@@ -574,6 +681,50 @@ export default function PrinterPage() {
                 placeholder="Въведете адрес"
                 required
               />
+            </div>
+            
+            <div>
+              <label className="block text-white text-lg font-medium mb-3">
+                Тип на поръчка *
+              </label>
+              <div className="grid grid-cols-3 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 1, deliveryPrice: 0 }))}
+                  className={`p-4 border transition-colors duration-200 ${
+                    customerInfo.orderType === 1
+                      ? 'bg-green-600 border-green-600 text-white'
+                      : 'bg-gray-900 border-gray-700 text-white hover:border-green-500'
+                  }`}
+                >
+                  <div className="font-bold text-xl">Вземане</div>
+                  <div className="text-sm mt-1">Безплатно</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 3 }))}
+                  className={`p-4 border transition-colors duration-200 ${
+                    customerInfo.orderType === 2 && customerInfo.deliveryPrice === 3
+                      ? 'bg-yellow-600 border-yellow-600 text-white'
+                      : 'bg-gray-900 border-gray-700 text-white hover:border-yellow-500'
+                  }`}
+                >
+                  <div className="font-bold text-xl">Доставка</div>
+                  <div className="text-sm mt-1">Жълта - 3 BGN</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 7 }))}
+                  className={`p-4 border transition-colors duration-200 ${
+                    customerInfo.orderType === 2 && customerInfo.deliveryPrice === 7
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-gray-900 border-gray-700 text-white hover:border-blue-500'
+                  }`}
+                >
+                  <div className="font-bold text-xl">Доставка</div>
+                  <div className="text-sm mt-1">Синя - 7 BGN</div>
+                </button>
+              </div>
             </div>
             
             <div className="flex gap-4 mt-8">

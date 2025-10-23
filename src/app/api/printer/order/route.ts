@@ -7,13 +7,17 @@ export async function POST(request: NextRequest) {
     const { 
       customerInfo, 
       orderItems, 
-      totalPrice
+      totalPrice,
+      orderType,
+      deliveryPrice
     } = body
 
     console.log('🖨️ Printer order creation request:', {
       customerInfo,
       orderItems: orderItems?.length,
-      totalPrice
+      totalPrice,
+      orderType,
+      deliveryPrice
     })
 
     // Create server-side Supabase client (bypasses RLS)
@@ -63,8 +67,8 @@ export async function POST(request: NextRequest) {
       RfPaymentMethodID: 2, // Cash payment for printer orders
       IsPaid: false, // Orders start as unpaid
       ExpectedDT: expectedDT.toISOString(),
-      OrderType: 1, // Restaurant collection
-      DeliveryPrice: 0, // No delivery for printer orders
+      OrderType: orderType || 1, // Use orderType from request, default to Collection
+      DeliveryPrice: deliveryPrice || 3, // Use deliveryPrice from request, default to 3
       TotalAmount: totalPrice
     }
 

@@ -67,7 +67,9 @@ export async function POST(request: NextRequest) {
       orderType: 'Доставка',
       paymentMethod: 'С карта на адрес',
       location: 'ул. "Главна" №15, ет. 3, ап. 8, Ловеч',
-      estimatedTime: '30-45 минути'
+      estimatedTime: '30-45 минути',
+      addressInstructions: 'Влезте от главния вход, звъннете на звънеца на апартамент 8',
+      specialInstructions: 'Моля, доставете до 19:30 часа'
     }
 
     await emailService.sendOrderConfirmationEmail({

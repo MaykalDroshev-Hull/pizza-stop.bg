@@ -8,6 +8,7 @@ export interface TicketData {
   address: string;
   phone: string;
   specialInstructions?: string;
+  addressInstructions?: string;
   items: Array<{
     quantity: number;
     name: string;
@@ -279,7 +280,8 @@ export function generateTicketHTML(data: TicketData): string {
       <div class="customer-name">${data.customerName}</div>
       <div>${data.address}</div>
       <div>${data.phone}</div>
-      ${data.specialInstructions ? `<div class="special-instructions">${data.specialInstructions}</div>` : ''}
+      ${data.addressInstructions ? `<div class="special-instructions">Адрес: ${data.addressInstructions}</div>` : ''}
+      ${data.specialInstructions ? `<div class="special-instructions">Инструкции: ${data.specialInstructions}</div>` : ''}
     </div>
     
     <div class="separator"></div>

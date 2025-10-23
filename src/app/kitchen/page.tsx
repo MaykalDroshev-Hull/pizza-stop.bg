@@ -30,6 +30,7 @@ interface Order {
   estimatedTime: number;
   specialInstructions: string;
   comments: string | null;
+  addressInstructions?: string | null;
   isPaid: boolean;
   orderStatusId: number;
   orderType: number; // 1 = Restaurant collection, 2 = Delivery
@@ -150,8 +151,9 @@ const KitchenCommandCenter = () => {
       workingStartTime: status === 'working' ? new Date(orderTime.getTime() + 5 * 60 * 1000) : null,
       completedTime: status === 'completed' ? new Date(orderTime.getTime() + 15 * 60 * 1000) : null,
       estimatedTime: 15, // Default estimate
-      specialInstructions: kitchenOrder.SpecialInstructions || '',
-      comments: kitchenOrder.Comments,
+      specialInstructions: kitchenOrder.SpecialInstructions || '', // Contains user's addressInstructions
+      comments: kitchenOrder.Comments, // Contains order-level comments
+      addressInstructions: kitchenOrder.SpecialInstructions || null, // Same as specialInstructions for ticket generation
       isPaid: kitchenOrder.IsPaid,
       orderStatusId: kitchenOrder.OrderStatusID,
       orderType: kitchenOrder.OrderType

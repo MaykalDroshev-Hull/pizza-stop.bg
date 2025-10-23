@@ -35,6 +35,8 @@ interface OrderDetails {
   items: OrderItem[]
   expectedDT?: string
   orderType?: number
+  comments?: string | null
+  addressInstructions?: string | null
 }
 
 function OrderSuccessContent() {
@@ -111,7 +113,9 @@ function OrderSuccessContent() {
           status: order.OrderStatus?.StatusName || '—',
           items,
           expectedDT: order.ExpectedDT,
-          orderType: order.OrderType
+          orderType: order.OrderType,
+          comments: order.Comments || null,
+          addressInstructions: order.Login?.addressInstructions || null
         })
 
         // Calculate initial estimated time display
@@ -360,6 +364,39 @@ function OrderSuccessContent() {
             </div>
           </div>
         </div>
+
+        {/* Delivery Instructions */}
+        {(orderDetails.comments || orderDetails.addressInstructions) && (
+          <div className="bg-card border border-white/12 rounded-2xl p-6 mb-6 max-md:p-4">
+            <h2 className="text-xl font-bold text-text mb-4">Инструкции за доставка</h2>
+            
+            <div className="space-y-4">
+              {orderDetails.comments && (
+                <div className="flex items-start gap-3 p-4 bg-orange/10 border border-orange/20 rounded-xl">
+                  <div className="w-10 h-10 bg-orange/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-orange font-bold text-lg">📝</span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted mb-1">Допълнителни инструкции</p>
+                    <p className="font-medium text-text">{orderDetails.comments}</p>
+                  </div>
+                </div>
+              )}
+              
+              {orderDetails.addressInstructions && (
+                <div className="flex items-start gap-3 p-4 bg-blue/10 border border-blue/20 rounded-xl">
+                  <div className="w-10 h-10 bg-blue/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <MapPin size={20} className="text-blue" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted mb-1">Инструкции за адреса</p>
+                    <p className="font-medium text-text">{orderDetails.addressInstructions}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Order Items */}
         <div className="bg-card border border-white/12 rounded-2xl p-6 mb-6 max-md:p-4">
