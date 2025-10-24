@@ -59,6 +59,7 @@ export default function CheckoutPage() {
   const [addressZone, setAddressZone] = useState<'yellow' | 'blue' | 'outside' | null>(null)
   const [addressConfirmed, setAddressConfirmed] = useState(false)
   const [isCollection, setIsCollection] = useState(false)
+  const [selectedDeliveryType, setSelectedDeliveryType] = useState<'pickup' | 'delivery-yellow' | 'delivery-blue'>('pickup')
   const [paymentMethodId, setPaymentMethodId] = useState<number | null>(null)
   const [unavailableItems, setUnavailableItems] = useState<string[]>([])
   const [cachedProfileData, setCachedProfileData] = useState<any>(null)
@@ -477,11 +478,9 @@ export default function CheckoutPage() {
 
   // Recalculate delivery cost when total price changes
   useEffect(() => {
-    if (addressZone) {
-      const cost = calculateDeliveryCost(totalPrice, addressZone, isCollection)
-      setDeliveryCost(cost || 0)
-    }
-  }, [totalPrice, addressZone, isCollection])
+    const cost = calculateDeliveryCost(totalPrice, selectedDeliveryType)
+    setDeliveryCost(cost || 0)
+  }, [totalPrice, selectedDeliveryType])
 
   // Validate address zone when user data is loaded and order type is 'user'
   useEffect(() => {
@@ -708,29 +707,21 @@ export default function CheckoutPage() {
   }
 
 
-    // Delivery cost calculation and address validation
-  const calculateDeliveryCost = (orderTotal: number, zone: 'yellow' | 'blue' | 'outside' | null, isCollectionOrder: boolean = false) => {
-    // No delivery cost for collection orders
-    if (isCollectionOrder) {
-      return 0
-    }
-    
-    if (!zone || zone === 'outside') {
-      return null // No delivery outside blue zone
-    }
-    
-    // Different minimum orders by zone
-    switch (zone) {
-      case 'yellow':
+    // Delivery cost calculation based on selected delivery type
+  const calculateDeliveryCost = (orderTotal: number, deliveryType: 'pickup' | 'delivery-yellow' | 'delivery-blue') => {
+    switch (deliveryType) {
+      case 'pickup':
+        return 0 // Free pickup
+      case 'delivery-yellow':
         if (orderTotal < 15) {
-          return null // Order too small for yellow zone
+          return null // Order too small for yellow zone delivery
         }
-        return 3
-      case 'blue':
+        return 3 // 3 BGN for yellow zone delivery
+      case 'delivery-blue':
         if (orderTotal < 30) {
-          return null // Order too small for blue zone
+          return null // Order too small for blue zone delivery
         }
-        return 7
+        return 7 // 7 BGN for blue zone delivery
       default:
         return null
     }
@@ -872,17 +863,23 @@ export default function CheckoutPage() {
     console.log(`🎯 Determined zone: ${zone}`)
     setAddressZone(zone)
     
-    // Only confirm address if it's within delivery zone
-    if (zone === 'outside') {
-      setAddressConfirmed(false)
-      console.log('❌ Address not confirmed - outside delivery zone')
+    // Only confirm address if it's within delivery zone (for delivery orders)
+    if (selectedDeliveryType !== 'pickup') {
+      if (zone === 'outside') {
+        setAddressConfirmed(false)
+        console.log('❌ Address not confirmed - outside delivery zone')
+      } else {
+        setAddressConfirmed(true)
+        console.log('✅ Address confirmed - within delivery zone')
+      }
     } else {
+      // For pickup orders, no address validation needed
       setAddressConfirmed(true)
-      console.log('✅ Address confirmed - within delivery zone')
+      console.log('✅ Pickup order - no address validation needed')
     }
     
-    // Calculate delivery cost
-    const cost = calculateDeliveryCost(totalPrice, zone, isCollection)
+    // Calculate delivery cost based on selected delivery type
+    const cost = calculateDeliveryCost(totalPrice, selectedDeliveryType)
     console.log('💰 Delivery cost calculated:', cost)
     setDeliveryCost(cost || 0)
     
@@ -1183,9 +1180,11 @@ export default function CheckoutPage() {
     paymentMethodId !== null && // Payment method must be selected
     totalPrice >= 15 && // Minimum order amount
     (
-      isCollection || // Collection orders don't need address validation
-      (customerInfo.LocationText && customerInfo.LocationCoordinates && addressConfirmed && addressZone !== 'outside' && deliveryCost !== null)
-    ) && // Delivery orders need full address validation
+      selectedDeliveryType === 'pickup' || // Pickup orders don't need address validation
+      (selectedDeliveryType === 'delivery-yellow' && totalPrice >= 15) || // Yellow zone delivery needs 15+ BGN
+      (selectedDeliveryType === 'delivery-blue' && totalPrice >= 30) // Blue zone delivery needs 30+ BGN
+    ) && // Delivery orders need address validation
+    (selectedDeliveryType === 'pickup' || (customerInfo.LocationText && customerInfo.LocationCoordinates && addressConfirmed)) &&
     (paymentMethodId !== 5 || (paymentData && paymentData.isValid)) // Online payment requires valid payment data
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1221,18 +1220,25 @@ export default function CheckoutPage() {
       return
     }
      
-     // Validate address zone (only for delivery orders)
-     if (!isCollection && addressZone === 'outside') {
-       alert('❌ Доставката не е възможна на този адрес. Моля, изберете адрес в зоната за доставка.')
-       setIsLoading(false)
-       return
-     }
-     
-     // Validate delivery cost (only for delivery orders)
-     if (!isCollection && deliveryCost === null) {
-       alert('❌ Не може да се изчисли цената за доставка. Моля, проверете адреса.')
-       setIsLoading(false)
-       return
+     // Validate delivery requirements (only for delivery orders)
+     if (selectedDeliveryType !== 'pickup') {
+       if (!customerInfo.LocationText || !customerInfo.LocationCoordinates) {
+         alert('❌ Моля, въведете адрес за доставка.')
+         setIsLoading(false)
+         return
+       }
+       
+       if (!addressConfirmed) {
+         alert('❌ Моля, потвърдете адреса за доставка.')
+         setIsLoading(false)
+         return
+       }
+       
+       if (deliveryCost === null) {
+         alert('❌ Не може да се изчисли цената за доставка. Моля, проверете адреса.')
+         setIsLoading(false)
+         return
+       }
      }
      
      // Validate payment method
@@ -1290,16 +1296,16 @@ export default function CheckoutPage() {
      }
      
      // Handle order submission
-     const finalTotal = totalPrice + (isCollection ? 0 : deliveryCost)
+     const finalTotal = totalPrice + (selectedDeliveryType === 'pickup' ? 0 : deliveryCost)
      
     console.log('📦 Order details being sent to API:')
     console.log('   - Customer:', customerInfo.name, customerInfo.email)
     console.log('   - Items count:', items.length)
     console.log('   - Items:', items.map(item => `${item.name} x${item.quantity}`).join(', '))
     console.log('   - Total:', totalPrice, 'лв')
-    console.log('   - Delivery:', isCollection ? 0 : deliveryCost, 'лв')
+    console.log('   - Delivery:', selectedDeliveryType === 'pickup' ? 0 : deliveryCost, 'лв')
     console.log('   - Final total:', finalTotal, 'лв')
-    console.log('   - Type:', isCollection ? 'Collection' : 'Delivery')
+    console.log('   - Type:', selectedDeliveryType)
     console.log('   - Payment method:', paymentMethodId)
      
     // Validate orderTime before sending (critical for API validation)
@@ -1331,9 +1337,9 @@ export default function CheckoutPage() {
        scheduledTime: orderTime.scheduledTime ? orderTime.scheduledTime.toISOString() : undefined
      },
      orderType,
-     deliveryCost: isCollection ? 0 : deliveryCost,
+     deliveryCost: selectedDeliveryType === 'pickup' ? 0 : deliveryCost,
      totalPrice,
-     isCollection,
+     isCollection: selectedDeliveryType === 'pickup',
      paymentMethodId,
      paymentData: paymentMethodId === 5 ? paymentData : null, // Include payment data for online payments
      loginId: user?.id || null
@@ -2010,45 +2016,62 @@ export default function CheckoutPage() {
              )}
            </div>
 
-           {/* Collection/Delivery Selection */}
+           {/* Order Type Selection */}
            <div className="bg-card border border-white/12 rounded-2xl p-6">
              <h2 className="text-xl font-bold text-text mb-4">
                <Truck size={20} className="inline mr-2" />
-               Начин на получаване *
+               Тип на поръчка *
              </h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                <button
                  type="button"
-                 onClick={() => setIsCollection(false)}
+                 onClick={() => setSelectedDeliveryType('pickup')}
                  className={`p-4 rounded-lg border-2 transition-all ${
-                   !isCollection
-                     ? 'border-orange bg-orange/10 text-orange'
+                   selectedDeliveryType === 'pickup'
+                     ? 'border-green bg-green/10 text-green'
                      : 'border-white/20 bg-white/5 text-text hover:border-white/30'
                  }`}
                >
                  <div className="flex items-center gap-3">
-                   <div className="w-3 h-3 rounded-full bg-orange"></div>
-                   <Truck size={20} />
-                   <span className="font-medium">Доставка</span>
+                   <div className="w-3 h-3 rounded-full bg-green"></div>
+                   <Store size={20} />
+                   <span className="font-medium">Вземане</span>
                  </div>
-                 <p className="text-sm text-muted mt-1">Доставяме до вашия адрес</p>
+                 <p className="text-sm text-muted mt-1">Безплатно</p>
                </button>
                
                <button
                  type="button"
-                 onClick={() => setIsCollection(true)}
+                 onClick={() => setSelectedDeliveryType('delivery-yellow')}
                  className={`p-4 rounded-lg border-2 transition-all ${
-                   isCollection
-                     ? 'border-orange bg-orange/10 text-orange'
+                   selectedDeliveryType === 'delivery-yellow'
+                     ? 'border-yellow bg-yellow/10 text-yellow'
                      : 'border-white/20 bg-white/5 text-text hover:border-white/30'
                  }`}
                >
                  <div className="flex items-center gap-3">
-                   <div className="w-3 h-3 rounded-full bg-orange"></div>
-                   <Store size={20} />
-                   <span className="font-medium">Вземане</span>
+                   <div className="w-3 h-3 rounded-full bg-yellow"></div>
+                   <Truck size={20} />
+                   <span className="font-medium">Доставка</span>
                  </div>
-                 <p className="text-sm text-muted mt-1">Вземете от ресторанта</p>
+                 <p className="text-sm text-muted mt-1">Жълта зона - 3 BGN</p>
+               </button>
+               
+               <button
+                 type="button"
+                 onClick={() => setSelectedDeliveryType('delivery-blue')}
+                 className={`p-4 rounded-lg border-2 transition-all ${
+                   selectedDeliveryType === 'delivery-blue'
+                     ? 'border-blue bg-blue/10 text-blue'
+                     : 'border-white/20 bg-white/5 text-text hover:border-white/30'
+                 }`}
+               >
+                 <div className="flex items-center gap-3">
+                   <div className="w-3 h-3 rounded-full bg-blue"></div>
+                   <Truck size={20} />
+                   <span className="font-medium">Доставка</span>
+                 </div>
+                 <p className="text-sm text-muted mt-1">Синя зона - 7 BGN</p>
                </button>
              </div>
            </div>
@@ -2060,8 +2083,8 @@ export default function CheckoutPage() {
                Начин на плащане *
              </h2>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               {isCollection ? (
-                 // Collection payment methods (1: Card at Restaurant, 2: Cash at Restaurant)
+               {selectedDeliveryType === 'pickup' ? (
+                 // Pickup payment methods (1: Card at Restaurant, 2: Cash at Restaurant)
                  <>
                    <button
                      type="button"
@@ -2216,7 +2239,7 @@ export default function CheckoutPage() {
             )}
 
             {/* Address - Only show for delivery */}
-            {!isCollection && (
+            {selectedDeliveryType !== 'pickup' && (
               <div>
                 <label className="block text-sm font-medium text-text mb-2">
                   <MapPin size={16} className="inline mr-2" />
@@ -2275,7 +2298,7 @@ export default function CheckoutPage() {
             )}
 
              {/* Delivery Instructions - Only show for delivery */}
-             {!isCollection && (
+             {selectedDeliveryType !== 'pickup' && (
              <div>
                <label className="block text-sm font-medium text-text mb-2">
                  <MessageSquare size={16} className="inline mr-2" />
@@ -2364,15 +2387,14 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Address Zone Status - Only show for delivery */}
-              {!isCollection && customerInfo.LocationCoordinates && (
+              {/* Order Type Status */}
+              {selectedDeliveryType !== 'pickup' && customerInfo.LocationCoordinates && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted">Зона за доставка:</span>
+                  <span className="text-muted">Тип на поръчка:</span>
                   <span className="text-white font-medium">
-                    {addressZone === 'yellow' ? 'Жълта зона (3 лв.)' :
-                     addressZone === 'blue' ? 'Синя зона (7 лв.)' :
-                     addressZone === 'outside' ? 'Извън зоната' :
-                     'Не е определена'}
+                    {selectedDeliveryType === 'delivery-yellow' ? 'Доставка - Жълта зона' :
+                     selectedDeliveryType === 'delivery-blue' ? 'Доставка - Синя зона' :
+                     'Не е избран'}
                   </span>
                 </div>
               )}
@@ -2385,7 +2407,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* Delivery Cost */}
-              {!isCollection && deliveryCost !== null && addressZone !== 'outside' && (
+              {selectedDeliveryType !== 'pickup' && deliveryCost !== null && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">Доставка:</span>
                   <span className="text-white">
@@ -2403,7 +2425,7 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between text-lg font-bold">
                   <span>Обща сума:</span>
                   <span className="text-white">
-                    {(totalPrice + (isCollection ? 0 : (deliveryCost || 0))).toFixed(2)} лв.
+                    {(totalPrice + (selectedDeliveryType === 'pickup' ? 0 : (deliveryCost || 0))).toFixed(2)} лв.
                   </span>
                 </div>
               </div>
@@ -2416,23 +2438,23 @@ export default function CheckoutPage() {
 
               {/* Validation Messages */}
               <div className="space-y-2">
-                {/* Minimum order amount errors by zone */}
-                {!isCollection && addressZone === 'yellow' && totalPrice < 15 && (
+                {/* Minimum order amount errors by delivery type */}
+                {selectedDeliveryType === 'delivery-yellow' && totalPrice < 15 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за жълта зона</div>
                     <div>Минималната сума за доставка в жълта зона е 15 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
                   </div>
                 )}
                 
-                {!isCollection && addressZone === 'blue' && totalPrice < 30 && (
+                {selectedDeliveryType === 'delivery-blue' && totalPrice < 30 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за синя зона</div>
                     <div>Минималната сума за доставка в синя зона е 30 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
                   </div>
                 )}
                 
-                {/* General minimum order for collection */}
-                {isCollection && totalPrice < 15 && (
+                {/* General minimum order for pickup */}
+                {selectedDeliveryType === 'pickup' && totalPrice < 15 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за поръчка</div>
                     <div>Минималната сума за поръчка е 15 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
@@ -2440,21 +2462,21 @@ export default function CheckoutPage() {
                 )}
                 
                 {/* Address validation errors */}
-                {!isCollection && !customerInfo.LocationText && (
+                {selectedDeliveryType !== 'pickup' && !customerInfo.LocationText && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Адрес не е въведен</div>
                     <div>Моля, въведете адрес за доставка.</div>
                   </div>
                 )}
                 
-                {!isCollection && customerInfo.LocationText && !addressConfirmed && (
+                {selectedDeliveryType !== 'pickup' && customerInfo.LocationText && !addressConfirmed && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Адрес не е потвърден</div>
                     <div>Моля, кликнете "Потвърди адрес" или "Избери точна локация".</div>
                   </div>
                 )}
                 
-                {!isCollection && addressZone === 'outside' && customerInfo.LocationText && (
+                {selectedDeliveryType !== 'pickup' && addressZone === 'outside' && customerInfo.LocationText && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Доставка не е възможна</div>
                     <div>Доставката не е възможна на този адрес. Моля, изберете адрес в зоната за доставка.</div>
@@ -2478,7 +2500,7 @@ export default function CheckoutPage() {
                 )}
                 
                 {/* Action Buttons for Low Order */}
-                {(totalPrice < 15 || (addressZone === 'blue' && totalPrice < 30)) && (
+                {(totalPrice < 15 || (selectedDeliveryType === 'delivery-blue' && totalPrice < 30)) && (
                   <div className="flex space-x-3">
                     <a
                       href="/order"
@@ -2556,7 +2578,7 @@ export default function CheckoutPage() {
                   </button>
                   <button 
                     onClick={handleMapLocationSelect}
-                    disabled={!hasMarker || addressZone === 'outside'}
+                    disabled={!hasMarker || (selectedDeliveryType !== 'pickup' && addressZone === 'outside')}
                     className={styles.confirmButton}
                   >
                     Потвърди адрес

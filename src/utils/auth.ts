@@ -26,6 +26,8 @@ export function clearAuth(): void {
   
   localStorage.removeItem('admin_authenticated');
   localStorage.removeItem('admin_login_time');
+  localStorage.removeItem('admin_access_token');
+  localStorage.removeItem('admin_refresh_token');
 }
 
 /**
@@ -53,6 +55,22 @@ export function isAuthExpired(): boolean {
   
   // Consider auth expired after 24 hours
   return hoursDiff > 24;
+}
+
+/**
+ * Get admin access token for API requests
+ */
+export function getAccessToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('admin_access_token');
+}
+
+/**
+ * Get admin refresh token
+ */
+export function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('admin_refresh_token');
 }
 
 

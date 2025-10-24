@@ -41,11 +41,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Normalize email to lowercase for consistent database queries
+    const normalizedEmail = email.toLowerCase().trim()
+
     // Check if real user exists (exclude guest accounts)
     const { data: user, error: fetchError } = await supabase
       .from('Login')
       .select('LoginID, Name, email')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .neq('Password', 'guest_password') // Only real accounts
       .single()
 

@@ -707,7 +707,9 @@ export async function POST(request: NextRequest) {
               year: 'numeric',
               hour: '2-digit',
               minute: '2-digit'
-            })
+            }),
+            addressInstructions: customerInfo.deliveryInstructions || undefined,
+            specialInstructions: undefined
           }
         })()
       }

@@ -12,11 +12,24 @@ export interface DatabaseProduct {
   isDeleted?: number | boolean;
 }
 
+/**
+ * Get JWT token from localStorage
+ */
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('admin_access_token');
+}
+
 export async function getProductsClient(): Promise<DatabaseProduct[]> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated - please log in again');
+  }
+
   const res = await fetch('/api/administraciq/products', { 
     cache: 'no-store',
     headers: {
-      'x-admin-auth': 'admin-token' // Simple token for now
+      'x-admin-auth': token
     }
   });
   const json = await res.json();
@@ -50,11 +63,16 @@ export async function getAddons(): Promise<DatabaseProduct[]> {
 }
 
 export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<DatabaseProduct> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated - please log in again');
+  }
+
   const res = await fetch('/api/administraciq/products', {
     method: 'POST', 
     headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': 'admin-token'
+      'x-admin-auth': token
     },
     body: JSON.stringify(p),
   });
@@ -64,11 +82,16 @@ export async function upsertProductClient(p: Partial<DatabaseProduct>): Promise<
 }
 
 export async function setProductDisabledClient(id: number, isDisabled: boolean) {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated - please log in again');
+  }
+
   const res = await fetch('/api/administraciq/products', {
     method: 'PUT', 
     headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': 'admin-token'
+      'x-admin-auth': token
     },
     body: JSON.stringify({ id, isDisabled }),
   });
@@ -86,11 +109,16 @@ export interface DeleteProductsResponse {
 }
 
 export async function deleteProductsClient(ids: number[]): Promise<DeleteProductsResponse> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated - please log in again');
+  }
+
   const res = await fetch('/api/administraciq/products', {
     method: 'DELETE',
     headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': 'admin-token'
+      'x-admin-auth': token
     },
     body: JSON.stringify({ ids }),
   });
@@ -100,11 +128,16 @@ export async function deleteProductsClient(ids: number[]): Promise<DeleteProduct
 }
 
 export async function softDeleteProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated - please log in again');
+  }
+
   const res = await fetch('/api/administraciq/products/soft-delete', {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': 'admin-token'
+      'x-admin-auth': token
     },
     body: JSON.stringify({ ids }),
   });
@@ -114,11 +147,16 @@ export async function softDeleteProductsClient(ids: number[]): Promise<{ success
 }
 
 export async function restoreProductsClient(ids: number[]): Promise<{ success: boolean; message: string }> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated - please log in again');
+  }
+
   const res = await fetch('/api/administraciq/products/restore', {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',
-      'x-admin-auth': 'admin-token'
+      'x-admin-auth': token
     },
     body: JSON.stringify({ ids }),
   });

@@ -81,6 +81,14 @@ const LoginPage: React.FC = (): React.JSX.Element => {
         localStorage.setItem('admin_authenticated', 'true');
         localStorage.setItem('admin_login_time', new Date().toISOString());
         
+        // Store JWT tokens for API requests
+        if (result.session?.access_token) {
+          localStorage.setItem('admin_access_token', result.session.access_token);
+        }
+        if (result.session?.refresh_token) {
+          localStorage.setItem('admin_refresh_token', result.session.refresh_token);
+        }
+        
         // Redirect to admin panel
         router.push('/administraciq');
       } else {

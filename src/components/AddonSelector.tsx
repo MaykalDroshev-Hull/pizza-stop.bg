@@ -47,8 +47,18 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons, category 
     
     // For other products, first 3 addons of each type are free
     const typeAddons = selectedAddons.filter(a => a.AddonType === addonType)
-    const typeIndex = typeAddons.indexOf(addon)
-    const isFree = typeIndex < 3
+    const isSelected = selectedAddonIds.includes(addon.AddonID)
+    
+    let isFree = false
+    if (isSelected) {
+      // If already selected, check its position in the selected list
+      const typeIndex = typeAddons.indexOf(addon)
+      isFree = typeIndex < 3
+    } else {
+      // If not selected, check if there's room for more free addons
+      isFree = typeAddons.length < 3
+    }
+    
     return isFree ? 0 : addon.Price
   }
 

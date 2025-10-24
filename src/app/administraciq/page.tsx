@@ -7,6 +7,7 @@ import {
   Coffee, 
   BarChart3,
   LogOut,
+  Search,
   LucideIcon
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -16,6 +17,7 @@ import ProductsTab from "./components/ProductsTab";
 import AddonsTab from "./components/AddonsTab";
 import BeverageTab from "./components/BeverageTab";
 import AnalysisTab from "./components/AnalysisTab";
+import DebugTab from "./components/DebugTab";
 
 interface Tab {
   id: string;
@@ -32,6 +34,7 @@ const AdminPage = (): React.JSX.Element => {
     { id: "addons", label: "Добавки", icon: Plus },
     { id: "beverage", label: "Напитки", icon: Coffee },
     { id: "analysis", label: "Анализи", icon: BarChart3 },
+    { id: "debug", label: "Debug", icon: Search },
   ];
 
   const renderTabContent = (): React.JSX.Element => {
@@ -44,6 +47,8 @@ const AdminPage = (): React.JSX.Element => {
         return <BeverageTab />;
       case "analysis":
         return <AnalysisTab />;
+      case "debug":
+        return <DebugTab />;
       default:
         return <ProductsTab />;
     }

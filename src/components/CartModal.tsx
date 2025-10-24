@@ -211,21 +211,58 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
 
         {/* Content */}
         <div className="p-6 space-y-8">
-          {/* Item Info */}
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-white/10">
-              <img 
-                src={item.image} 
-                alt={item.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNjY2NjY2MiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5GVPzwvdGV4dD4KPC9zdmc+';
-                }}
-              />
+          {/* Item Info with Dynamic Price */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-white/10">
+                <img 
+                  src={item.image} 
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNjY2NjY2MiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5GVPzwvdGV4dD4KPC9zdmc+';
+                  }}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-lg text-text truncate">{item.name}</h3>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="font-bold text-lg text-text truncate">{item.name}</h3>
+            
+            {/* Dynamic Price Display */}
+            <div className="text-center">
+              <div className="inline-block px-4 py-2 border-2 border-orange rounded-lg">
+                <span className="text-orange font-bold text-xl">
+                  {(() => {
+                    const basePricePerItem = getItemBasePrice();
+                    const basePrice = basePricePerItem * quantity;
+                    
+                    // Calculate addon cost
+                    const addonCost = selectedAddons
+                      .map((addon, index) => {
+                        // For pizzas, all addons are paid
+                        let addonPrice = addon.Price;
+                        let isFree = false;
+                        
+                        if (item.category !== 'pizza') {
+                          // For non-pizza items, use the free tier logic
+                          const typeSelected = selectedAddons.filter(a => a.AddonType === addon.AddonType);
+                          const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID);
+                          addonPrice = positionInType < 3 ? 0 : addon.Price;
+                          isFree = positionInType < 3;
+                        }
+                        
+                        return addonPrice;
+                      })
+                      .reduce((sum, price) => sum + price, 0) * quantity;
+                    
+                    const totalPrice = basePrice + addonCost;
+                    
+                    return totalPrice.toFixed(2);
+                  })()} лв.
+                </span>
+              </div>
             </div>
           </div>
 

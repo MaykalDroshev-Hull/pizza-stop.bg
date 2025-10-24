@@ -27,6 +27,7 @@ interface KitchenOrder {
   estimatedTime: number;
   specialInstructions: string;
   comments: string | null;
+  addressInstructions?: string | null;
   isPaid: boolean;
   orderStatusId: number;
   orderType: number; // 1 = Restaurant collection, 2 = Delivery
@@ -92,7 +93,8 @@ export function convertOrderToTicketData(order: KitchenOrder): TicketData {
     customerName: order.customerName,
     address: order.address,
     phone: order.phone,
-    specialInstructions: order.comments || undefined, // Use Comments field for delivery instructions
+    specialInstructions: order.comments || undefined, // Use Comments field for order-specific instructions
+    addressInstructions: order.specialInstructions || undefined, // Use specialInstructions field for address-specific instructions (contains user's addressInstructions)
     items: ticketItems,
     subtotal,
     serviceCharge,

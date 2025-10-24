@@ -92,6 +92,10 @@ export async function POST(request: NextRequest) {
         fullName: authData.user.user_metadata?.full_name,
         role: userRole
       },
+      session: {
+        access_token: authData.session?.access_token,
+        refresh_token: authData.session?.refresh_token
+      },
       message: 'Login successful'
     })
 

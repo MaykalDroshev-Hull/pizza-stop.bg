@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw } from 'lucide-react';
 import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_STATUS, KitchenOrder } from '../../lib/supabase';
 import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerator';
+import SerialPrinterManager from '../../components/SerialPrinterManager';
+import { useSerialPrinter } from '../../contexts/SerialPrinterContext';
 // AdminLogin moved to separate page at /admin-kitchen-login
 
 interface Order {
@@ -30,6 +32,7 @@ interface Order {
   estimatedTime: number;
   specialInstructions: string;
   comments: string | null;
+  addressInstructions?: string | null;
   isPaid: boolean;
   orderStatusId: number;
   orderType: number; // 1 = Restaurant collection, 2 = Delivery
@@ -70,6 +73,9 @@ const KitchenCommandCenter = () => {
     averageTime: 14,
     activeOrders: 0
   });
+
+  // Serial printer integration
+  const { printOrder } = useSerialPrinter();
 
   // Convert Supabase data to Order format
   const convertKitchenOrderToOrder = (kitchenOrder: KitchenOrder): Order => {
@@ -150,8 +156,9 @@ const KitchenCommandCenter = () => {
       workingStartTime: status === 'working' ? new Date(orderTime.getTime() + 5 * 60 * 1000) : null,
       completedTime: status === 'completed' ? new Date(orderTime.getTime() + 15 * 60 * 1000) : null,
       estimatedTime: 15, // Default estimate
-      specialInstructions: kitchenOrder.SpecialInstructions || '',
-      comments: kitchenOrder.Comments,
+      specialInstructions: kitchenOrder.SpecialInstructions || '', // Contains user's addressInstructions
+      comments: kitchenOrder.Comments, // Contains order-level comments
+      addressInstructions: kitchenOrder.SpecialInstructions || null, // Same as specialInstructions for ticket generation
       isPaid: kitchenOrder.IsPaid,
       orderStatusId: kitchenOrder.OrderStatusID,
       orderType: kitchenOrder.OrderType
@@ -215,6 +222,16 @@ const KitchenCommandCenter = () => {
         console.log('Refresh - Remaining orders:', remainingOrders.length);
         console.log('Refresh - New orders from DB:', newOrders.length);
         console.log('Refresh - Total orders after update:', updatedOrders.length + newOrders.length);
+        
+        // Auto-print new orders
+        for (const newOrder of newOrders) {
+          if (newOrder.status === 'new') {
+            // Delay auto-print to ensure UI updates first
+            setTimeout(() => {
+              autoPrintNewOrder(newOrder);
+            }, 1000);
+          }
+        }
         
         return [...updatedOrders, ...newOrders];
       });
@@ -836,6 +853,40 @@ const KitchenCommandCenter = () => {
     }
     return paymentMethods[paymentMethodId] || 'Неизвестен метод'
   }
+
+  // Auto-print new orders
+  const autoPrintNewOrder = async (order: Order) => {
+    try {
+      // Convert Order to OrderData format for serial printer
+      const orderData = {
+        orderId: order.id,
+        orderType: order.address.includes('Lovech Center') ? 'Вземане от ресторанта' : 'Доставка',
+        customerName: order.customerName,
+        phone: order.phone,
+        address: order.address,
+        items: order.items.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          addons: item.customizations,
+          comment: item.comment
+        })),
+        subtotal: order.totalPrice,
+        deliveryCharge: order.deliveryPrice,
+        total: order.totalPrice + order.deliveryPrice,
+        paymentMethod: 'Неопределен',
+        isPaid: order.isPaid,
+        placedTime: order.orderTime.toLocaleString('bg-BG'),
+        restaurantPhone: '0888 123 456'
+      };
+
+      await printOrder(orderData);
+      console.log(`✅ Auto-printed order #${order.id} to serial printer`);
+    } catch (error) {
+      console.log(`⚠️ Auto-print failed for order #${order.id}:`, error);
+      // Don't show error to user, just log it
+    }
+  };
 
   const confirmReadyTime = async () => {
     if (!readyTimeModal.order || !readyTimeModal.selectedMinutes) return;
@@ -1712,6 +1763,9 @@ const KitchenCommandCenter = () => {
               <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
               <span className="hidden sm:inline">{isRefreshing ? 'Обновява...' : 'Обнови'}</span>
             </button>
+
+            {/* Serial Printer Manager */}
+            <SerialPrinterManager autoPrint={true} showStatus={true} className="ml-2" />
           </div>
         </div>
 

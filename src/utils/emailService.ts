@@ -31,6 +31,8 @@ interface OrderConfirmationEmailOptions {
     paymentMethod: string
     location: string
     estimatedTime?: string
+    addressInstructions?: string
+    specialInstructions?: string
   }
 }
 
@@ -53,6 +55,8 @@ interface OrderReadyTimeEmailOptions {
     orderType: string
     paymentMethod: string
     location: string
+    addressInstructions?: string
+    specialInstructions?: string
   }
 }
 
@@ -76,6 +80,8 @@ interface DeliveryETAEmailOptions {
     orderType: string
     paymentMethod: string
     location: string
+    addressInstructions?: string
+    specialInstructions?: string
   }
 }
 
@@ -93,6 +99,12 @@ export class EmailService {
   }
 
   async sendWelcomeEmail({ to, name }: EmailOptions): Promise<void> {
+    // Skip sending emails to printer guest accounts
+    if (to.startsWith('printer_guest')) {
+      console.log(`Skipping welcome email for printer guest account: ${to}`);
+      return;
+    }
+    
     const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
     
     const htmlContent = `
@@ -222,6 +234,12 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail({ to, name, resetToken, resetUrl }: PasswordResetEmailOptions): Promise<void> {
+    // Skip sending emails to printer guest accounts
+    if (to.startsWith('printer_guest')) {
+      console.log(`Skipping password reset email for printer guest account: ${to}`);
+      return;
+    }
+    
     const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
     
     const htmlContent = `
@@ -365,6 +383,12 @@ export class EmailService {
   }
 
   async sendOrderConfirmationEmail({ to, name, orderId, orderDetails }: OrderConfirmationEmailOptions): Promise<void> {
+    // Skip sending emails to printer guest accounts
+    if (to.startsWith('printer_guest')) {
+      console.log(`Skipping order confirmation email for printer guest account: ${to}`);
+      return;
+    }
+    
     const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
     
     // Generate items HTML
@@ -561,6 +585,29 @@ export class EmailService {
             color: #10b981;
             font-weight: 500;
           }
+          .delivery-instructions {
+            background-color: rgba(255, 127, 17, 0.1);
+            border: 1px solid rgba(255, 127, 17, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+          }
+          .delivery-instructions h4 {
+            margin: 0 0 10px 0;
+            color: #ff7f11;
+            font-size: 16px;
+            font-weight: 700;
+          }
+          .delivery-instructions p {
+            margin: 5px 0;
+            color: #f8fafc;
+            font-size: 14px;
+            line-height: 1.5;
+          }
+          .instruction-type {
+            font-weight: 600;
+            color: #ff7f11;
+          }
         </style>
       </head>
       <body>
@@ -595,6 +642,18 @@ export class EmailService {
               <span class="detail-value">${orderDetails.paymentMethod}</span>
             </div>
           </div>
+          
+          ${(orderDetails.addressInstructions || orderDetails.specialInstructions) ? `
+            <div class="delivery-instructions">
+              <h4>📝 Инструкции за доставка</h4>
+              ${orderDetails.addressInstructions ? `
+                <p><span class="instruction-type">Адрес:</span> ${orderDetails.addressInstructions}</p>
+              ` : ''}
+              ${orderDetails.specialInstructions ? `
+                <p><span class="instruction-type">Допълнителни инструкции:</span> ${orderDetails.specialInstructions}</p>
+              ` : ''}
+            </div>
+          ` : ''}
           
           ${orderDetails.estimatedTime ? `
             <div class="estimated-time">
@@ -656,6 +715,12 @@ export class EmailService {
   }
 
   async sendDeliveryETAEmail({ to, name, orderId, etaMinutes, estimatedArrivalTime, orderDetails }: DeliveryETAEmailOptions): Promise<void> {
+    // Skip sending emails to printer guest accounts
+    if (to.startsWith('printer_guest')) {
+      console.log(`Skipping delivery ETA email for printer guest account: ${to}`);
+      return;
+    }
+    
     const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
     
     // Generate items HTML
@@ -931,6 +996,12 @@ export class EmailService {
   }
 
   async sendOrderReadyTimeEmail({ to, name, orderId, readyTimeMinutes, orderDetails }: OrderReadyTimeEmailOptions): Promise<void> {
+    // Skip sending emails to printer guest accounts
+    if (to.startsWith('printer_guest')) {
+      console.log(`Skipping order ready time email for printer guest account: ${to}`);
+      return;
+    }
+    
     const logoUrl = 'https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE'
     
     // Generate items HTML
