@@ -85,11 +85,7 @@ export async function POST(request: NextRequest) {
 
 // Test TCP connection to printer port
 async function testTCPConnection(ip: string, port: number): Promise<boolean> {
-  // Note: In a serverless environment like Vercel, we can't use raw TCP sockets
-  // This is a simulation. In a real Node.js environment, you would use:
-  
-  /*
-  import * as net from 'net';
+  const net = await import('net');
   
   return new Promise((resolve) => {
     const socket = new net.Socket();
@@ -113,23 +109,4 @@ async function testTCPConnection(ip: string, port: number): Promise<boolean> {
     
     socket.connect(port, ip);
   });
-  */
-  
-  // For now, simulate based on common printer IPs and ports
-  const commonPrinterIPs = [
-    '192.168.1.100', '192.168.1.101', '192.168.1.102',
-    '192.168.0.100', '192.168.0.101', '192.168.0.102',
-    '10.0.0.100', '10.0.0.101', '10.0.0.102'
-  ];
-  
-  const commonPrinterPorts = [9100, 9101, 9102, 631, 515];
-  
-  // Simulate network latency
-  await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 50));
-  
-  // Check if IP/port combination is likely a printer
-  const isLikelyPrinter = commonPrinterIPs.includes(ip) && commonPrinterPorts.includes(port);
-  
-  // Add some randomness for demo purposes
-  return isLikelyPrinter || Math.random() > 0.85;
 }
