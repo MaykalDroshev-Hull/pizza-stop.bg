@@ -39,8 +39,8 @@ export class ESCPOSCommands {
     // Initialize printer
     commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x40]));
     
-    // Set character encoding to UTF-8
-    commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x74, 0x00]));
+    // Set character encoding to CP1251 for Datecs printers
+    commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x74, 0x11]));
     
     // Set line spacing
     commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x33, 0x18]));
@@ -97,11 +97,64 @@ export class ESCPOSCommands {
   }
 
   /**
-   * Convert text to bytes
+   * Convert UTF-8 text to CP1251 for Datecs printers
+   */
+  private static utf8ToCp1251(text: string): string {
+    try {
+      // Create a mapping for common Cyrillic characters
+      const cyrillicMap: { [key: string]: string } = {
+        'А': '\xC0', 'Б': '\xC1', 'В': '\xC2', 'Г': '\xC3', 'Д': '\xC4', 'Е': '\xC5', 'Ж': '\xC6', 'З': '\xC7',
+        'И': '\xC8', 'Й': '\xC9', 'К': '\xCA', 'Л': '\xCB', 'М': '\xCC', 'Н': '\xCD', 'О': '\xCE', 'П': '\xCF',
+        'Р': '\xD0', 'С': '\xD1', 'Т': '\xD2', 'У': '\xD3', 'Ф': '\xD4', 'Х': '\xD5', 'Ц': '\xD6', 'Ч': '\xD7',
+        'Ш': '\xD8', 'Щ': '\xD9', 'Ъ': '\xDA', 'Ь': '\xDB', 'Ю': '\xDC', 'Я': '\xDD',
+        'а': '\xE0', 'б': '\xE1', 'в': '\xE2', 'г': '\xE3', 'д': '\xE4', 'е': '\xE5', 'ж': '\xE6', 'з': '\xE7',
+        'и': '\xE8', 'й': '\xE9', 'к': '\xEA', 'л': '\xEB', 'м': '\xEC', 'н': '\xED', 'о': '\xEE', 'п': '\xEF',
+        'р': '\xF0', 'с': '\xF1', 'т': '\xF2', 'у': '\xF3', 'ф': '\xF4', 'х': '\xF5', 'ц': '\xF6', 'ч': '\xF7',
+        'ш': '\xF8', 'щ': '\xF9', 'ъ': '\xFA', 'ь': '\xFB', 'ю': '\xFC', 'я': '\xFD'
+      };
+
+      let result = '';
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (cyrillicMap[char]) {
+          result += cyrillicMap[char];
+        } else {
+          result += char;
+        }
+      }
+      return result;
+    } catch (error) {
+      console.warn('Failed to convert UTF-8 to CP1251, using original text:', error);
+      return text;
+    }
+  }
+
+  /**
+   * Convert text to bytes with CP1251 encoding for Cyrillic support
    */
   static text(text: string): Uint8Array {
-    const encoder = new TextEncoder();
-    return encoder.encode(text);
+    try {
+      // Convert Cyrillic to CP1251, then to bytes
+      const cp1251Text = ESCPOSCommands.utf8ToCp1251(text);
+      const bytes: number[] = [];
+      
+      for (let i = 0; i < cp1251Text.length; i++) {
+        const char = cp1251Text[i];
+        if (char.charCodeAt(0) > 127) {
+          // Non-ASCII character - use CP1251 encoding
+          bytes.push(char.charCodeAt(0) & 0xFF);
+        } else {
+          // ASCII character
+          bytes.push(char.charCodeAt(0));
+        }
+      }
+      
+      return new Uint8Array(bytes);
+    } catch (error) {
+      console.warn('Failed to convert text with CP1251, using UTF-8:', error);
+      const encoder = new TextEncoder();
+      return encoder.encode(text);
+    }
   }
 
   /**
