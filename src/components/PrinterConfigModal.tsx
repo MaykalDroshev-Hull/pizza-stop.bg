@@ -56,11 +56,21 @@ export default function PrinterConfigModal({ isOpen, onClose, onConfigSaved }: P
   const loadAvailablePorts = async () => {
     setIsScanningPorts(true);
     try {
-      // Common COM ports to check
-      const commonPorts = ['COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8'];
-      setAvailablePorts(commonPorts);
+      // Call backend API to get real COM ports
+      const response = await fetch('/api/debug/scan-com-ports');
+      const result = await response.json();
+      
+      if (result.success && result.ports) {
+        const portPaths = result.ports.map((port: any) => port.path);
+        setAvailablePorts(portPaths);
+        console.log('✅ Found COM ports:', portPaths);
+      } else {
+        console.log('⚠️ No COM ports found from API');
+        setAvailablePorts([]);
+      }
     } catch (error) {
       console.error('Error loading ports:', error);
+      setAvailablePorts([]);
     } finally {
       setIsScanningPorts(false);
     }
@@ -71,25 +81,43 @@ export default function PrinterConfigModal({ isOpen, onClose, onConfigSaved }: P
     setTestResult(null);
     
     try {
-      // Test COM port configuration
-      const success = await comPortPrinter.testConnection(comConfig);
+      console.log('🧪 [COM Port Test] Testing connection...', comConfig);
       
-      if (success) {
-        setTestResult({ 
-          success: true, 
-          message: 'COM порт принтерът е успешно свързан и готов за печат!' 
+      // Test connection using the real API
+      const response = await fetch('/api/printer/com-port', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          comPort: comConfig.comPort,
+          baudRate: comConfig.baudRate,
+          data: [0x1B, 0x40] // ESC @ - Initialize printer
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setTestResult({
+          success: true,
+          message: `✅ Успешно свързване с ${comConfig.comPort} на ${comConfig.baudRate} baud!`
         });
+        console.log('✅ [COM Port Test] Connection successful');
       } else {
-        setTestResult({ 
-          success: false, 
-          message: 'Неуспешно свързване с COM порт принтера. Проверете настройките и връзката.' 
+        setTestResult({
+          success: false,
+          message: `❌ Неуспешно свързване: ${result.message || 'Unknown error'}`
         });
+        console.error('❌ [COM Port Test] Connection failed:', result.message);
       }
     } catch (error) {
-      setTestResult({ 
-        success: false, 
-        message: `Грешка при тестване: ${error instanceof Error ? error.message : 'Неизвестна грешка'}` 
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setTestResult({
+        success: false,
+        message: `❌ Грешка при тест: ${errorMessage}`
       });
+      console.error('❌ [COM Port Test] Test error:', error);
     } finally {
       setIsLoading(false);
     }
