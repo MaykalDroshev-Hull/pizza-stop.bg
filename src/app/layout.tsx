@@ -11,6 +11,7 @@ import CookieConsent from '../components/CookieConsent'
 import ConditionalNavBar from '../components/ConditionalNavBar'
 import { Suspense } from 'react'
 import { Analytics } from "@vercel/analytics/next"
+import { SerialPrinterProvider } from '../contexts/SerialPrinterContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -91,17 +92,19 @@ export default function RootLayout({
           <LoadingProvider>
             <LoginIDProvider>
               <CartProvider>
-                <div className="min-h-screen bg-bg text-text">
-                  <ConditionalNavBar />
-                  <main className="flex-1">
-                    {children}
-                  </main>
-                  <ConditionalFooter />
-                  <LoadingOverlay />
-                  <Suspense fallback={null}>
-                    <CookieConsent />
-                  </Suspense>
-                </div>
+                <SerialPrinterProvider>
+                  <div className="min-h-screen bg-bg text-text">
+                    <ConditionalNavBar />
+                    <main className="flex-1">
+                      {children}
+                    </main>
+                    <ConditionalFooter />
+                    <LoadingOverlay />
+                    <Suspense fallback={null}>
+                      <CookieConsent />
+                    </Suspense>
+                  </div>
+                </SerialPrinterProvider>
               </CartProvider>
             </LoginIDProvider>
           </LoadingProvider>
