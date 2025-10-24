@@ -39,8 +39,8 @@ export class ESCPOSCommands {
     // Initialize printer
     commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x40]));
     
-    // Set character encoding to CP1251 for Datecs printers
-    commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x74, 0x11]));
+    // Set character encoding to UTF-8
+    commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x74, 0x00]));
     
     // Set line spacing
     commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x33, 0x18]));
@@ -97,64 +97,11 @@ export class ESCPOSCommands {
   }
 
   /**
-   * Convert UTF-8 text to CP1251 for Datecs printers
-   */
-  private static utf8ToCp1251(text: string): string {
-    try {
-      // Create a mapping for common Cyrillic characters using String.fromCharCode
-      const cyrillicMap: { [key: string]: string } = {
-        'А': String.fromCharCode(0xC0), 'Б': String.fromCharCode(0xC1), 'В': String.fromCharCode(0xC2), 'Г': String.fromCharCode(0xC3), 'Д': String.fromCharCode(0xC4), 'Е': String.fromCharCode(0xC5), 'Ж': String.fromCharCode(0xC6), 'З': String.fromCharCode(0xC7),
-        'И': String.fromCharCode(0xC8), 'Й': String.fromCharCode(0xC9), 'К': String.fromCharCode(0xCA), 'Л': String.fromCharCode(0xCB), 'М': String.fromCharCode(0xCC), 'Н': String.fromCharCode(0xCD), 'О': String.fromCharCode(0xCE), 'П': String.fromCharCode(0xCF),
-        'Р': String.fromCharCode(0xD0), 'С': String.fromCharCode(0xD1), 'Т': String.fromCharCode(0xD2), 'У': String.fromCharCode(0xD3), 'Ф': String.fromCharCode(0xD4), 'Х': String.fromCharCode(0xD5), 'Ц': String.fromCharCode(0xD6), 'Ч': String.fromCharCode(0xD7),
-        'Ш': String.fromCharCode(0xD8), 'Щ': String.fromCharCode(0xD9), 'Ъ': String.fromCharCode(0xDA), 'Ь': String.fromCharCode(0xDB), 'Ю': String.fromCharCode(0xDC), 'Я': String.fromCharCode(0xDD),
-        'а': String.fromCharCode(0xE0), 'б': String.fromCharCode(0xE1), 'в': String.fromCharCode(0xE2), 'г': String.fromCharCode(0xE3), 'д': String.fromCharCode(0xE4), 'е': String.fromCharCode(0xE5), 'ж': String.fromCharCode(0xE6), 'з': String.fromCharCode(0xE7),
-        'и': String.fromCharCode(0xE8), 'й': String.fromCharCode(0xE9), 'к': String.fromCharCode(0xEA), 'л': String.fromCharCode(0xEB), 'м': String.fromCharCode(0xEC), 'н': String.fromCharCode(0xED), 'о': String.fromCharCode(0xEE), 'п': String.fromCharCode(0xEF),
-        'р': String.fromCharCode(0xF0), 'с': String.fromCharCode(0xF1), 'т': String.fromCharCode(0xF2), 'у': String.fromCharCode(0xF3), 'ф': String.fromCharCode(0xF4), 'х': String.fromCharCode(0xF5), 'ц': String.fromCharCode(0xF6), 'ч': String.fromCharCode(0xF7),
-        'ш': String.fromCharCode(0xF8), 'щ': String.fromCharCode(0xF9), 'ъ': String.fromCharCode(0xFA), 'ь': String.fromCharCode(0xFB), 'ю': String.fromCharCode(0xFC), 'я': String.fromCharCode(0xFD)
-      };
-
-      let result = '';
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (cyrillicMap[char]) {
-          result += cyrillicMap[char];
-        } else {
-          result += char;
-        }
-      }
-      return result;
-    } catch (error) {
-      console.warn('Failed to convert UTF-8 to CP1251, using original text:', error);
-      return text;
-    }
-  }
-
-  /**
-   * Convert text to bytes with CP1251 encoding for Cyrillic support
+   * Convert text to bytes
    */
   static text(text: string): Uint8Array {
-    try {
-      // Convert Cyrillic to CP1251, then to bytes
-      const cp1251Text = ESCPOSCommands.utf8ToCp1251(text);
-      const bytes: number[] = [];
-      
-      for (let i = 0; i < cp1251Text.length; i++) {
-        const char = cp1251Text[i];
-        if (char.charCodeAt(0) > 127) {
-          // Non-ASCII character - use CP1251 encoding
-          bytes.push(char.charCodeAt(0) & 0xFF);
-        } else {
-          // ASCII character
-          bytes.push(char.charCodeAt(0));
-        }
-      }
-      
-      return new Uint8Array(bytes);
-    } catch (error) {
-      console.warn('Failed to convert text with CP1251, using UTF-8:', error);
-      const encoder = new TextEncoder();
-      return encoder.encode(text);
-    }
+    const encoder = new TextEncoder();
+    return encoder.encode(text);
   }
 
   /**
