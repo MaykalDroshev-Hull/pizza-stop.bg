@@ -43,7 +43,7 @@ export class WebSerialPrinter {
    */
   async requestPort(): Promise<SerialPort | null> {
     try {
-      if (!this.isSupported()) {
+      if (!this.isSupported() || !navigator.serial) {
         throw new Error('Web Serial API не се поддържа в този браузър. Използвайте Chrome или Edge.');
       }
 
@@ -141,7 +141,7 @@ export class WebSerialPrinter {
    * Get all previously authorized ports
    */
   async getPorts(): Promise<SerialPort[]> {
-    if (!this.isSupported()) {
+    if (!this.isSupported() || !navigator.serial) {
       return [];
     }
     return await navigator.serial.getPorts();
