@@ -246,7 +246,8 @@ const DeliveryDashboard = () => {
           IsPaid,
           OrderType,
           DeliveryPrice,
-          Comments
+          Comments,
+          RfPaymentMethodID
         `)
         .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
         .neq('OrderType', 1) // Exclude pickup orders (OrderType = 1)

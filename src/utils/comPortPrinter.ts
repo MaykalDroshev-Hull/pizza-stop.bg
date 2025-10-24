@@ -70,6 +70,48 @@ export class ComPortPrinter {
   }
 
   /**
+   * Test connection to COM port
+   */
+  async testConnection(config?: ComPortConfig): Promise<boolean> {
+    const testConfig = config || this.config;
+    
+    if (!testConfig) {
+      console.error('🖨️ [COM Port Printer] No configuration provided for test');
+      return false;
+    }
+
+    try {
+      console.log(`🖨️ [COM Port Printer] Testing connection to ${testConfig.comPort}...`);
+      
+      // Send a simple test command to the printer
+      const response = await fetch('/api/printer/com-port', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          comPort: testConfig.comPort,
+          baudRate: testConfig.baudRate,
+          data: [0x1B, 0x40] // ESC @ - Initialize printer
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log('✅ [COM Port Printer] Connection test successful');
+        return true;
+      } else {
+        console.error('❌ [COM Port Printer] Connection test failed:', result.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ [COM Port Printer] Connection test error:', error);
+      return false;
+    }
+  }
+
+  /**
    * Print order ticket to COM port
    */
   async printOrder(order: OrderData): Promise<void> {
