@@ -20,7 +20,7 @@ export interface ConnectedPrinter {
 
 export class WebSerialPrinter {
   private static instance: WebSerialPrinter;
-  private connectedPorts: Map<string, ConnectedPrinter> = new Map();
+  private connectedPorts: Map<SerialPort, ConnectedPrinter> = new Map();
 
   private constructor() {}
 
@@ -77,8 +77,7 @@ export class WebSerialPrinter {
     try {
       await port.open(config);
       
-      const portId = this.getPortId(port);
-      this.connectedPorts.set(portId, {
+      this.connectedPorts.set(port, {
         port,
         name,
         config,
@@ -97,9 +96,8 @@ export class WebSerialPrinter {
    */
   async disconnect(port: SerialPort): Promise<void> {
     try {
-      const portId = this.getPortId(port);
       await port.close();
-      this.connectedPorts.delete(portId);
+      this.connectedPorts.delete(port);
       console.log('🔌 [Web Serial] Port disconnected');
     } catch (error) {
       console.error('❌ [Web Serial] Error disconnecting:', error);
@@ -137,8 +135,7 @@ export class WebSerialPrinter {
         console.log(`📄 [Web Serial] Sent ${data.length} bytes to printer in ${Math.ceil(data.length / chunkSize)} chunks`);
         
         // Update last used
-        const portId = this.getPortId(port);
-        const printer = this.connectedPorts.get(portId);
+        const printer = this.connectedPorts.get(port);
         if (printer) {
           printer.lastUsed = new Date();
         }
@@ -173,14 +170,6 @@ export class WebSerialPrinter {
    */
   private async getPortInfo(port: SerialPort): Promise<SerialPortInfo> {
     return port.getInfo();
-  }
-
-  /**
-   * Generate unique ID for port
-   */
-  private getPortId(port: SerialPort): string {
-    const info = port.getInfo();
-    return `${info.usbVendorId}-${info.usbProductId}`;
   }
 
   /**
@@ -231,11 +220,10 @@ export class WebSerialPrinter {
             });
           }
 
-          const portId = this.getPortId(port);
-          if (!this.connectedPorts.has(portId)) {
-            this.connectedPorts.set(portId, {
+          if (!this.connectedPorts.has(port)) {
+            this.connectedPorts.set(port, {
               port,
-              name: `Saved Printer ${portId}`,
+              name: `Saved Printer ${port.getInfo()}`,
               config: {
                 baudRate: 9600,
                 dataBits: 8,

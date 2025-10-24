@@ -149,7 +149,7 @@ const DebugTab = (): React.JSX.Element => {
     setScanProgress(0);
     
     const commonRanges = [
-      "192.168.1.", "192.168.0.", "10.0.0.", "172.16.0."
+      "192.168.1.", "192.168.0.", "10.0.0.", "172.16.0.","127.0.0."
     ];
     
     const foundPrinters: NetworkPrinter[] = [];
