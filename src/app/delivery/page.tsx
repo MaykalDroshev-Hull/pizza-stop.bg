@@ -300,6 +300,7 @@ const DeliveryDashboard = () => {
               OrderLocationCoordinates: order.OrderLocationCoordinates,
               OrderStatusID: order.OrderStatusID,
               OrderType: order.OrderType,
+              RfPaymentMethodID: order.RfPaymentMethodID || 0,
               IsPaid: order.IsPaid,
               CustomerName: customer?.Name || 'Unknown',
               CustomerPhone: customer?.phone || '',

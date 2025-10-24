@@ -161,9 +161,14 @@ export class ComPortPrinter {
     // Set alignment to center
     commands += '\x1B\x61\x01'; // ESC a 1 - Center alignment
     
+    // Print order type first (ДОСТАВКА/ВЗИМАНЕ)
+    commands += '\x1B\x21\x30'; // ESC ! 48 - Double size
+    commands += `${order.orderType}\n\n`;
+    
     // Print header
-    commands += '\x1B\x21\x30'; // ESC ! 0 - Normal text
+    commands += '\x1B\x21\x30'; // ESC ! 48 - Double size
     commands += 'PIZZA STOP\n';
+    commands += '\x1B\x21\x00'; // ESC ! 0 - Normal text
     commands += '================\n';
     commands += `Поръчка #${order.orderId}\n`;
     commands += `Дата: ${order.placedTime}\n\n`;
@@ -175,8 +180,13 @@ export class ComPortPrinter {
     commands += 'КЛИЕНТ:\n';
     commands += `Име: ${order.customerName}\n`;
     commands += `Телефон: ${order.phone}\n`;
+    
+    // Switch to Font B for address (ESC M 1)
+    commands += '\x1B\x4D\x01';
     commands += `Адрес: ${order.address}\n`;
-    commands += `Тип: ${order.orderType}\n\n`;
+    // Switch back to Font A (ESC M 0)
+    commands += '\x1B\x4D\x00';
+    commands += '\n';
     
     // Order items
     commands += 'ПОРЪЧКА:\n';
@@ -184,7 +194,6 @@ export class ComPortPrinter {
     
     for (const item of order.items) {
       commands += `${item.quantity}x ${item.name}\n`;
-      commands += `  ${(item.price * item.quantity).toFixed(2)} лв.\n`;
       
       if (item.addons && item.addons.length > 0) {
         commands += `  Добавки: ${item.addons.join(', ')}\n`;
@@ -197,19 +206,22 @@ export class ComPortPrinter {
       commands += '\n';
     }
     
-    // Totals
+    // No payment required
     commands += '================\n';
-    commands += `Артикули: ${order.subtotal.toFixed(2)} лв.\n`;
+    commands += '\n';
     
-    if (order.deliveryCharge > 0) {
-      commands += `Доставка: ${order.deliveryCharge.toFixed(2)} лв.\n`;
-    }
-    
-    commands += `ОБЩО: ${order.total.toFixed(2)} лв.\n\n`;
-    
-    // Payment info
-    commands += `Плащане: ${order.paymentMethod}\n`;
-    commands += `Статус: ${order.isPaid ? 'Платено' : 'Неплатено'}\n\n`;
+    // Set alignment to center
+    commands += '\x1B\x61\x01'; // ESC a 1 - Center alignment
+    // Bold on and double size
+    commands += '\x1B\x45\x01'; // ESC E 1 - Bold ON
+    commands += '\x1B\x21\x30'; // ESC ! 48 - Double size
+    commands += 'НЕ СЕ ИЗИСКВА ПЛАЩАНЕ\n';
+    // Normal text and bold off
+    commands += '\x1B\x21\x00'; // ESC ! 0 - Normal size
+    commands += '\x1B\x45\x00'; // ESC E 0 - Bold OFF
+    // Set alignment to left
+    commands += '\x1B\x61\x00'; // ESC a 0 - Left alignment
+    commands += '\n';
     
     // Footer
     commands += '================\n';

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw } from 'lucide-react';
+import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw, Settings } from 'lucide-react';
 import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_STATUS, KitchenOrder } from '../../lib/supabase';
 import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerator';
 import SerialPrinterManager from '../../components/SerialPrinterManager';
+import PrinterConfigModal from '../../components/PrinterConfigModal';
 import { useSerialPrinter } from '../../contexts/SerialPrinterContext';
 import { comPortPrinter, OrderData } from '../../utils/comPortPrinter';
 // AdminLogin moved to separate page at /admin-kitchen-login
@@ -37,6 +38,7 @@ interface Order {
   isPaid: boolean;
   orderStatusId: number;
   orderType: number; // 1 = Restaurant collection, 2 = Delivery
+  paymentMethodId?: number;
 }
 
 const KitchenCommandCenter = () => {
@@ -53,6 +55,7 @@ const KitchenCommandCenter = () => {
   const [confirmDialog, setConfirmDialog] = useState<{ show: boolean; order: Order | null; action: string | null }>({ show: false, order: null, action: null });
   const [readyTimeModal, setReadyTimeModal] = useState<{ show: boolean; order: Order | null; selectedMinutes: number | null }>({ show: false, order: null, selectedMinutes: null });
   const [orderDetailsModal, setOrderDetailsModal] = useState<{ show: boolean; order: Order | null }>({ show: false, order: null });
+  const [printerConfigModal, setPrinterConfigModal] = useState(false);
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [debugMode, setDebugMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -76,7 +79,7 @@ const KitchenCommandCenter = () => {
   });
 
   // Serial printer integration
-  const { printOrder } = useSerialPrinter();
+  const { printOrder, defaultPrinter: webSerialDefaultPrinter, connectedPrinters } = useSerialPrinter();
 
   // Convert Supabase data to Order format
   const convertKitchenOrderToOrder = (kitchenOrder: KitchenOrder): Order => {
@@ -126,14 +129,69 @@ const KitchenCommandCenter = () => {
           }
         }
         
-        // Format product name for display
+        // Format product name for display - convert sizes based on product category
         let displayName = product.ProductName;
+        let productSize = product.ProductSize;
+        
+        // Helper function to determine product category from name
+        const getProductCategory = (name: string): 'pizza' | 'kebab' | 'other' => {
+          const nameLower = name.toLowerCase();
+          // Check for kebabs/doners first
+          if (nameLower.includes('кебап') || nameLower.includes('дюнер') || 
+              nameLower.includes('kebab') || nameLower.includes('doner')) {
+            return 'kebab';
+          }
+          // Check for pizzas (common pizza names or the word pizza)
+          if (nameLower.includes('пица') || nameLower.includes('pizza') ||
+              nameLower.includes('маргарита') || nameLower.includes('капричоза') ||
+              nameLower.includes('кватро') || nameLower.includes('формаджо')) {
+            return 'pizza';
+          }
+          // Everything else (burgers, drinks, sauces, etc.)
+          return 'other';
+        };
+        
+        const category = getProductCategory(product.ProductName);
+        
         if (product.CompositeProduct) {
-          // For 50/50 pizzas, show the composite product name with size
-          displayName = `${product.ProductName}${product.ProductSize ? ` (${product.ProductSize})` : ''}`;
+          // For 50/50 pizzas, add "50/50" prefix and convert size for pizzas
+          let sizeDisplay = productSize;
+          
+          // Convert pizza sizes: Small -> 30cm, Large -> 60cm
+          if (productSize && category === 'pizza') {
+            const sizeLower = productSize.toLowerCase();
+            if (sizeLower.includes('small')) {
+              sizeDisplay = '30cm';
+            } else if (sizeLower.includes('large')) {
+              sizeDisplay = '60cm';
+            }
+          }
+          
+          // Add "50/50" prefix before the product name
+          displayName = `50/50 ${product.ProductName}${sizeDisplay ? ` (${sizeDisplay})` : ''}`;
         } else {
-          // For regular products
-          displayName = `${product.ProductName}${product.ProductSize ? ` (${product.ProductSize})` : ''}`;
+          // For regular products - format size based on category
+          let sizeDisplay: string | null = null;
+          
+          if (productSize) {
+            const sizeLower = productSize.toLowerCase();
+            
+            if (category === 'pizza') {
+              // Pizzas: Convert Small -> 30cm, Large -> 60cm
+              if (sizeLower.includes('small')) {
+                sizeDisplay = '30cm';
+              } else if (sizeLower.includes('large')) {
+                sizeDisplay = '60cm';
+              }
+            } else if (category === 'kebab') {
+              // Kebabs: Keep the size as-is (Small, Medium, Large)
+              sizeDisplay = productSize;
+            }
+            // For 'other' category: Don't show size at all (sizeDisplay stays null)
+          }
+          
+          // Build display name with size only if sizeDisplay is set
+          displayName = `${product.ProductName}${sizeDisplay ? ` (${sizeDisplay})` : ''}`;
         }
         
         // Calculate correct unit price including add-ons
@@ -162,7 +220,8 @@ const KitchenCommandCenter = () => {
       addressInstructions: kitchenOrder.SpecialInstructions || null, // Same as specialInstructions for ticket generation
       isPaid: kitchenOrder.IsPaid,
       orderStatusId: kitchenOrder.OrderStatusID,
-      orderType: kitchenOrder.OrderType
+      orderType: kitchenOrder.OrderType,
+      paymentMethodId: kitchenOrder.RfPaymentMethodID
     };
   };
 
@@ -843,53 +902,128 @@ const KitchenCommandCenter = () => {
     }));
   };
 
-  // Helper function to get payment method name
+  // Helper function to get payment method name for printing
   const getPaymentMethodName = (paymentMethodId: number): string => {
-    const paymentMethods: { [key: number]: string } = {
-      1: 'С карта в ресторант',
-      2: 'В брой в ресторант',
-      3: 'С карта на адрес',
-      4: 'В брой на адрес',
-      5: 'Онлайн'
+    // For printing: 1,3 = Card, 2,4 = Cash, 5 = Paid online
+    if (paymentMethodId === 1 || paymentMethodId === 3) {
+      return 'Карта';
+    } else if (paymentMethodId === 2 || paymentMethodId === 4) {
+      return 'В брой';
+    } else if (paymentMethodId === 5) {
+      return 'Платено онлайн';
     }
-    return paymentMethods[paymentMethodId] || 'Неизвестен метод'
+    return 'Неизвестен метод';
+  }
+
+  // Helper function to format pizza names with diameter for printing
+  const formatPizzaNameForPrint = (itemName: string, isComposite: boolean): string => {
+    // Check if it's a pizza (contains common pizza keywords or is composite/50-50)
+    const nameLower = itemName.toLowerCase();
+    const isPizza = isComposite || 
+                    nameLower.includes('пица') || 
+                    nameLower.includes('pizza') ||
+                    nameLower.includes('маргарита') || 
+                    nameLower.includes('капричоза') ||
+                    nameLower.includes('кватро') || 
+                    nameLower.includes('формаджо') ||
+                    nameLower.includes('bbq') ||
+                    nameLower.includes('специал');
+    
+    if (!isPizza) {
+      return itemName; // Not a pizza, return as-is
+    }
+
+    // For 50/50 pizzas, they're always large (60cm)
+    if (isComposite || nameLower.includes('50/50')) {
+      // Remove any existing size/diameter info
+      let cleanName = itemName
+        .replace(/\s*\(?\s*(small|large|малка|голяма|средна)\s*\)?/gi, '')
+        .replace(/\s*\(?\s*\d+\s*cm\s*\)?/gi, '')
+        .trim();
+      
+      // Add diameter
+      return `${cleanName} (60)`;
+    }
+
+    // For regular pizzas, check for size indicators
+    if (nameLower.includes('small') || nameLower.includes('малка')) {
+      // Remove size indicator and add diameter
+      let cleanName = itemName
+        .replace(/\s*\(?\s*(small|малка)\s*\)?/gi, '')
+        .replace(/\s*\(?\s*\d+\s*cm\s*\)?/gi, '')
+        .trim();
+      return `${cleanName} (30)`;
+    } else if (nameLower.includes('large') || nameLower.includes('голяма')) {
+      // Remove size indicator and add diameter
+      let cleanName = itemName
+        .replace(/\s*\(?\s*(large|голяма)\s*\)?/gi, '')
+        .replace(/\s*\(?\s*\d+\s*cm\s*\)?/gi, '')
+        .trim();
+      return `${cleanName} (60)`;
+    } else if (nameLower.includes('30cm') || nameLower.includes('(30)')) {
+      // Already has small diameter, keep it
+      return itemName.replace(/30\s*cm/gi, '30').replace(/\(\s*30\s*\)/gi, '(30)');
+    } else if (nameLower.includes('60cm') || nameLower.includes('(60)')) {
+      // Already has large diameter, keep it
+      return itemName.replace(/60\s*cm/gi, '60').replace(/\(\s*60\s*\)/gi, '(60)');
+    }
+
+    // Default: if no size info found, assume it's a standard size item
+    return itemName;
   }
 
   // Handle print order with COM port or Web Serial fallback
   const handlePrintOrder = async (order: Order) => {
     try {
-      // Convert Order to OrderData format
+      // Determine order type: 1 = Collection, 2 = Delivery
+      const orderTypeText = order.orderType === 1 ? 'ВЗИМАНЕ' : 'ДОСТАВКА';
+      
+      // Convert Order to OrderData format with formatted pizza names
       const orderData: OrderData = {
         orderId: order.id,
-        orderType: order.address.includes('Lovech Center') ? 'Вземане от ресторанта' : 'Доставка',
+        orderType: orderTypeText,
         customerName: order.customerName,
         phone: order.phone,
         address: order.address,
-        items: order.items.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          addons: item.customizations,
-          comment: item.comment
-        })),
+        items: order.items.map(item => {
+          // Check if item is composite (50/50) by looking at customizations or name
+          const isComposite = item.name.includes('50/50') || 
+                             (item.customizations && item.customizations.some(c => 
+                               c.includes('Лява половина') || c.includes('Дясна половина')
+                             ));
+          
+          // Format the name for printing (pizza names get diameter)
+          const formattedName = formatPizzaNameForPrint(item.name, isComposite);
+          
+          return {
+            name: formattedName,
+            quantity: item.quantity,
+            price: item.price,
+            addons: item.customizations,
+            comment: item.comment
+          };
+        }),
         subtotal: order.totalPrice,
         deliveryCharge: order.deliveryPrice,
         total: order.totalPrice + order.deliveryPrice,
-        paymentMethod: 'Неопределен',
+        paymentMethod: order.paymentMethodId ? getPaymentMethodName(order.paymentMethodId) : 'Неопределен',
         isPaid: order.isPaid,
         placedTime: order.orderTime.toLocaleString('bg-BG'),
-        restaurantPhone: '0888 123 456'
+        restaurantPhone: '068 670 070'
       };
 
-      // Try COM port printer first, fallback to Web Serial
-      if (comPortPrinter.isConfigured()) {
-        await comPortPrinter.printOrder(orderData);
-        addNotification(`Поръчка #${order.id} отпечатана на COM порт принтер`, 'info');
-        console.log(`✅ Manual print: Order #${order.id} sent to COM port printer`);
-      } else {
+      // Prioritize Web Serial if configured, otherwise use COM port
+      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
         await printOrder(orderData);
         addNotification(`Поръчка #${order.id} отпечатана на Web Serial принтер`, 'info');
         console.log(`✅ Manual print: Order #${order.id} sent to Web Serial printer`);
+      } else if (comPortPrinter.isConfigured()) {
+        await comPortPrinter.printOrder(orderData);
+        const config = comPortPrinter.getConfig();
+        addNotification(`Поръчка #${order.id} отпечатана на COM порт принтер (${config?.comPort})`, 'info');
+        console.log(`✅ Manual print: Order #${order.id} sent to COM port printer (${config?.comPort})`);
+      } else {
+        throw new Error('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.');
       }
     } catch (error) {
       console.error(`❌ Manual print failed for order #${order.id}:`, error);
@@ -897,39 +1031,220 @@ const KitchenCommandCenter = () => {
     }
   };
 
+  // Browser print (like Ctrl+P) for preview
+  const handleBrowserPrint = (order: Order) => {
+    // Determine order type text
+    const orderTypeText = order.orderType === 1 ? 'ВЗИМАНЕ' : 'ДОСТАВКА';
+    
+    // Format items with pizza diameter
+    const formattedItems = order.items.map(item => {
+      // Check if item is composite (50/50) by looking at customizations or name
+      const isComposite = item.name.includes('50/50') || 
+                         (item.customizations && item.customizations.some(c => 
+                           c.includes('Лява половина') || c.includes('Дясна половина')
+                         ));
+      
+      // Format the name for printing (pizza names get diameter)
+      const formattedName = formatPizzaNameForPrint(item.name, isComposite);
+      
+      return {
+        ...item,
+        name: formattedName
+      };
+    });
+    
+    // Create HTML ticket
+    const ticketHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Поръчка #${order.id}</title>
+  <style>
+    @media print {
+      @page { 
+        size: 80mm auto;
+        margin: 0;
+      }
+      body {
+        margin: 0;
+        padding: 10mm;
+      }
+    }
+    body {
+      font-family: 'Courier New', monospace;
+      width: 80mm;
+      margin: 0 auto;
+      padding: 10mm;
+      background: white;
+      color: black;
+      font-size: 12pt;
+      line-height: 1.4;
+    }
+    .center {
+      text-align: center;
+    }
+    .bold {
+      font-weight: bold;
+    }
+    .large {
+      font-size: 24pt;
+    }
+    .separator {
+      border-top: 1px dashed #000;
+      margin: 8px 0;
+    }
+    .separator-solid {
+      border-top: 2px solid #000;
+      margin: 8px 0;
+    }
+    .item {
+      margin: 8px 0;
+    }
+    .addons {
+      font-size: 10pt;
+      margin-left: 15px;
+      margin-top: 2px;
+    }
+    .comment {
+      font-size: 10pt;
+      margin-left: 15px;
+      margin-top: 2px;
+      font-style: italic;
+    }
+    .address {
+      font-family: 'Arial', sans-serif;
+      font-size: 10pt;
+    }
+    .no-payment {
+      font-size: 18pt;
+      font-weight: bold;
+      text-align: center;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="center large bold">${orderTypeText}</div>
+  <br>
+  
+  <div class="center large bold">PIZZA STOP</div>
+  <div class="center">www.pizza-stop.bg</div>
+  <div class="center">тел: 068 670 070</div>
+  <br><br>
+  
+  <div class="separator-solid"></div>
+  
+  <div class="center bold">ПОРЪЧКА #${order.id}</div>
+  
+  <div class="separator-solid"></div>
+  
+  <div>Дата/Час: ${order.orderTime.toLocaleString('bg-BG')}</div>
+  
+  <div class="separator"></div>
+  
+  <div class="bold">КЛИЕНТ:</div>
+  <div>Име: ${order.customerName}</div>
+  <div>Тел: ${order.phone}</div>
+  <div class="address">Адрес: ${order.address}</div>
+  
+  <div class="separator-solid"></div>
+  
+  <div class="bold">АРТИКУЛИ:</div>
+  <div class="separator"></div>
+  
+  ${formattedItems.map(item => `
+    <div class="item">
+      <div>${item.quantity}x ${item.name}</div>
+      ${item.customizations.length > 0 ? `<div class="addons">+ ${item.customizations.join(', ')}</div>` : ''}
+      ${item.comment ? `<div class="comment">Забележка: ${item.comment}</div>` : ''}
+    </div>
+  `).join('')}
+  
+  <div class="separator-solid"></div>
+  
+  ${order.specialInstructions ? `
+    <div class="bold">СПЕЦИАЛНИ ИНСТРУКЦИИ:</div>
+    <div>${order.specialInstructions}</div>
+    <br>
+  ` : ''}
+  
+  <div class="no-payment">НЕ СЕ ИЗИСКВА ПЛАЩАНЕ</div>
+  
+  <div class="separator-solid"></div>
+  <br><br>
+  
+  <div class="center">Благодарим Ви!</div>
+  <div class="center">Приятен апетит!</div>
+  
+</body>
+</html>
+    `;
+    
+    // Open in new window and print
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(ticketHTML);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Wait for content to load, then print
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
   // Auto-print new orders
   const autoPrintNewOrder = async (order: Order) => {
     try {
-      // Convert Order to OrderData format for COM port printer
+      // Determine order type: 1 = Collection, 2 = Delivery
+      const orderTypeText = order.orderType === 1 ? 'ВЗИМАНЕ' : 'ДОСТАВКА';
+      
+      // Convert Order to OrderData format for COM port printer with formatted pizza names
       const orderData: OrderData = {
         orderId: order.id,
-        orderType: order.address.includes('Lovech Center') ? 'Вземане от ресторанта' : 'Доставка',
+        orderType: orderTypeText,
         customerName: order.customerName,
         phone: order.phone,
         address: order.address,
-        items: order.items.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          addons: item.customizations,
-          comment: item.comment
-        })),
+        items: order.items.map(item => {
+          // Check if item is composite (50/50) by looking at customizations or name
+          const isComposite = item.name.includes('50/50') || 
+                             (item.customizations && item.customizations.some(c => 
+                               c.includes('Лява половина') || c.includes('Дясна половина')
+                             ));
+          
+          // Format the name for printing (pizza names get diameter)
+          const formattedName = formatPizzaNameForPrint(item.name, isComposite);
+          
+          return {
+            name: formattedName,
+            quantity: item.quantity,
+            price: item.price,
+            addons: item.customizations,
+            comment: item.comment
+          };
+        }),
         subtotal: order.totalPrice,
         deliveryCharge: order.deliveryPrice,
         total: order.totalPrice + order.deliveryPrice,
-        paymentMethod: 'Неопределен',
+        paymentMethod: order.paymentMethodId ? getPaymentMethodName(order.paymentMethodId) : 'Неопределен',
         isPaid: order.isPaid,
         placedTime: order.orderTime.toLocaleString('bg-BG'),
-        restaurantPhone: '0888 123 456'
+        restaurantPhone: '068 670 070'
       };
 
-      // Try COM port printer first, fallback to Web Serial
-      if (comPortPrinter.isConfigured()) {
-        await comPortPrinter.printOrder(orderData);
-        console.log(`✅ Auto-printed order #${order.id} to COM port printer`);
-      } else {
+      // Prioritize Web Serial if configured, otherwise use COM port
+      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
         await printOrder(orderData);
         console.log(`✅ Auto-printed order #${order.id} to Web Serial printer`);
+      } else if (comPortPrinter.isConfigured()) {
+        await comPortPrinter.printOrder(orderData);
+        const config = comPortPrinter.getConfig();
+        console.log(`✅ Auto-printed order #${order.id} to COM port printer (${config?.comPort})`);
+      } else {
+        console.log(`⚠️ No printer configured for auto-print of order #${order.id}`);
       }
     } catch (error) {
       console.log(`⚠️ Auto-print failed for order #${order.id}:`, error);
@@ -1388,25 +1703,25 @@ const KitchenCommandCenter = () => {
         onTouchStart={(e) => handleTouchStart(e, order.id)}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="flex justify-between items-start mb-3">
+        <div className="flex justify-between items-start mb-1.5">
           <div className="flex-1 min-w-0">
-            <div className="text-lg sm:text-xl font-bold text-white flex items-center space-x-2">
+            <div className="text-sm font-bold text-white flex items-center space-x-1.5">
               <span>#{order.id}</span>
-              <span className="text-xs sm:text-sm text-blue-400 bg-blue-900 px-1 sm:px-2 py-1 rounded truncate">
+              <span className="text-[10px] text-blue-400 bg-blue-900 px-1 py-0.5 rounded truncate">
                 НОВА
               </span>
             </div>
-            <div className="text-xs sm:text-sm text-gray-400">
+            <div className="text-[10px] text-gray-400">
               Получена преди: {totalTime}мин
             </div>
-            <div className="text-xs text-gray-500 hidden sm:block">
+            <div className="text-[9px] text-gray-500 hidden sm:block">
               Време: {formatTimeForDisplay(order.orderTime)}
             </div>
           </div>
         </div>
 
-        <div className="space-y-1 mb-3">
-          <div className="text-blue-400 font-semibold text-sm sm:text-base truncate">👤 {order.customerName}</div>
+        <div className="space-y-0.5 mb-1.5">
+          <div className="text-blue-400 font-semibold text-xs truncate">👤 {order.customerName}</div>
           <div className="text-gray-400 text-xs sm:text-sm">📞 {order.phone}</div>
           <div className="text-gray-400 text-xs sm:text-sm truncate">📍 {order.address}</div>
           {order.expectedTime && (
@@ -1416,19 +1731,19 @@ const KitchenCommandCenter = () => {
           )}
         </div>
 
-        <div className="space-y-1 mb-3">
+        <div className="space-y-0.5 mb-1.5">
           {order.items.slice(0, 3).map((item, index) => (
-            <div key={index} className="text-sm">
+            <div key={index} className="text-xs">
               <span className="text-white font-medium">
                 {item.quantity}x {item.name}
               </span>
               {item.customizations.length > 0 && (
-                <div className="text-yellow-400 text-xs ml-2 mt-1">
+                <div className="text-yellow-400 text-[10px] ml-1 mt-0.5">
                   🧂 {item.customizations.join(', ')}
                 </div>
               )}
               {item.comment && (
-                <div className="text-blue-400 text-xs ml-2 mt-1 bg-blue-900/30 px-2 py-1 rounded">
+                <div className="text-blue-400 text-[10px] ml-1 mt-0.5 bg-blue-900/30 px-1 py-0.5 rounded">
                   💬 {item.comment}
                 </div>
               )}
@@ -1437,48 +1752,55 @@ const KitchenCommandCenter = () => {
           {order.items.length > 3 && (
             <button
               onClick={() => setOrderDetailsModal({ show: true, order })}
-              className="flex items-center space-x-1 text-blue-400 hover:text-blue-300 text-xs mt-2 transition-colors"
+              className="flex items-center space-x-0.5 text-blue-400 hover:text-blue-300 text-[10px] mt-1 transition-colors"
             >
-              <Eye size={14} />
+              <Eye size={10} />
               <span>Покажи всички ({order.items.length})</span>
             </button>
           )}
         </div>
 
         {order.specialInstructions && (
-          <div className="bg-yellow-900 border border-yellow-600 rounded p-2 mb-3">
-            <div className="text-yellow-200 text-xs">
+          <div className="bg-yellow-900 border border-yellow-600 rounded p-1 mb-1.5">
+            <div className="text-yellow-200 text-[10px]">
               📝 {order.specialInstructions}
             </div>
           </div>
         )}
 
         {order.deliveryPrice > 0 && (
-          <div className="flex items-center space-x-2 bg-blue-900/40 border border-blue-500/30 rounded-lg px-2 py-1 mb-2">
-            <span className="text-blue-300 text-xs">🚚</span>
-            <span className="text-blue-300 text-xs font-medium">
+          <div className="flex items-center space-x-1 bg-blue-900/40 border border-blue-500/30 rounded px-1 py-0.5 mb-1">
+            <span className="text-blue-300 text-[10px]">🚚</span>
+            <span className="text-blue-300 text-[10px] font-medium">
               Доставка: {order.deliveryPrice.toFixed(2)} лв
             </span>
           </div>
         )}
 
         <div className="flex justify-between items-center">
-          <span className="text-green-400 font-bold">
+          <span className="text-green-400 font-bold text-xs">
             Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} лв
           </span>
-          <div className="flex space-x-2">
+          <div className="flex space-x-1">
             <button
               onClick={() => startOrderWithReadyTime(order.id)}
-              className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-1 px-3 rounded text-sm hover:from-orange-600 hover:to-red-600 transition-all"
+              className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-1 px-2 rounded text-[10px] hover:from-orange-600 hover:to-red-600 transition-all"
             >
               🔥 Започвам
             </button>
             <button
               onClick={() => handlePrintOrder(order)}
-              className="bg-gray-600 text-white font-bold py-1 px-3 rounded text-sm hover:bg-gray-700 transition-all flex items-center space-x-1"
+              className="bg-gray-600 text-white font-bold py-1 px-1.5 rounded text-[10px] hover:bg-gray-700 transition-all flex items-center space-x-0.5"
+              title="Принтирай на термален принтер"
             >
-              <Printer className="w-4 h-4" />
-              <span>Принтирай</span>
+              <Printer className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => handleBrowserPrint(order)}
+              className="bg-blue-600 text-white font-bold py-1 px-1.5 rounded text-[10px] hover:bg-blue-700 transition-all"
+              title="Преглед за печат (Ctrl+P)"
+            >
+              👁️
             </button>
           </div>
         </div>
@@ -1581,9 +1903,16 @@ const KitchenCommandCenter = () => {
             <button
               onClick={() => handlePrintOrder(order)}
               className="bg-gray-600 text-white font-bold py-1 px-2 rounded text-xs hover:bg-gray-700 transition-all"
-              title="Принтирай"
+              title="Принтирай на термален принтер"
             >
               <Printer className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => handleBrowserPrint(order)}
+              className="bg-blue-600 text-white font-bold py-1 px-2 rounded text-xs hover:bg-blue-700 transition-all"
+              title="Преглед за печат (Ctrl+P)"
+            >
+              👁️
             </button>
             <button
               onClick={() => updateOrderStatus(order.id, 'completed', true)}
@@ -1641,9 +1970,16 @@ const KitchenCommandCenter = () => {
             <button
               onClick={() => handlePrintOrder(order)}
               className={`bg-purple-500 hover:bg-purple-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
-              title="Принтирай"
+              title="Принтирай на термален принтер"
             >
               <Printer className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleBrowserPrint(order)}
+              className={`bg-blue-500 hover:bg-blue-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
+              title="Преглед за печат (Ctrl+P)"
+            >
+              <span className={`${emojiSizeClasses[cardSize]}`}>👁️</span>
             </button>
             <button
               onClick={() => updateOrderStatus(order.id, 'working', true)}
@@ -1778,21 +2114,18 @@ const KitchenCommandCenter = () => {
               )}
             </div>
             
-            <div className="flex items-center space-x-1 sm:space-x-2">
+            <div className="flex items-center space-x-1">
               {isOnline ? (
-                <Wifi className="text-green-500 w-4 h-4 sm:w-6 sm:h-6" />
+                <Wifi className="text-green-500 w-3 h-3" />
               ) : (
-                <WifiOff className="text-red-500 w-4 h-4 sm:w-6 sm:h-6" />
+                <WifiOff className="text-red-500 w-3 h-3" />
               )}
-              <span className={`text-sm sm:text-base hidden sm:inline ${isOnline ? 'text-green-500' : 'text-red-500'}`}>
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
             </div>
 
             {/* Sound Toggle */}
             <button 
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className={`px-2 py-1 rounded text-xs ${soundEnabled ? 'bg-green-600' : 'bg-gray-600'} hover:opacity-80 transition-opacity`}
+              className={`px-1.5 py-0.5 rounded text-[10px] ${soundEnabled ? 'bg-green-600' : 'bg-gray-600'} hover:opacity-80 transition-opacity`}
               title={soundEnabled ? 'Звук включен' : 'Звук изключен'}
             >
               {soundEnabled ? '🔊' : '🔇'}
@@ -1802,37 +2135,62 @@ const KitchenCommandCenter = () => {
             <button
               onClick={() => fetchOrders()}
               disabled={isRefreshing}
-              className={`px-2 py-1 rounded text-xs font-bold transition-colors flex items-center space-x-1 ${
+              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors flex items-center space-x-0.5 ${
                 isRefreshing 
                   ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
               title="Обнови поръчките"
             >
-              <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">{isRefreshing ? 'Обновява...' : 'Обнови'}</span>
+              <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
             </button>
 
+            {/* Printer Configuration Button */}
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => setPrinterConfigModal(true)}
+                className="px-2 py-1 bg-orange-600 text-white rounded text-[10px] font-bold hover:bg-orange-700 transition-colors flex items-center space-x-1"
+                title="Конфигурирай принтер"
+              >
+                <Settings className="w-3 h-3" />
+              </button>
+              
+              {/* Printer Status Indicator */}
+              {webSerialDefaultPrinter && connectedPrinters.length > 0 ? (
+                <div className="flex items-center space-x-0.5 bg-blue-600 text-white px-1 py-0.5 rounded text-[9px]">
+                  <Printer className="w-2.5 h-2.5" />
+                </div>
+              ) : comPortPrinter.isConfigured() ? (
+                <div className="flex items-center space-x-0.5 bg-green-600 text-white px-1 py-0.5 rounded text-[9px]">
+                  <Printer className="w-2.5 h-2.5" />
+                </div>
+              ) : (
+                <div className="flex items-center space-x-0.5 bg-gray-600 text-white px-1 py-0.5 rounded text-[9px]">
+                  <Printer className="w-2.5 h-2.5" />
+                </div>
+              )}
+            </div>
+
             {/* Serial Printer Manager */}
-            <SerialPrinterManager autoPrint={true} showStatus={true} className="ml-2" />
+            <SerialPrinterManager autoPrint={true} showStatus={true} className="ml-1" />
           </div>
         </div>
 
-        {/* Second Row - Order Counts and Quick Actions */}
-        <div className="h-12 bg-gray-800 border-t border-gray-700 flex items-center justify-center px-2 sm:px-8">
-          <div className="flex items-center space-x-2 sm:space-x-4">
+        {/* Second Row - Order Counts - Compact for 702p */}
+        <div className="h-8 bg-gray-800 border-t border-gray-700 flex items-center justify-center px-2">
+          <div className="flex items-center space-x-1.5">
             {/* Order Count Badges */}
             {(() => {
               const { newOrders, workingOrders, completedOrders } = getOrderCounts();
               return (
                 <>
-                  <span className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold">
+                  <span className="bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-bold">
                     Нов: {newOrders.length}
                   </span>
-                  <span className="bg-orange-600 text-white px-3 py-2 rounded-lg text-sm font-bold">
+                  <span className="bg-orange-600 text-white px-2 py-1 rounded text-[10px] font-bold">
                     Работи: {workingOrders.length}
                   </span>
-                  <span className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold">
+                  <span className="bg-green-600 text-white px-2 py-1 rounded text-[10px] font-bold">
                     Готов: {completedOrders.length}
                   </span>
                 </>
@@ -1843,8 +2201,8 @@ const KitchenCommandCenter = () => {
             {(() => {
               const overdueOrders = getOverdueOrders();
               return overdueOrders.length > 0 && (
-                <span className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-bold animate-pulse">
-                  ⚠️ {overdueOrders.length} закъснели
+                <span className="bg-red-600 text-white px-2 py-1 rounded text-[10px] font-bold animate-pulse">
+                  ⚠️ {overdueOrders.length}
                 </span>
               );
             })()}
@@ -1861,17 +2219,17 @@ const KitchenCommandCenter = () => {
           className="flex flex-col main-work-area"
           style={{ width: `${workAreaWidth}%` }}
         >
-          {/* New Orders Grid - Resizable */}
+          {/* New Orders Grid - Compact for 702p */}
           <div 
-            className="bg-gray-900 p-4 overflow-hidden"
+            className="bg-gray-900 p-2 overflow-hidden"
             style={{ height: `${newOrdersHeight}%` }}
           >
             <div className="h-full flex flex-col">
-              <h2 className="text-2xl font-bold text-blue-400 mb-4 flex items-center">
+              <h2 className="text-base font-bold text-blue-400 mb-2 flex items-center">
                 📋 НОВИ ПОРЪЧКИ ({newOrders.length})
               </h2>
               <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-1.5">
                   {newOrders.map(order => (
                     <NewOrderCard key={order.id} order={order} />
                   ))}
@@ -2157,6 +2515,16 @@ const KitchenCommandCenter = () => {
           </div>
         </div>
       )}
+
+      {/* Printer Configuration Modal */}
+      <PrinterConfigModal
+        isOpen={printerConfigModal}
+        onClose={() => setPrinterConfigModal(false)}
+        onConfigSaved={() => {
+          setPrinterConfigModal(false);
+          addNotification('Принтерът е конфигуриран успешно!', 'info');
+        }}
+      />
     </div>
   );
 };
