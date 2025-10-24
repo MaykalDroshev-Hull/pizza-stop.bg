@@ -125,6 +125,9 @@ export class ComPortPrinter {
       // Generate ESC/POS commands for the order
       const ticketData = this.generateOrderTicket(order);
       
+      // Convert string to byte array to avoid JSON encoding issues with Cyrillic
+      const dataBytes = this.stringToByteArray(ticketData);
+      
       // Send to COM port via API
       const response = await fetch('/api/printer/com-port', {
         method: 'POST',
@@ -134,7 +137,7 @@ export class ComPortPrinter {
         body: JSON.stringify({
           comPort: this.config.comPort,
           baudRate: this.config.baudRate,
-          data: ticketData
+          data: dataBytes
         })
       });
 
@@ -165,6 +168,9 @@ export class ComPortPrinter {
       // Generate test ESC/POS commands
       const testData = this.generateTestTicket();
       
+      // Convert string to byte array to avoid JSON encoding issues with Cyrillic
+      const dataBytes = this.stringToByteArray(testData);
+      
       // Send to COM port via API
       const response = await fetch('/api/printer/com-port', {
         method: 'POST',
@@ -174,7 +180,7 @@ export class ComPortPrinter {
         body: JSON.stringify({
           comPort: this.config.comPort,
           baudRate: this.config.baudRate,
-          data: testData
+          data: dataBytes
         })
       });
 
@@ -192,6 +198,66 @@ export class ComPortPrinter {
   }
 
   /**
+   * Convert UTF-8 text to CP1251 for Datecs printers
+   */
+  private utf8ToCp1251(text: string): string {
+    try {
+      // Create a mapping for common Cyrillic characters
+      const cyrillicMap: { [key: string]: string } = {
+        'А': '\xC0', 'Б': '\xC1', 'В': '\xC2', 'Г': '\xC3', 'Д': '\xC4', 'Е': '\xC5', 'Ж': '\xC6', 'З': '\xC7',
+        'И': '\xC8', 'Й': '\xC9', 'К': '\xCA', 'Л': '\xCB', 'М': '\xCC', 'Н': '\xCD', 'О': '\xCE', 'П': '\xCF',
+        'Р': '\xD0', 'С': '\xD1', 'Т': '\xD2', 'У': '\xD3', 'Ф': '\xD4', 'Х': '\xD5', 'Ц': '\xD6', 'Ч': '\xD7',
+        'Ш': '\xD8', 'Щ': '\xD9', 'Ъ': '\xDA', 'Ь': '\xDB', 'Ю': '\xDC', 'Я': '\xDD',
+        'а': '\xE0', 'б': '\xE1', 'в': '\xE2', 'г': '\xE3', 'д': '\xE4', 'е': '\xE5', 'ж': '\xE6', 'з': '\xE7',
+        'и': '\xE8', 'й': '\xE9', 'к': '\xEA', 'л': '\xEB', 'м': '\xEC', 'н': '\xED', 'о': '\xEE', 'п': '\xEF',
+        'р': '\xF0', 'с': '\xF1', 'т': '\xF2', 'у': '\xF3', 'ф': '\xF4', 'х': '\xF5', 'ц': '\xF6', 'ч': '\xF7',
+        'ш': '\xF8', 'щ': '\xF9', 'ъ': '\xFA', 'ь': '\xFB', 'ю': '\xFC', 'я': '\xFD'
+      };
+
+      let result = '';
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (cyrillicMap[char]) {
+          result += cyrillicMap[char];
+        } else {
+          result += char;
+        }
+      }
+      return result;
+    } catch (error) {
+      console.warn('Failed to convert UTF-8 to CP1251, using original text:', error);
+      return text;
+    }
+  }
+
+  /**
+   * Convert string to byte array for JSON transmission
+   */
+  private stringToByteArray(text: string): number[] {
+    try {
+      // First convert Cyrillic to CP1251, then to bytes
+      const cp1251Text = this.utf8ToCp1251(text);
+      const bytes: number[] = [];
+      
+      for (let i = 0; i < cp1251Text.length; i++) {
+        const char = cp1251Text[i];
+        if (char.charCodeAt(0) > 127) {
+          // Non-ASCII character - use CP1251 encoding
+          bytes.push(char.charCodeAt(0) & 0xFF);
+        } else {
+          // ASCII character
+          bytes.push(char.charCodeAt(0));
+        }
+      }
+      
+      return bytes;
+    } catch (error) {
+      console.warn('Failed to convert string to byte array, using UTF-8:', error);
+      return Array.from(new TextEncoder().encode(text));
+    }
+  }
+
+  /**
    * Generate ESC/POS commands for order ticket
    */
   private generateOrderTicket(order: OrderData): string {
@@ -200,49 +266,52 @@ export class ComPortPrinter {
     // Initialize printer
     commands += '\x1B\x40'; // ESC @ - Initialize printer
     
+    // Set character encoding to CP1251 for Cyrillic support
+    commands += '\x1B\x74\x11'; // ESC t 17 - Select character code table (CP1251)
+    
     // Set alignment to center
     commands += '\x1B\x61\x01'; // ESC a 1 - Center alignment
     
     // Print order type first (ДОСТАВКА/ВЗИМАНЕ)
     commands += '\x1B\x21\x30'; // ESC ! 48 - Double size
-    commands += `${order.orderType}\n\n`;
+    commands += this.utf8ToCp1251(`${order.orderType}\n\n`);
     
     // Print header
     commands += '\x1B\x21\x30'; // ESC ! 48 - Double size
     commands += 'PIZZA STOP\n';
     commands += '\x1B\x21\x00'; // ESC ! 0 - Normal text
     commands += '================\n';
-    commands += `Поръчка #${order.orderId}\n`;
-    commands += `Дата: ${order.placedTime}\n\n`;
+    commands += this.utf8ToCp1251(`Поръчка #${order.orderId}\n`);
+    commands += this.utf8ToCp1251(`Дата: ${order.placedTime}\n\n`);
     
     // Set alignment to left
     commands += '\x1B\x61\x00'; // ESC a 0 - Left alignment
     
     // Customer info
-    commands += 'КЛИЕНТ:\n';
-    commands += `Име: ${order.customerName}\n`;
-    commands += `Телефон: ${order.phone}\n`;
+    commands += this.utf8ToCp1251('КЛИЕНТ:\n');
+    commands += this.utf8ToCp1251(`Име: ${order.customerName}\n`);
+    commands += this.utf8ToCp1251(`Телефон: ${order.phone}\n`);
     
     // Switch to Font B for address (ESC M 1)
     commands += '\x1B\x4D\x01';
-    commands += `Адрес: ${order.address}\n`;
+    commands += this.utf8ToCp1251(`Адрес: ${order.address}\n`);
     // Switch back to Font A (ESC M 0)
     commands += '\x1B\x4D\x00';
     commands += '\n';
     
     // Order items
-    commands += 'ПОРЪЧКА:\n';
+    commands += this.utf8ToCp1251('ПОРЪЧКА:\n');
     commands += '================\n';
     
     for (const item of order.items) {
-      commands += `${item.quantity}x ${item.name}\n`;
+      commands += this.utf8ToCp1251(`${item.quantity}x ${item.name}\n`);
       
       if (item.addons && item.addons.length > 0) {
-        commands += `  Добавки: ${item.addons.join(', ')}\n`;
+        commands += this.utf8ToCp1251(`  Добавки: ${item.addons.join(', ')}\n`);
       }
       
       if (item.comment) {
-        commands += `  Коментар: ${item.comment}\n`;
+        commands += this.utf8ToCp1251(`  Коментар: ${item.comment}\n`);
       }
       
       commands += '\n';
@@ -257,7 +326,7 @@ export class ComPortPrinter {
     // Bold on and double size
     commands += '\x1B\x45\x01'; // ESC E 1 - Bold ON
     commands += '\x1B\x21\x30'; // ESC ! 48 - Double size
-    commands += 'НЕ СЕ ИЗИСКВА ПЛАЩАНЕ\n';
+    commands += this.utf8ToCp1251('НЕ СЕ ИЗИСКВА ПЛАЩАНЕ\n');
     // Normal text and bold off
     commands += '\x1B\x21\x00'; // ESC ! 0 - Normal size
     commands += '\x1B\x45\x00'; // ESC E 0 - Bold OFF
@@ -267,8 +336,8 @@ export class ComPortPrinter {
     
     // Footer
     commands += '================\n';
-    commands += `Телефон: ${order.restaurantPhone}\n`;
-    commands += 'Благодарим за поръчката!\n\n\n';
+    commands += this.utf8ToCp1251(`Телефон: ${order.restaurantPhone}\n`);
+    commands += this.utf8ToCp1251('Благодарим за поръчката!\n\n\n');
     
     // Cut paper
     commands += '\x1D\x56\x00'; // GS V 0 - Full cut
@@ -285,6 +354,9 @@ export class ComPortPrinter {
     // Initialize printer
     commands += '\x1B\x40'; // ESC @ - Initialize printer
     
+    // Set character encoding to CP1251 for Cyrillic support
+    commands += '\x1B\x74\x11'; // ESC t 17 - Select character code table (CP1251)
+    
     // Set alignment to center
     commands += '\x1B\x61\x01'; // ESC a 1 - Center alignment
     
@@ -292,37 +364,37 @@ export class ComPortPrinter {
     commands += '\x1B\x21\x30'; // ESC ! 0 - Normal text
     commands += 'PIZZA STOP\n';
     commands += '================\n';
-    commands += 'ТЕСТОВА СТРАНИЦА\n';
-    commands += `Дата: ${new Date().toLocaleString('bg-BG')}\n\n`;
+    commands += this.utf8ToCp1251('ТЕСТОВА СТРАНИЦА\n');
+    commands += this.utf8ToCp1251(`Дата: ${new Date().toLocaleString('bg-BG')}\n\n`);
     
     // Set alignment to left
     commands += '\x1B\x61\x00'; // ESC a 0 - Left alignment
     
     // Test content
-    commands += 'Това е тестова страница за\n';
-    commands += 'проверка на COM порт принтера.\n\n';
-    commands += 'Ако виждате този текст,\n';
-    commands += 'принтерът работи правилно!\n\n';
+    commands += this.utf8ToCp1251('Това е тестова страница за\n');
+    commands += this.utf8ToCp1251('проверка на COM порт принтера.\n\n');
+    commands += this.utf8ToCp1251('Ако виждате този текст,\n');
+    commands += this.utf8ToCp1251('принтерът работи правилно!\n\n');
     
     // Test different text sizes
     commands += '\x1B\x21\x00'; // ESC ! 0 - Normal size
-    commands += 'Нормален размер\n';
+    commands += this.utf8ToCp1251('Нормален размер\n');
     
     commands += '\x1B\x21\x10'; // ESC ! 16 - Double height
-    commands += 'Двойна височина\n';
+    commands += this.utf8ToCp1251('Двойна височина\n');
     
     commands += '\x1B\x21\x20'; // ESC ! 32 - Double width
-    commands += 'Двойна ширина\n';
+    commands += this.utf8ToCp1251('Двойна ширина\n');
     
     commands += '\x1B\x21\x30'; // ESC ! 48 - Double size
-    commands += 'Двойен размер\n\n';
+    commands += this.utf8ToCp1251('Двойен размер\n\n');
     
     // Reset to normal
     commands += '\x1B\x21\x00'; // ESC ! 0 - Normal size
     
     // Footer
     commands += '================\n';
-    commands += 'Тест завършен успешно!\n\n\n';
+    commands += this.utf8ToCp1251('Тест завършен успешно!\n\n\n');
     
     // Cut paper
     commands += '\x1D\x56\x00'; // GS V 0 - Full cut

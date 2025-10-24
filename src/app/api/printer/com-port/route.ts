@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { spawn } from 'child_process';
+import { writeFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 
-export const runtime = 'nodejs'; // Use Node.js runtime for serial port access
+export const runtime = 'nodejs';
 
 /**
  * API endpoint to send print jobs to COM port thermal printer
@@ -20,205 +24,128 @@ export async function POST(request: NextRequest) {
     
     console.log(`🖨️ [COM Port Print] Printing to ${comPort} at ${baudRate} baud...`);
     
-    try {
-      // Note: In production, you would use the 'serialport' package:
-      /*
-      const { SerialPort } = require('serialport');
-      
-      return new Promise((resolve) => {
-        const port = new SerialPort({
-          path: comPort,
-          baudRate: baudRate,
-          dataBits: 8,
-          parity: 'none',
-          stopBits: 1,
-          autoOpen: false
-        });
+    // Convert data to buffer
+    let buffer: Buffer;
+    if (Array.isArray(data)) {
+      buffer = Buffer.from(data);
+    } else if (Buffer.isBuffer(data)) {
+      buffer = data;
+    } else {
+      buffer = Buffer.from(data, 'utf8');
+    }
+    
+    // Create temporary file for data
+    const tempFile = join(tmpdir(), `print_${Date.now()}.bin`);
+    writeFileSync(tempFile, buffer);
+    
+    return new Promise<NextResponse>((resolve) => {
+      // Use PowerShell to send data to COM port
+      const powershellScript = `
+        $targetPort = "${comPort}"
+        $baudRate = ${baudRate}
+        $tempFile = "${tempFile}"
         
-        port.open((err) => {
-          if (err) {
-            console.error(`❌ [COM Port Print] Cannot open ${comPort}:`, err);
-            resolve(NextResponse.json({
-              success: false,
-              message: `Cannot open ${comPort}: ${err.message}`,
-              error: err.message,
-              comPort,
-              baudRate
-            }));
-          } else {
-            console.log(`✅ [COM Port Print] Connected to ${comPort}`);
-            
-            // Convert data to buffer if it's a string
-            const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8');
-            
-            // Send data to printer
-            port.write(buffer, (writeErr) => {
-              if (writeErr) {
-                console.error(`❌ [COM Port Print] Write error on ${comPort}:`, writeErr);
-                port.close();
-                resolve(NextResponse.json({
-                  success: false,
-                  message: `Write error on ${comPort}: ${writeErr.message}`,
-                  error: writeErr.message,
-                  comPort,
-                  baudRate
-                }));
-              } else {
-                console.log(`📄 [COM Port Print] Sent ${buffer.length} bytes to ${comPort}`);
-                
-                // Wait a bit for printer to process, then close connection
-                setTimeout(() => {
-                  port.close();
-                  resolve(NextResponse.json({
-                    success: true,
-                    message: `Print job sent successfully to ${comPort}`,
-                    bytesSent: buffer.length,
-                    comPort,
-                    baudRate
-                  }));
-                }, 1000);
-              }
-            });
+        # Get all available COM ports dynamically
+        $availablePorts = [System.IO.Ports.SerialPort]::getPortNames()
+        
+        # Try the specified port first if it exists
+        $portsToTry = @()
+        if ($availablePorts -contains $targetPort) {
+          $portsToTry += $targetPort
+        }
+        
+        # Add other available ports as fallback
+        foreach ($port in $availablePorts) {
+          if ($port -ne $targetPort) {
+            $portsToTry += $port
           }
-        });
+        }
         
-        // Timeout after 10 seconds
-        setTimeout(() => {
-          port.close();
-          resolve(NextResponse.json({
-            success: false,
-            message: `Timeout on ${comPort}`,
-            error: 'Connection timeout',
-            comPort,
-            baudRate
-          }));
-        }, 10000);
-      });
-      */
-      
-      // Simulated response for environments without serial port access
-      const simulatedPorts = ['COM3', 'COM4', 'COM7'];
-      const isKnownPort = simulatedPorts.includes(comPort);
-      
-      if (isKnownPort) {
-        // Simulate successful print
-        const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8');
+        if ($portsToTry.Count -eq 0) {
+          Write-Output "ERROR: No COM ports available on this system"
+          exit 1
+        }
         
-        return NextResponse.json({
-          success: true,
-          message: `Print job sent successfully to ${comPort}`,
-          bytesSent: buffer.length,
-          comPort,
-          baudRate,
-          note: 'Симулиран отговор - за реална имплементация използвайте serialport пакет'
-        });
-      } else {
-        return NextResponse.json({
-          success: false,
-          message: `COM порт ${comPort} не е намерен`,
-          error: 'Port not found',
-          comPort,
-          baudRate,
-          note: 'Симулиран отговор - за реална имплементация използвайте serialport пакет'
-        });
-      }
-
-    } catch (error) {
-      console.error(`❌ [COM Port Print] Error printing to ${comPort}:`, error);
+        foreach ($portName in $portsToTry) {
+          try {
+            $port = New-Object System.IO.Ports.SerialPort($portName, $baudRate)
+            $port.DataBits = 8
+            $port.Parity = "None"
+            $port.StopBits = "One"
+            $port.Handshake = "None"
+            $port.ReadTimeout = 1000
+            $port.WriteTimeout = 1000
+            
+            $port.Open()
+            $data = [System.IO.File]::ReadAllBytes($tempFile)
+            $port.Write($data, 0, $data.Length)
+            Start-Sleep -Milliseconds 1000
+            $port.Close()
+            Write-Output "SUCCESS: Data sent to $portName"
+            exit 0
+          } catch {
+            if ($port.IsOpen) { $port.Close() }
+            Write-Output "FAILED: $portName - $($_.Exception.Message)"
+          }
+        }
+        Write-Output "ERROR: Could not send data to any available COM port"
+      `;
       
-      return NextResponse.json({
-        success: false,
-        message: `Грешка при печат на ${comPort}`,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        comPort,
-        baudRate
-      });
-    }
-
-  } catch (error) {
-    console.error('❌ [COM Port Print] Fatal error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Вътрешна грешка на сървъра',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
-}
-
-/* Real implementation with serialport package:
-
-npm install serialport
-
-import { SerialPort } from 'serialport';
-
-export async function POST(request: NextRequest) {
-  try {
-    const { comPort, baudRate = 9600, data } = await request.json();
-    
-    if (!comPort || !data) {
-      return NextResponse.json(
-        { success: false, message: 'COM port and data are required' },
-        { status: 400 }
-      );
-    }
-    
-    return new Promise((resolve) => {
-      const port = new SerialPort({
-        path: comPort,
-        baudRate: baudRate,
-        dataBits: 8,
-        parity: 'none',
-        stopBits: 1,
-        autoOpen: false
+      const ps = spawn('powershell', ['-Command', powershellScript]);
+      let output = '';
+      let errorOutput = '';
+      
+      ps.stdout.on('data', (data) => {
+        output += data.toString();
       });
       
-      port.open((err) => {
-        if (err) {
+      ps.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+      
+      ps.on('close', (code) => {
+        // Clean up temp file
+        try {
+          unlinkSync(tempFile);
+        } catch (e) {
+          console.warn('Could not delete temp file:', e);
+        }
+        
+        if (code === 0 && output.includes('SUCCESS')) {
+          console.log(`✅ [COM Port Print] Successfully sent ${buffer.length} bytes to ${comPort}`);
           resolve(NextResponse.json({
-            success: false,
-            message: `Cannot open ${comPort}: ${err.message}`,
-            error: err.message,
+            success: true,
+            message: `Print job sent successfully to ${comPort}`,
+            bytesSent: buffer.length,
             comPort,
             baudRate
           }));
         } else {
-          // Convert data to buffer if it's a string
-          const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, 'utf8');
-          
-          // Send data to printer
-          port.write(buffer, (writeErr) => {
-            if (writeErr) {
-              port.close();
-              resolve(NextResponse.json({
-                success: false,
-                message: `Write error on ${comPort}: ${writeErr.message}`,
-                error: writeErr.message,
-                comPort,
-                baudRate
-              }));
-            } else {
-              // Wait a bit for printer to process, then close connection
-              setTimeout(() => {
-                port.close();
-                resolve(NextResponse.json({
-                  success: true,
-                  message: `Print job sent successfully to ${comPort}`,
-                  bytesSent: buffer.length,
-                  comPort,
-                  baudRate
-                }));
-              }, 1000);
-            }
-          });
+          console.error(`❌ [COM Port Print] Failed to send to ${comPort}:`, errorOutput || output);
+          resolve(NextResponse.json({
+            success: false,
+            message: `Failed to send to ${comPort}: ${errorOutput || output}`,
+            error: errorOutput || output,
+            comPort,
+            baudRate
+          }));
         }
+      });
+      
+      ps.on('error', (err) => {
+        console.error(`❌ [COM Port Print] Process error:`, err);
+        resolve(NextResponse.json({
+          success: false,
+          message: `Process error: ${err.message}`,
+          error: err.message,
+          comPort,
+          baudRate
+        }));
       });
       
       // Timeout after 10 seconds
       setTimeout(() => {
-        port.close();
+        ps.kill();
         resolve(NextResponse.json({
           success: false,
           message: `Timeout on ${comPort}`,
@@ -230,11 +157,10 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('[COM Port Print] Fatal error:', error);
+    console.error('❌ [COM Port Print] Fatal error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Вътрешна грешка на сървъра' },
       { status: 500 }
     );
   }
 }
-*/
