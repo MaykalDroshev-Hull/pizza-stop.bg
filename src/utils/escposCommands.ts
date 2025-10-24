@@ -31,10 +31,24 @@ export class ESCPOSCommands {
   private static readonly LF = 0x0A;
 
   /**
-   * Initialize printer
+   * Initialize printer with proper setup
    */
   static init(): Uint8Array {
-    return new Uint8Array([ESCPOSCommands.ESC, 0x40]);
+    const commands: Uint8Array[] = [];
+    
+    // Initialize printer
+    commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x40]));
+    
+    // Set character encoding to UTF-8
+    commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x74, 0x00]));
+    
+    // Set line spacing
+    commands.push(new Uint8Array([ESCPOSCommands.ESC, 0x33, 0x18]));
+    
+    // Set print density
+    commands.push(new Uint8Array([ESCPOSCommands.GS, 0x28, 0x4C, 0x02, 0x00, 0x30, 0x00]));
+    
+    return this.combine(...commands);
   }
 
   /**
@@ -58,6 +72,14 @@ export class ESCPOSCommands {
    */
   static setBold(enabled: boolean): Uint8Array {
     return new Uint8Array([ESCPOSCommands.ESC, 0x45, enabled ? 0x01 : 0x00]);
+  }
+
+  /**
+   * Set font type (for Datecs printers)
+   * @param font 0 = Font A (standard), 1 = Font B (compact)
+   */
+  static setFont(font: 0 | 1): Uint8Array {
+    return new Uint8Array([ESCPOSCommands.ESC, 0x4D, font]);
   }
 
   /**
@@ -147,9 +169,20 @@ export class ESCPOSCommands {
     // Initialize
     commands.push(this.init());
 
-    // Header - PIZZA STOP
+    // Header - Order Type (ДОСТАВКА/ВЗИМАНЕ)
     commands.push(
       this.setAlign('center'),
+      this.setSize(2, 2),
+      this.setBold(true),
+      this.text(order.orderType),
+      this.lineFeed(),
+      this.setSize(1, 1),
+      this.setBold(false),
+      this.feedLines(1)
+    );
+
+    // Restaurant name
+    commands.push(
       this.setSize(2, 2),
       this.setBold(true),
       this.text('PIZZA STOP'),
@@ -185,8 +218,6 @@ export class ESCPOSCommands {
     commands.push(
       this.text(`Дата/Час: ${order.placedTime}`),
       this.lineFeed(),
-      this.text(`Тип: ${order.orderType}`),
-      this.lineFeed(),
       this.separator('-'),
       this.lineFeed()
     );
@@ -204,8 +235,13 @@ export class ESCPOSCommands {
     );
 
     if (order.address) {
-      // Wrap long addresses
-      const addressLines = this.wrapText(order.address, 40);
+      // Switch to Font B for address (compact font)
+      commands.push(
+        this.setFont(1)
+      );
+      
+      // Wrap long addresses (using wider wrap for Font B)
+      const addressLines = this.wrapText(order.address, 48);
       commands.push(
         this.text('Адрес: '),
         this.text(addressLines[0] || ''),
@@ -219,6 +255,11 @@ export class ESCPOSCommands {
           this.lineFeed()
         );
       }
+      
+      // Switch back to Font A (standard)
+      commands.push(
+        this.setFont(0)
+      );
     }
 
     commands.push(
@@ -238,11 +279,9 @@ export class ESCPOSCommands {
 
     for (const item of order.items) {
       const itemLine = `${item.quantity}x ${item.name}`;
-      const price = `${(item.quantity * item.price).toFixed(2)} лв`;
-      const spaces = 48 - itemLine.length - price.length;
       
       commands.push(
-        this.text(itemLine + ' '.repeat(Math.max(0, spaces)) + price),
+        this.text(itemLine),
         this.lineFeed()
       );
 
@@ -276,50 +315,19 @@ export class ESCPOSCommands {
       this.lineFeed()
     );
 
-    // Totals
+    // Payment info - No payment required
     commands.push(
+      this.feedLines(1),
+      this.setAlign('center'),
       this.setBold(true),
-      this.text(`Междинна сума:${' '.repeat(20)}${order.subtotal.toFixed(2)} лв`),
-      this.lineFeed()
-    );
-
-    if (order.deliveryCharge > 0) {
-      commands.push(
-        this.text(`Доставка:${' '.repeat(26)}${order.deliveryCharge.toFixed(2)} лв`),
-        this.lineFeed()
-      );
-    }
-
-    commands.push(
-      this.separator(),
-      this.lineFeed(),
       this.setSize(1, 2),
-      this.text(`ОБЩО:${' '.repeat(20)}${order.total.toFixed(2)} лв`),
+      this.text('НЕ СЕ ИЗИСКВА ПЛАЩАНЕ'),
       this.lineFeed(),
       this.setSize(1, 1),
       this.setBold(false),
-      this.separator(),
-      this.lineFeed()
+      this.setAlign('left'),
+      this.feedLines(1)
     );
-
-    // Payment info
-    if (order.paymentMethod) {
-      commands.push(
-        this.text(`Плащане: ${order.paymentMethod}`),
-        this.lineFeed()
-      );
-    }
-
-    if (order.isPaid) {
-      commands.push(
-        this.setAlign('center'),
-        this.setBold(true),
-        this.text('*** ПЛАТЕНА ***'),
-        this.lineFeed(),
-        this.setBold(false),
-        this.setAlign('left')
-      );
-    }
 
     // Footer
     commands.push(
@@ -354,14 +362,23 @@ export class ESCPOSCommands {
       this.setBold(false),
       this.text('Test Print'),
       this.lineFeed(),
+      this.lineFeed(),
       this.separator(),
       this.lineFeed(),
+      this.setAlign('left'),
       this.text(`Time: ${new Date().toLocaleString('bg-BG')}`),
       this.lineFeed(),
       this.text('Status: Connection OK'),
       this.lineFeed(),
       this.text('Web Serial API Active'),
-      this.feedLines(3),
+      this.lineFeed(),
+      this.lineFeed(),
+      this.setAlign('center'),
+      this.text('--- END TEST ---'),
+      this.lineFeed(),
+      this.lineFeed(),
+      this.lineFeed(),
+      this.lineFeed(),
       this.cut()
     );
 

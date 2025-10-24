@@ -144,7 +144,7 @@ export default function MenuPage() {
       category: 'pizza-5050',
       size: fiftyFiftySelection.size,
       addons: fiftyFiftySelection.selectedAddons, // Addons stored separately
-      comment: `50/50 пица: ${fiftyFiftySelection.leftHalf?.name} / ${fiftyFiftySelection.rightHalf?.name}: ${fiftyFiftySelection.size} (~2000г | 60см)${(fiftyFiftySelection.selectedAddons || []).length > 0 ? ` | ${(fiftyFiftySelection.selectedAddons || []).length} добавки` : ''}`,
+      comment: `${fiftyFiftySelection.leftHalf?.name} / ${fiftyFiftySelection.rightHalf?.name}: ${fiftyFiftySelection.size} (~2000г | 60см)${(fiftyFiftySelection.selectedAddons || []).length > 0 ? ` | ${(fiftyFiftySelection.selectedAddons || []).length} добавки` : ''}`,
       quantity: 1
     }
 

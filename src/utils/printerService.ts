@@ -39,6 +39,8 @@ const Commands = {
   ALIGN_RIGHT: [ESC, 0x61, 0x02],       // Right alignment
   FEED_LINE: [ESC, 0x64, 0x01],         // Feed 1 line
   FEED_LINES: (n: number) => [ESC, 0x64, n], // Feed n lines
+  FONT_A: [ESC, 0x4D, 0x00],            // Font A (standard)
+  FONT_B: [ESC, 0x4D, 0x01],            // Font B (compact)
 };
 
 /**
@@ -95,8 +97,17 @@ function generateTicketBytes(data: TicketData): number[] {
   // Initialize printer
   bytes.push(...Commands.INIT);
   
-  // Header - Logo/Restaurant Name
+  // Header - Order Type (ДОСТАВКА/ВЗИМАНЕ)
   bytes.push(...Commands.ALIGN_CENTER);
+  bytes.push(...Commands.DOUBLE_HEIGHT);
+  bytes.push(...Commands.BOLD_ON);
+  bytes.push(...textToBytes(data.orderType));
+  bytes.push(...Commands.FEED_LINE);
+  bytes.push(...Commands.NORMAL_SIZE);
+  bytes.push(...Commands.BOLD_OFF);
+  bytes.push(...Commands.FEED_LINE);
+  
+  // Restaurant Name
   bytes.push(...Commands.DOUBLE_HEIGHT);
   bytes.push(...Commands.BOLD_ON);
   bytes.push(...textToBytes('PIZZA STOP'));
@@ -129,10 +140,6 @@ function generateTicketBytes(data: TicketData): number[] {
   bytes.push(...textToBytes(twoColumnLine('Час:', data.placedTime.split(' ')[1] || data.placedTime, width)));
   bytes.push(...Commands.FEED_LINE);
   
-  // Order type
-  bytes.push(...textToBytes(twoColumnLine('Тип:', data.orderType, width)));
-  bytes.push(...Commands.FEED_LINE);
-  
   bytes.push(...textToBytes('-'.repeat(width)));
   bytes.push(...Commands.FEED_LINE);
   
@@ -148,12 +155,16 @@ function generateTicketBytes(data: TicketData): number[] {
   bytes.push(...Commands.FEED_LINE);
   
   if (data.address) {
-    // Word wrap long addresses
+    // Switch to Font B for address (compact font)
+    bytes.push(...Commands.FONT_B);
+    
+    // Word wrap long addresses (Font B allows more characters per line)
+    const fontBWidth = Math.floor(width * 1.3); // Font B is more compact
     const addressWords = data.address.split(' ');
     let currentLine = 'Адрес: ';
     
     for (const word of addressWords) {
-      if (currentLine.length + word.length + 1 > width) {
+      if (currentLine.length + word.length + 1 > fontBWidth) {
         bytes.push(...textToBytes(currentLine));
         bytes.push(...Commands.FEED_LINE);
         currentLine = '       ' + word + ' ';
@@ -166,6 +177,9 @@ function generateTicketBytes(data: TicketData): number[] {
       bytes.push(...textToBytes(currentLine));
       bytes.push(...Commands.FEED_LINE);
     }
+    
+    // Switch back to Font A (standard)
+    bytes.push(...Commands.FONT_A);
   }
   
   bytes.push(...textToBytes('='.repeat(width)));
@@ -181,10 +195,9 @@ function generateTicketBytes(data: TicketData): number[] {
   bytes.push(...Commands.FEED_LINE);
   
   data.items.forEach(item => {
-    // Item name and price
+    // Item name only (no price)
     const itemLine = `${item.quantity}x ${item.name}`;
-    const price = `${(item.quantity * item.price).toFixed(2)} лв`;
-    bytes.push(...textToBytes(twoColumnLine(itemLine, price, width)));
+    bytes.push(...textToBytes(itemLine));
     bytes.push(...Commands.FEED_LINE);
     
     // Addons/customizations
@@ -236,40 +249,17 @@ function generateTicketBytes(data: TicketData): number[] {
     bytes.push(...Commands.FEED_LINES(2));
   }
   
-  // Totals
+  // No payment required message
+  bytes.push(...Commands.FEED_LINE);
+  bytes.push(...Commands.ALIGN_CENTER);
   bytes.push(...Commands.BOLD_ON);
-  bytes.push(...textToBytes(twoColumnLine('Междинна сума:', data.subtotal.toFixed(2) + ' лв', width)));
-  bytes.push(...Commands.FEED_LINE);
-  
-  if (data.deliveryCharge > 0) {
-    bytes.push(...textToBytes(twoColumnLine('Доставка:', data.deliveryCharge.toFixed(2) + ' лв', width)));
-    bytes.push(...Commands.FEED_LINE);
-  }
-  
-  bytes.push(...textToBytes('='.repeat(width)));
-  bytes.push(...Commands.FEED_LINE);
-  
   bytes.push(...Commands.DOUBLE_HEIGHT);
-  bytes.push(...textToBytes(twoColumnLine('ОБЩО:', data.total.toFixed(2) + ' лв', width)));
+  bytes.push(...textToBytes('НЕ СЕ ИЗИСКВА ПЛАЩАНЕ'));
   bytes.push(...Commands.FEED_LINE);
   bytes.push(...Commands.NORMAL_SIZE);
   bytes.push(...Commands.BOLD_OFF);
-  
-  bytes.push(...textToBytes('='.repeat(width)));
+  bytes.push(...Commands.ALIGN_LEFT);
   bytes.push(...Commands.FEED_LINE);
-  
-  // Payment info
-  if (data.paymentMethod) {
-    bytes.push(...textToBytes('Плащане: ' + data.paymentMethod));
-    bytes.push(...Commands.FEED_LINE);
-  }
-  
-  if (data.isPaid) {
-    bytes.push(...Commands.BOLD_ON);
-    bytes.push(...textToBytes(padText('*** ПЛАТЕНА ***', width, 'center')));
-    bytes.push(...Commands.FEED_LINE);
-    bytes.push(...Commands.BOLD_OFF);
-  }
   
   // Footer
   bytes.push(...Commands.FEED_LINES(2));

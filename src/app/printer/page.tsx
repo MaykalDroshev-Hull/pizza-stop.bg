@@ -143,7 +143,7 @@ export default function PrinterPage() {
       category: 'pizza-5050',
       size: fiftyFiftySelection.size,
       addons: fiftyFiftySelection.selectedAddons,
-      comment: `50/50 пица: ${fiftyFiftySelection.leftHalf?.name} / ${fiftyFiftySelection.rightHalf?.name}: ${fiftyFiftySelection.size} (~2000г | 60см)${(fiftyFiftySelection.selectedAddons || []).length > 0 ? ` | ${(fiftyFiftySelection.selectedAddons || []).length} добавки` : ''}`,
+      comment: `${fiftyFiftySelection.leftHalf?.name} / ${fiftyFiftySelection.rightHalf?.name}: ${fiftyFiftySelection.size} (~2000г | 60см)${(fiftyFiftySelection.selectedAddons || []).length > 0 ? ` | ${(fiftyFiftySelection.selectedAddons || []).length} добавки` : ''}`,
       quantity: 1
     }
 
@@ -934,35 +934,35 @@ export default function PrinterPage() {
       <div className="h-screen bg-black w-full flex overflow-hidden">
         {/* Left Side - Categories */}
         <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-3 border-b border-gray-800">
-              <div className="flex items-center gap-3">
+          {/* Header - Compact for 702p */}
+          <div className="flex items-center justify-between p-2 border-b border-gray-800">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={goBack}
-                  className="p-3 bg-gray-800 hover:bg-gray-700 rounded-2xl transition-colors duration-200"
+                  className="p-2 bg-gray-800 hover:bg-gray-700 rounded-2xl transition-colors duration-200"
                 >
-                  <ArrowLeft className="w-6 h-6 text-white" />
+                  <ArrowLeft className="w-5 h-5 text-white" />
                 </button>
-                <h1 className="text-3xl font-bold text-white">Избери категория</h1>
+                <h1 className="text-2xl font-bold text-white">Избери категория</h1>
               </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
+              className="flex items-center gap-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
             >
               <LogOut className="w-4 h-4" />
-              <span>Изход</span>
+              <span className="text-sm">Изход</span>
             </button>
           </div>
 
-          {/* Categories Grid - Compact for 1080p */}
-          <div className="flex-1 grid grid-cols-5 gap-3 p-3 overflow-y-auto">
+          {/* Categories Grid - Optimized for 702p */}
+          <div className="flex-1 grid grid-cols-5 gap-2 p-2 overflow-y-auto">
             {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => handleCategorySelect(category.id)}
-                className="bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-red-500 flex flex-col items-center justify-center transition-all duration-200 hover:scale-105 group p-4 h-[140px]"
+                className="bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-red-500 flex flex-col items-center justify-center transition-all duration-200 hover:scale-105 group p-2 h-[100px]"
               >
-                <span className="text-white font-medium text-lg text-center leading-tight">
+                <span className="text-white font-medium text-base text-center leading-tight">
                   {category.name}
                 </span>
               </button>
@@ -1019,12 +1019,12 @@ export default function PrinterPage() {
             )}
           </div>
 
-          {/* Cart Footer */}
+          {/* Cart Footer - Compact for 702p */}
           {selectedProducts.length > 0 && (
-            <div className="p-3 border-t border-gray-700">
-              <div className="flex items-center justify-between text-white mb-3">
-                <span className="font-bold text-lg">Общо:</span>
-                <span className="text-red-500 font-bold text-xl">
+            <div className="p-2 border-t border-gray-700">
+              <div className="flex items-center justify-between text-white mb-2">
+                <span className="font-bold text-base">Общо:</span>
+                <span className="text-red-500 font-bold text-lg">
                   {calculateTotal().toFixed(2)} лв
                 </span>
               </div>
@@ -1034,13 +1034,13 @@ export default function PrinterPage() {
                     console.log('Clear button clicked');
                     setShowClearModal(true);
                   }}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-sm py-2 transition-colors duration-200"
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-xs py-1.5 transition-colors duration-200"
                 >
                   Изчисти
                 </button>
                 <button
                   onClick={handleReady}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-sm py-2 transition-colors duration-200"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs py-1.5 transition-colors duration-200"
                 >
                   Готово
                 </button>
@@ -1057,46 +1057,46 @@ export default function PrinterPage() {
       <div className="h-screen bg-black w-full flex overflow-hidden">
         {/* Left Side - Products */}
         <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-3 border-b border-gray-800">
-            <div className="flex items-center gap-3">
+          {/* Header - Compact for 702p */}
+          <div className="flex items-center justify-between p-2 border-b border-gray-800">
+            <div className="flex items-center gap-2">
               <button
                 onClick={goBack}
-                className="p-3 bg-gray-800 hover:bg-gray-700 rounded-2xl transition-colors duration-200"
+                className="p-2 bg-gray-800 hover:bg-gray-700 rounded-2xl transition-colors duration-200"
               >
-                <ArrowLeft className="w-6 h-6 text-white" />
+                <ArrowLeft className="w-5 h-5 text-white" />
               </button>
-              <h1 className="text-3xl font-bold text-white">
+              <h1 className="text-2xl font-bold text-white">
                 {categories.find(cat => cat.id === selectedCategory)?.name || "Продукти"}
               </h1>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
+              className="flex items-center gap-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
             >
               <LogOut className="w-4 h-4" />
-              <span>Изход</span>
+              <span className="text-sm">Изход</span>
             </button>
           </div>
 
-          {/* Products Grid - Scrollable */}
+          {/* Products Grid - Optimized for 702p */}
           {loading ? (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-white text-xl">Зареждане...</p>
+              <p className="text-white text-lg">Зареждане...</p>
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto p-3">
+            <div className="flex-1 overflow-y-auto p-2">
               <div className="grid grid-cols-5 gap-2">
                 {products.map((product) => (
                   <button
                     key={product.id}
                     onClick={() => handleProductSelect(product)}
-                    className="bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-red-500 p-3 flex flex-col items-center justify-center transition-all duration-200 h-[140px]"
+                    className="bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-red-500 p-2 flex flex-col items-center justify-center transition-all duration-200 h-[100px]"
                   >
-                    <span className="text-white font-medium text-center text-base mb-2 leading-tight line-clamp-2">
+                    <span className="text-white font-medium text-center text-sm mb-1 leading-tight line-clamp-2">
                       {product.name}
                     </span>
-                    <span className="text-red-500 font-bold text-lg">
+                    <span className="text-red-500 font-bold text-base">
                       {product.basePrice.toFixed(2)} лв
                     </span>
                   </button>
@@ -1106,47 +1106,47 @@ export default function PrinterPage() {
           )}
         </div>
 
-        {/* Right Side - Cart */}
-        <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col">
+        {/* Right Side - Cart - Compact for 702p */}
+        <div className="w-72 bg-gray-900 border-l border-gray-700 flex flex-col">
           {/* Cart Header */}
-          <div className="p-3 border-b border-gray-700">
-            <h2 className="text-xl font-bold text-white">Поръчка</h2>
+          <div className="p-2 border-b border-gray-700">
+            <h2 className="text-lg font-bold text-white">Поръчка</h2>
           </div>
 
           {/* Cart Items */}
-          <div className="flex-1 p-3 overflow-y-auto">
+          <div className="flex-1 p-2 overflow-y-auto">
             {selectedProducts.length === 0 ? (
-              <p className="text-gray-400 text-center">Няма избрани продукти</p>
+              <p className="text-gray-400 text-center text-sm">Няма избрани продукти</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {selectedProducts.map((product, index) => (
-                  <div key={`${product.id}-${index}`} className="bg-gray-800 p-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-white font-medium text-sm">{product.name}</span>
+                  <div key={`${product.id}-${index}`} className="bg-gray-800 p-1.5">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-white font-medium text-xs">{product.name}</span>
                       <button
                         onClick={() => handleRemoveProduct(index)}
-                        className="text-red-500 hover:text-red-400 text-lg"
+                        className="text-red-500 hover:text-red-400 text-base"
                       >
                         ×
                       </button>
                     </div>
-                    <div className="text-gray-400 text-xs mb-1">
+                    <div className="text-gray-400 text-[10px] mb-0.5">
                       {product.size && product.size !== 'Standard' && (
                         <span>Размер: {product.size} | </span>
                       )}
                       Брой: {product.quantity} x {product.price.toFixed(2)} лв
                     </div>
                     {product.comment && (
-                      <div className="text-gray-400 text-xs mb-1">
+                      <div className="text-gray-400 text-[10px] mb-0.5">
                         Коментар: {product.comment}
                       </div>
                     )}
                     {product.addons && product.addons.length > 0 && (
-                      <div className="text-gray-400 text-xs mb-1">
+                      <div className="text-gray-400 text-[10px] mb-0.5">
                         Добавки: {product.addons.map((addon: any) => addon.name || addon.Name).join(', ')}
                       </div>
                     )}
-                    <div className="text-red-500 font-bold text-base">
+                    <div className="text-red-500 font-bold text-sm">
                       {calculateItemTotal(product).toFixed(2)} лв
                     </div>
                   </div>
@@ -1155,12 +1155,12 @@ export default function PrinterPage() {
             )}
           </div>
 
-          {/* Cart Footer */}
+          {/* Cart Footer - Compact for 702p */}
           {selectedProducts.length > 0 && (
-            <div className="p-3 border-t border-gray-700">
-              <div className="flex items-center justify-between text-white mb-3">
-                <span className="font-bold text-lg">Общо:</span>
-                <span className="text-red-500 font-bold text-xl">
+            <div className="p-2 border-t border-gray-700">
+              <div className="flex items-center justify-between text-white mb-2">
+                <span className="font-bold text-base">Общо:</span>
+                <span className="text-red-500 font-bold text-lg">
                   {calculateTotal().toFixed(2)} лв
                 </span>
               </div>
@@ -1170,13 +1170,13 @@ export default function PrinterPage() {
                     console.log('Clear button clicked');
                     setShowClearModal(true);
                   }}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-sm py-2 transition-colors duration-200"
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-xs py-1.5 transition-colors duration-200"
                 >
                   Изчисти
                 </button>
                 <button
                   onClick={handleReady}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-sm py-2 transition-colors duration-200"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs py-1.5 transition-colors duration-200"
                 >
                   Готово
                 </button>
@@ -1194,33 +1194,33 @@ export default function PrinterPage() {
       <div className="h-screen bg-black w-full flex overflow-hidden">
         {/* Left Side - 50/50 Selection */}
         <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-3 border-b border-gray-800">
-            <div className="flex items-center gap-3">
+          {/* Header - Compact for 702p */}
+          <div className="flex items-center justify-between p-2 border-b border-gray-800">
+            <div className="flex items-center gap-2">
               <button
                 onClick={goBack}
-                className="p-3 bg-gray-800 hover:bg-gray-700 rounded-2xl transition-colors duration-200"
+                className="p-2 bg-gray-800 hover:bg-gray-700 rounded-2xl transition-colors duration-200"
               >
-                <ArrowLeft className="w-6 h-6 text-white" />
+                <ArrowLeft className="w-5 h-5 text-white" />
               </button>
-              <h1 className="text-3xl font-bold text-white">Пица 50/50</h1>
+              <h1 className="text-2xl font-bold text-white">Пица 50/50</h1>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
+              className="flex items-center gap-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
             >
               <LogOut className="w-4 h-4" />
-              <span>Изход</span>
+              <span className="text-sm">Изход</span>
             </button>
           </div>
 
-          {/* 50/50 Content - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-3">
-            {/* Step 1: Size Selection */}
+          {/* 50/50 Content - Optimized for 702p */}
+          <div className="flex-1 overflow-y-auto p-2">
+            {/* Step 1: Size Selection - Compact for 702p */}
             {fiftyFiftySelection.step === 1 && (
               <div>
-                <h3 className="text-2xl font-bold text-white mb-6">Избери размер на пицата</h3>
-                <div className="grid grid-cols-1 gap-4 max-w-md">
+                <h3 className="text-xl font-bold text-white mb-4">Избери размер на пицата</h3>
+                <div className="grid grid-cols-1 gap-2 max-w-md">
                   <button
                     onClick={() => {
                       setFiftyFiftySelection(prev => ({
@@ -1229,36 +1229,36 @@ export default function PrinterPage() {
                         step: 2
                       }))
                     }}
-                    className="p-6 bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-red-500 transition-all"
+                    className="p-4 bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-red-500 transition-all"
                   >
-                    <div className="text-xl font-bold text-white mb-2">Голяма</div>
-                    <div className="text-sm text-gray-400">~2000г | 60см</div>
+                    <div className="text-lg font-bold text-white mb-1">Голяма</div>
+                    <div className="text-xs text-gray-400">~2000г | 60см</div>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Step 2: Left Half Selection */}
+            {/* Step 2: Left Half Selection - Compact for 702p */}
             {fiftyFiftySelection.step === 2 && (
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 1 }))}
-                    className="text-white hover:text-red-500 transition-colors"
+                    className="text-white hover:text-red-500 transition-colors text-sm"
                   >
                     ← Назад
                   </button>
-                  <h3 className="text-2xl font-bold text-white">Избери лявата половина</h3>
-                  <div className="w-20"></div>
+                  <h3 className="text-lg font-bold text-white">Избери лявата половина</h3>
+                  <div className="w-16"></div>
                 </div>
                 
-                <div className="mb-4">
-                  <div className="inline-block px-4 py-2 bg-red-900 border border-red-500 text-red-400">
+                <div className="mb-3">
+                  <div className="inline-block px-3 py-1 bg-red-900 border border-red-500 text-red-400 text-xs">
                     Размер: {fiftyFiftySelection.size} (~2000г | 60см)
                   </div>
                 </div>
 
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-6 gap-1.5">
                   {products.map((pizza) => (
                     <button
                       key={pizza.id}
@@ -1269,20 +1269,20 @@ export default function PrinterPage() {
                           step: 3
                         }))
                       }}
-                      className={`p-3 transition-all h-[110px] flex flex-col items-center justify-center ${
+                      className={`p-2 transition-all h-[85px] flex flex-col items-center justify-center ${
                         fiftyFiftySelection.leftHalf?.id === pizza.id 
                           ? 'bg-green-900 border-2 border-green-500' 
                           : 'bg-gray-900 border border-gray-700 hover:border-red-500'
                       }`}
                     >
-                      <div className="text-white font-medium text-center text-xs mb-2 leading-tight line-clamp-2">
+                      <div className="text-white font-medium text-center text-[10px] mb-1 leading-tight line-clamp-2">
                         {pizza.name}
                       </div>
-                      <div className="text-red-500 font-bold text-base text-center">
+                      <div className="text-red-500 font-bold text-xs text-center">
                         {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.
                       </div>
                       {fiftyFiftySelection.leftHalf?.id === pizza.id && (
-                        <div className="text-green-400 text-xs text-center mt-1">✓ ЛЯВА</div>
+                        <div className="text-green-400 text-[9px] text-center mt-0.5">✓ ЛЯВА</div>
                       )}
                     </button>
                   ))}
@@ -1290,30 +1290,30 @@ export default function PrinterPage() {
               </div>
             )}
 
-            {/* Step 3: Right Half Selection */}
+            {/* Step 3: Right Half Selection - Compact for 702p */}
             {fiftyFiftySelection.step === 3 && (
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 2, rightHalf: null }))}
-                    className="text-white hover:text-red-500 transition-colors"
+                    className="text-white hover:text-red-500 transition-colors text-sm"
                   >
                     ← Назад
                   </button>
-                  <h3 className="text-2xl font-bold text-white">Избери дясната половина</h3>
-                  <div className="w-20"></div>
+                  <h3 className="text-lg font-bold text-white">Избери дясната половина</h3>
+                  <div className="w-16"></div>
                 </div>
                 
-                <div className="flex gap-4 mb-4">
-                  <div className="inline-block px-4 py-2 bg-red-900 border border-red-500 text-red-400">
+                <div className="flex gap-2 mb-3">
+                  <div className="inline-block px-3 py-1 bg-red-900 border border-red-500 text-red-400 text-xs">
                     Размер: {fiftyFiftySelection.size}
                   </div>
-                  <div className="inline-block px-4 py-2 bg-green-900 border border-green-500 text-green-400">
+                  <div className="inline-block px-3 py-1 bg-green-900 border border-green-500 text-green-400 text-xs">
                     Лява: {fiftyFiftySelection.leftHalf?.name}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-6 gap-1.5">
                   {products.map((pizza) => (
                     <button
                       key={pizza.id}
@@ -1326,7 +1326,7 @@ export default function PrinterPage() {
                           step: 4
                         }))
                       }}
-                      className={`p-3 transition-all h-[110px] flex flex-col items-center justify-center ${
+                      className={`p-2 transition-all h-[85px] flex flex-col items-center justify-center ${
                         pizza.id === fiftyFiftySelection.leftHalf?.id 
                           ? 'bg-gray-700 border-2 border-gray-500' 
                           : fiftyFiftySelection.rightHalf?.id === pizza.id
@@ -1334,17 +1334,17 @@ export default function PrinterPage() {
                             : 'bg-gray-900 border border-gray-700 hover:border-red-500'
                       }`}
                     >
-                      <div className="text-white font-medium text-center text-xs mb-2 leading-tight line-clamp-2">
+                      <div className="text-white font-medium text-center text-[10px] mb-1 leading-tight line-clamp-2">
                         {pizza.name}
                       </div>
-                      <div className="text-red-500 font-bold text-base text-center">
+                      <div className="text-red-500 font-bold text-xs text-center">
                         {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.
                       </div>
                       {pizza.id === fiftyFiftySelection.leftHalf?.id && (
-                        <div className="text-gray-400 text-xs text-center mt-1">ЛЯВА</div>
+                        <div className="text-gray-400 text-[9px] text-center mt-0.5">ЛЯВА</div>
                       )}
                       {fiftyFiftySelection.rightHalf?.id === pizza.id && (
-                        <div className="text-red-400 text-xs text-center mt-1">✓ ДЯСНА</div>
+                        <div className="text-red-400 text-[9px] text-center mt-0.5">✓ ДЯСНА</div>
                       )}
                     </button>
                   ))}
@@ -1352,34 +1352,34 @@ export default function PrinterPage() {
               </div>
             )}
 
-              {/* Step 4: Addons Selection */}
+              {/* Step 4: Addons Selection - Compact for 702p */}
             {fiftyFiftySelection.step === 4 && (
               <div>
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-3">
                   <button
                     onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 3 }))}
-                    className="text-white hover:text-red-500 transition-colors"
+                    className="text-white hover:text-red-500 transition-colors text-sm"
                   >
                     ← Назад
                   </button>
-                  <h3 className="text-2xl font-bold text-white">Избери добавки</h3>
-                  <div className="w-20"></div>
+                  <h3 className="text-lg font-bold text-white">Избери добавки</h3>
+                  <div className="w-16"></div>
                 </div>
                 
-                <div className="flex gap-4 mb-6">
-                  <div className="inline-block px-4 py-2 bg-red-900 border border-red-500 text-red-400">
+                <div className="flex gap-2 mb-3 flex-wrap">
+                  <div className="inline-block px-2 py-1 bg-red-900 border border-red-500 text-red-400 text-[10px]">
                     {fiftyFiftySelection.leftHalf?.name} / {fiftyFiftySelection.rightHalf?.name}
                   </div>
-                  <div className="inline-block px-4 py-2 bg-green-900 border border-green-500 text-green-400">
+                  <div className="inline-block px-2 py-1 bg-green-900 border border-green-500 text-green-400 text-[10px]">
                     {fiftyFiftySelection.size} (~2000г | 60см)
                   </div>
-                  <div className="inline-block px-4 py-2 bg-orange-900 border border-orange-500 text-orange-400">
+                  <div className="inline-block px-2 py-1 bg-orange-900 border border-orange-500 text-orange-400 text-[10px]">
                     {fiftyFiftySelection.finalPrice.toFixed(2)} лв.
                   </div>
                 </div>
 
-                {/* Addons Selection */}
-                <div className="mb-6 bg-gray-900 border border-gray-700 p-3 max-h-[calc(100vh-350px)] overflow-y-auto">
+                {/* Addons Selection - Optimized for 702p */}
+                <div className="mb-4 bg-gray-900 border border-gray-700 p-2 max-h-[calc(100vh-280px)] overflow-y-auto">
                   {isLoadingFiftyFiftyAddons ? (
                     <div className="text-center text-gray-400 py-4">
                       Зареждане на добавки...
@@ -1588,17 +1588,17 @@ export default function PrinterPage() {
                   )}
                 </div>
 
-                {/* Final Action Buttons */}
-                <div className="flex gap-4">
+                {/* Final Action Buttons - Compact for 702p */}
+                <div className="flex gap-2">
                   <button
                     onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 3 }))}
-                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-4 transition-colors duration-200"
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 text-sm transition-colors duration-200"
                   >
                     ← Назад
                   </button>
                   <button
                     onClick={addFiftyFiftyToCart}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-4 transition-colors duration-200"
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 text-sm transition-colors duration-200"
                   >
                     Добави в кошницата
                   </button>
@@ -1608,47 +1608,47 @@ export default function PrinterPage() {
           </div>
         </div>
 
-        {/* Right Side - Cart (Same as categories and products view) */}
-        <div className="w-96 bg-gray-900 border-l border-gray-700 flex flex-col">
+        {/* Right Side - Cart - Compact for 702p */}
+        <div className="w-72 bg-gray-900 border-l border-gray-700 flex flex-col">
           {/* Cart Header */}
-          <div className="p-4 border-b border-gray-700">
-            <h2 className="text-2xl font-bold text-white">Поръчка</h2>
+          <div className="p-2 border-b border-gray-700">
+            <h2 className="text-lg font-bold text-white">Поръчка</h2>
           </div>
 
-          {/* Cart Items */}
-          <div className="flex-1 p-4 overflow-y-auto">
+          {/* Cart Items - Compact for 702p */}
+          <div className="flex-1 p-2 overflow-y-auto">
             {selectedProducts.length === 0 ? (
-              <p className="text-gray-400 text-center">Няма избрани продукти</p>
+              <p className="text-gray-400 text-center text-sm">Няма избрани продукти</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {selectedProducts.map((product, index) => (
-                  <div key={`${product.id}-${index}`} className="bg-gray-800 p-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-white font-medium text-sm">{product.name}</span>
+                  <div key={`${product.id}-${index}`} className="bg-gray-800 p-1.5">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-white font-medium text-xs">{product.name}</span>
                       <button
                         onClick={() => handleRemoveProduct(index)}
-                        className="text-red-500 hover:text-red-400 text-lg"
+                        className="text-red-500 hover:text-red-400 text-base"
                       >
                         ×
                       </button>
                     </div>
-                    <div className="text-gray-400 text-xs mb-1">
+                    <div className="text-gray-400 text-[10px] mb-0.5">
                       {product.size && product.size !== 'Standard' && (
                         <span>Размер: {product.size} | </span>
                       )}
                       Брой: {product.quantity} x {product.price.toFixed(2)} лв
                     </div>
                     {product.comment && (
-                      <div className="text-gray-400 text-xs mb-1">
+                      <div className="text-gray-400 text-[10px] mb-0.5">
                         Коментар: {product.comment}
                       </div>
                     )}
                     {product.addons && product.addons.length > 0 && (
-                      <div className="text-gray-400 text-xs mb-1">
+                      <div className="text-gray-400 text-[10px] mb-0.5">
                         Добавки: {product.addons.map((addon: any) => addon.name || addon.Name).join(', ')}
                       </div>
                     )}
-                    <div className="text-red-500 font-bold text-base">
+                    <div className="text-red-500 font-bold text-sm">
                       {calculateItemTotal(product).toFixed(2)} лв
                     </div>
                   </div>
@@ -1657,12 +1657,12 @@ export default function PrinterPage() {
             )}
           </div>
 
-          {/* Cart Footer */}
+          {/* Cart Footer - Compact for 702p */}
           {selectedProducts.length > 0 && (
-            <div className="p-3 border-t border-gray-700">
-              <div className="flex items-center justify-between text-white mb-3">
-                <span className="font-bold text-lg">Общо:</span>
-                <span className="text-red-500 font-bold text-xl">
+            <div className="p-2 border-t border-gray-700">
+              <div className="flex items-center justify-between text-white mb-2">
+                <span className="font-bold text-base">Общо:</span>
+                <span className="text-red-500 font-bold text-lg">
                   {calculateTotal().toFixed(2)} лв
                 </span>
               </div>
@@ -1672,13 +1672,13 @@ export default function PrinterPage() {
                     console.log('Clear button clicked');
                     setShowClearModal(true);
                   }}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-sm py-2 transition-colors duration-200"
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-xs py-1.5 transition-colors duration-200"
                 >
                   Изчисти
                 </button>
                 <button
                   onClick={handleReady}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-sm py-2 transition-colors duration-200"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs py-1.5 transition-colors duration-200"
                 >
                   Готово
                 </button>
