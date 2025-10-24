@@ -22,6 +22,7 @@ import {
   TestTube
 } from "lucide-react";
 import { useSerialPrinter } from "@/contexts/SerialPrinterContext";
+import { comPortPrinter } from "@/utils/comPortPrinter";
 
 interface NetworkPrinter {
   ip: string;
@@ -400,6 +401,53 @@ const DebugTab = (): React.JSX.Element => {
     } catch (error) {
       addDebugLog('error', `❌ Изключение при тестване на ${comPort}: ${error}`, error);
       alert(`❌ Грешка при тестване на ${comPort}\n${error}`);
+    }
+  };
+
+  const configureComPortPrinter = async (comPort: string, baudRate: number = 9600) => {
+    addDebugLog('info', `⚙️ Конфигуриране на COM порт принтер ${comPort} (${baudRate} baud)...`);
+    
+    try {
+      // Set configuration in COM port printer
+      comPortPrinter.setConfig({
+        comPort,
+        baudRate,
+        dataBits: 8,
+        stopBits: 1,
+        parity: 'none',
+        flowControl: 'none'
+      });
+      
+      addDebugLog('success', `✅ COM порт принтер конфигуриран: ${comPort}`, { comPort, baudRate });
+      alert(`✅ COM порт принтер конфигуриран!\n\nПорт: ${comPort}\nBaud Rate: ${baudRate}\n\nСега ще се използва за печат на поръчки.`);
+    } catch (error) {
+      addDebugLog('error', `❌ Грешка при конфигуриране на COM порт принтер: ${error}`, error);
+      alert(`❌ Грешка при конфигуриране на COM порт принтер.\n${error}`);
+    }
+  };
+
+  const testComPortPrint = async (comPort: string, baudRate: number = 9600) => {
+    addDebugLog('info', `🧪 Тест печат на COM порт ${comPort} (${baudRate} baud)...`);
+    
+    try {
+      // Configure printer first
+      comPortPrinter.setConfig({
+        comPort,
+        baudRate,
+        dataBits: 8,
+        stopBits: 1,
+        parity: 'none',
+        flowControl: 'none'
+      });
+      
+      // Send test print
+      await comPortPrinter.printTest();
+      
+      addDebugLog('success', `✅ Тест печат изпратен успешно на ${comPort}`, { comPort, baudRate });
+      alert(`✅ Тест печат изпратен успешно!\n\nПорт: ${comPort}\nBaud Rate: ${baudRate}\n\nПроверете принтера за тестовата страница.`);
+    } catch (error) {
+      addDebugLog('error', `❌ Грешка при тест печат на ${comPort}: ${error}`, error);
+      alert(`❌ Грешка при тест печат на ${comPort}.\n\nГрешка: ${error}`);
     }
   };
 
@@ -871,16 +919,19 @@ const DebugTab = (): React.JSX.Element => {
                       onClick={() => testSerialPort(printer.comPort, printer.baudRate)}
                       className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors duration-200"
                     >
-                      Тест
+                      Тест връзка
                     </button>
                     <button
-                      onClick={() => {
-                        addDebugLog('info', `🖨️ Изпращане на тестова страница към ${printer.comPort}...`);
-                        alert(`Тест печат към ${printer.comPort} (в разработка)`);
-                      }}
+                      onClick={() => testComPortPrint(printer.comPort, printer.baudRate)}
                       className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors duration-200"
                     >
                       Тест печат
+                    </button>
+                    <button
+                      onClick={() => configureComPortPrinter(printer.comPort, printer.baudRate)}
+                      className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors duration-200"
+                    >
+                      Използвай за печат
                     </button>
                   </div>
                 </div>
@@ -913,6 +964,9 @@ const DebugTab = (): React.JSX.Element => {
             <div className="text-gray-400">Legacy Serial</div>
             <div className="text-xs text-gray-500 mt-1">
               {serialPrinters.filter(p => p.status === 'connected').length} свързани
+            </div>
+            <div className="text-xs text-purple-400 mt-1">
+              {comPortPrinter.isConfigured() ? '✅ Конфигуриран' : '❌ Не е конфигуриран'}
             </div>
           </div>
           <div className="bg-gray-800 rounded-xl p-4 text-center border border-gray-700">

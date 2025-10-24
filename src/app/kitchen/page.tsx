@@ -6,6 +6,7 @@ import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_ST
 import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerator';
 import SerialPrinterManager from '../../components/SerialPrinterManager';
 import { useSerialPrinter } from '../../contexts/SerialPrinterContext';
+import { comPortPrinter, OrderData } from '../../utils/comPortPrinter';
 // AdminLogin moved to separate page at /admin-kitchen-login
 
 interface Order {
@@ -854,11 +855,11 @@ const KitchenCommandCenter = () => {
     return paymentMethods[paymentMethodId] || 'Неизвестен метод'
   }
 
-  // Auto-print new orders
-  const autoPrintNewOrder = async (order: Order) => {
+  // Handle print order with COM port or Web Serial fallback
+  const handlePrintOrder = async (order: Order) => {
     try {
-      // Convert Order to OrderData format for serial printer
-      const orderData = {
+      // Convert Order to OrderData format
+      const orderData: OrderData = {
         orderId: order.id,
         orderType: order.address.includes('Lovech Center') ? 'Вземане от ресторанта' : 'Доставка',
         customerName: order.customerName,
@@ -880,8 +881,56 @@ const KitchenCommandCenter = () => {
         restaurantPhone: '0888 123 456'
       };
 
-      await printOrder(orderData);
-      console.log(`✅ Auto-printed order #${order.id} to serial printer`);
+      // Try COM port printer first, fallback to Web Serial
+      if (comPortPrinter.isConfigured()) {
+        await comPortPrinter.printOrder(orderData);
+        addNotification(`Поръчка #${order.id} отпечатана на COM порт принтер`, 'info');
+        console.log(`✅ Manual print: Order #${order.id} sent to COM port printer`);
+      } else {
+        await printOrder(orderData);
+        addNotification(`Поръчка #${order.id} отпечатана на Web Serial принтер`, 'info');
+        console.log(`✅ Manual print: Order #${order.id} sent to Web Serial printer`);
+      }
+    } catch (error) {
+      console.error(`❌ Manual print failed for order #${order.id}:`, error);
+      addNotification(`Грешка при печат на поръчка #${order.id}`, 'warning');
+    }
+  };
+
+  // Auto-print new orders
+  const autoPrintNewOrder = async (order: Order) => {
+    try {
+      // Convert Order to OrderData format for COM port printer
+      const orderData: OrderData = {
+        orderId: order.id,
+        orderType: order.address.includes('Lovech Center') ? 'Вземане от ресторанта' : 'Доставка',
+        customerName: order.customerName,
+        phone: order.phone,
+        address: order.address,
+        items: order.items.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          addons: item.customizations,
+          comment: item.comment
+        })),
+        subtotal: order.totalPrice,
+        deliveryCharge: order.deliveryPrice,
+        total: order.totalPrice + order.deliveryPrice,
+        paymentMethod: 'Неопределен',
+        isPaid: order.isPaid,
+        placedTime: order.orderTime.toLocaleString('bg-BG'),
+        restaurantPhone: '0888 123 456'
+      };
+
+      // Try COM port printer first, fallback to Web Serial
+      if (comPortPrinter.isConfigured()) {
+        await comPortPrinter.printOrder(orderData);
+        console.log(`✅ Auto-printed order #${order.id} to COM port printer`);
+      } else {
+        await printOrder(orderData);
+        console.log(`✅ Auto-printed order #${order.id} to Web Serial printer`);
+      }
     } catch (error) {
       console.log(`⚠️ Auto-print failed for order #${order.id}:`, error);
       // Don't show error to user, just log it
@@ -1425,7 +1474,7 @@ const KitchenCommandCenter = () => {
               🔥 Започвам
             </button>
             <button
-              onClick={() => printOrderTicket(order)}
+              onClick={() => handlePrintOrder(order)}
               className="bg-gray-600 text-white font-bold py-1 px-3 rounded text-sm hover:bg-gray-700 transition-all flex items-center space-x-1"
             >
               <Printer className="w-4 h-4" />
@@ -1530,7 +1579,7 @@ const KitchenCommandCenter = () => {
           </span>
           <div className="flex space-x-2">
             <button
-              onClick={() => printOrderTicket(order)}
+              onClick={() => handlePrintOrder(order)}
               className="bg-gray-600 text-white font-bold py-1 px-2 rounded text-xs hover:bg-gray-700 transition-all"
               title="Принтирай"
             >
@@ -1590,7 +1639,7 @@ const KitchenCommandCenter = () => {
           </div>
           <div className="flex space-x-2">
             <button
-              onClick={() => printOrderTicket(order)}
+              onClick={() => handlePrintOrder(order)}
               className={`bg-purple-500 hover:bg-purple-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
               title="Принтирай"
             >
