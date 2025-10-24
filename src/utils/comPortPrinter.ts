@@ -202,16 +202,16 @@ export class ComPortPrinter {
    */
   private utf8ToCp1251(text: string): string {
     try {
-      // Create a mapping for common Cyrillic characters using String.fromCharCode
+      // Create a mapping for common Cyrillic characters
       const cyrillicMap: { [key: string]: string } = {
-        'А': String.fromCharCode(0xC0), 'Б': String.fromCharCode(0xC1), 'В': String.fromCharCode(0xC2), 'Г': String.fromCharCode(0xC3), 'Д': String.fromCharCode(0xC4), 'Е': String.fromCharCode(0xC5), 'Ж': String.fromCharCode(0xC6), 'З': String.fromCharCode(0xC7),
-        'И': String.fromCharCode(0xC8), 'Й': String.fromCharCode(0xC9), 'К': String.fromCharCode(0xCA), 'Л': String.fromCharCode(0xCB), 'М': String.fromCharCode(0xCC), 'Н': String.fromCharCode(0xCD), 'О': String.fromCharCode(0xCE), 'П': String.fromCharCode(0xCF),
-        'Р': String.fromCharCode(0xD0), 'С': String.fromCharCode(0xD1), 'Т': String.fromCharCode(0xD2), 'У': String.fromCharCode(0xD3), 'Ф': String.fromCharCode(0xD4), 'Х': String.fromCharCode(0xD5), 'Ц': String.fromCharCode(0xD6), 'Ч': String.fromCharCode(0xD7),
-        'Ш': String.fromCharCode(0xD8), 'Щ': String.fromCharCode(0xD9), 'Ъ': String.fromCharCode(0xDA), 'Ь': String.fromCharCode(0xDB), 'Ю': String.fromCharCode(0xDC), 'Я': String.fromCharCode(0xDD),
-        'а': String.fromCharCode(0xE0), 'б': String.fromCharCode(0xE1), 'в': String.fromCharCode(0xE2), 'г': String.fromCharCode(0xE3), 'д': String.fromCharCode(0xE4), 'е': String.fromCharCode(0xE5), 'ж': String.fromCharCode(0xE6), 'з': String.fromCharCode(0xE7),
-        'и': String.fromCharCode(0xE8), 'й': String.fromCharCode(0xE9), 'к': String.fromCharCode(0xEA), 'л': String.fromCharCode(0xEB), 'м': String.fromCharCode(0xEC), 'н': String.fromCharCode(0xED), 'о': String.fromCharCode(0xEE), 'п': String.fromCharCode(0xEF),
-        'р': String.fromCharCode(0xF0), 'с': String.fromCharCode(0xF1), 'т': String.fromCharCode(0xF2), 'у': String.fromCharCode(0xF3), 'ф': String.fromCharCode(0xF4), 'х': String.fromCharCode(0xF5), 'ц': String.fromCharCode(0xF6), 'ч': String.fromCharCode(0xF7),
-        'ш': String.fromCharCode(0xF8), 'щ': String.fromCharCode(0xF9), 'ъ': String.fromCharCode(0xFA), 'ь': String.fromCharCode(0xFB), 'ю': String.fromCharCode(0xFC), 'я': String.fromCharCode(0xFD)
+        'А': '\xC0', 'Б': '\xC1', 'В': '\xC2', 'Г': '\xC3', 'Д': '\xC4', 'Е': '\xC5', 'Ж': '\xC6', 'З': '\xC7',
+        'И': '\xC8', 'Й': '\xC9', 'К': '\xCA', 'Л': '\xCB', 'М': '\xCC', 'Н': '\xCD', 'О': '\xCE', 'П': '\xCF',
+        'Р': '\xD0', 'С': '\xD1', 'Т': '\xD2', 'У': '\xD3', 'Ф': '\xD4', 'Х': '\xD5', 'Ц': '\xD6', 'Ч': '\xD7',
+        'Ш': '\xD8', 'Щ': '\xD9', 'Ъ': '\xDA', 'Ь': '\xDB', 'Ю': '\xDC', 'Я': '\xDD',
+        'а': '\xE0', 'б': '\xE1', 'в': '\xE2', 'г': '\xE3', 'д': '\xE4', 'е': '\xE5', 'ж': '\xE6', 'з': '\xE7',
+        'и': '\xE8', 'й': '\xE9', 'к': '\xEA', 'л': '\xEB', 'м': '\xEC', 'н': '\xED', 'о': '\xEE', 'п': '\xEF',
+        'р': '\xF0', 'с': '\xF1', 'т': '\xF2', 'у': '\xF3', 'ф': '\xF4', 'х': '\xF5', 'ц': '\xF6', 'ч': '\xF7',
+        'ш': '\xF8', 'щ': '\xF9', 'ъ': '\xFA', 'ь': '\xFB', 'ю': '\xFC', 'я': '\xFD'
       };
 
       let result = '';
