@@ -75,7 +75,7 @@ declare global {
     TIMEOUT: number
   }
 
-  // Web Serial API types
+  // Web Serial API types - using official browser types
   interface SerialPort {
     readonly readable: ReadableStream<Uint8Array> | null
     readonly writable: WritableStream<Uint8Array> | null
