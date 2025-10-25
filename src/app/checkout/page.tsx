@@ -59,7 +59,7 @@ export default function CheckoutPage() {
   const [addressZone, setAddressZone] = useState<'yellow' | 'blue' | 'outside' | null>(null)
   const [addressConfirmed, setAddressConfirmed] = useState(false)
   const [isCollection, setIsCollection] = useState(false)
-  const [selectedDeliveryType, setSelectedDeliveryType] = useState<'pickup' | 'delivery'>('pickup')
+  const [selectedDeliveryType, setSelectedDeliveryType] = useState<'pickup' | 'delivery' | 'delivery-yellow' | 'delivery-blue'>('pickup')
   const [paymentMethodId, setPaymentMethodId] = useState<number | null>(null)
   const [unavailableItems, setUnavailableItems] = useState<string[]>([])
   const [cachedProfileData, setCachedProfileData] = useState<any>(null)
@@ -478,9 +478,9 @@ export default function CheckoutPage() {
 
   // Recalculate delivery cost when total price changes
   useEffect(() => {
-    const cost = calculateDeliveryCost(totalPrice, selectedDeliveryType)
+    const cost = calculateDeliveryCost(totalPrice, addressZone, selectedDeliveryType)
     setDeliveryCost(cost || 0)
-  }, [totalPrice, selectedDeliveryType])
+  }, [totalPrice, addressZone, selectedDeliveryType])
 
   // Validate address zone when user data is loaded and order type is 'user'
   useEffect(() => {
@@ -708,7 +708,11 @@ export default function CheckoutPage() {
 
 
     // Delivery cost calculation based on selected delivery type
-  const calculateDeliveryCost = (orderTotal: number, zone: 'yellow' | 'blue' | 'outside' | null, deliveryType: 'pickup' | 'delivery') => {
+  const calculateDeliveryCost = (
+    orderTotal: number,
+    zone: 'yellow' | 'blue' | 'outside' | null,
+    deliveryType: 'pickup' | 'delivery' | 'delivery-yellow' | 'delivery-blue'
+  ) => {
     if (deliveryType === 'pickup') return 0
     if (zone === 'yellow') {
       if (orderTotal < 15) return null
@@ -1175,7 +1179,7 @@ export default function CheckoutPage() {
     totalPrice >= 15 && // Minimum order amount
     (
       selectedDeliveryType === 'pickup' || // Pickup orders don't need address validation
-      (selectedDeliveryType === 'delivery' && (
+      ((selectedDeliveryType === 'delivery' || selectedDeliveryType === 'delivery-yellow' || selectedDeliveryType === 'delivery-blue') && (
         (addressZone === 'yellow' && totalPrice >= 15) ||
         (addressZone === 'blue' && totalPrice >= 30)
       ))
