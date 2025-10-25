@@ -90,10 +90,27 @@ export class ESCPOSCommands {
   }
 
   /**
-   * Cut paper
+   * Cut paper - For Datecs FP2000
+   * 
+   * IMPORTANT: Datecs FP-2000 uses a fiscal protocol, not ESC/POS for cut commands.
+   * The manual cut command is 0x2D in a Datecs protocol frame, not ESC/POS.
+   * 
+   * RECOMMENDED: Use auto-cut feature (DIP Switch 5 = ON) on the FP-2000.
+   * When auto-cut is enabled, the printer automatically cuts after finishing a receipt.
+   * 
+   * This function only adds line feeds to position paper for auto-cut.
+   * No manual cut command is sent.
    */
   static cut(): Uint8Array {
-    return new Uint8Array([ESCPOSCommands.ESC, 0x69]);
+    // Only send line feeds to position paper for auto-cut
+    // The FP-2000's auto-cut (DIP Switch 5) will handle the actual cutting
+    return new Uint8Array([
+      0x0A, // Line feed
+      0x0A, // Line feed
+      0x0A, // Line feed
+      0x0A, // Line feed
+      0x0A  // Line feed
+    ]);
   }
 
   /**
@@ -388,12 +405,13 @@ export class ESCPOSCommands {
       this.setAlign('center'),
       this.text('Благодарим Ви!'),
       this.lineFeed(),
-      this.text('Приятен апетит!'),
-      this.feedLines(3)
+      this.text('Приятен апетит!')
     );
 
-    // Cut paper
-    commands.push(this.cut());
+    // Cut paper - the cut() function now includes the required line feeds
+    const cutCmd = this.cut();
+    console.log('🔪 [Cut Command] Sending cut:', Array.from(cutCmd).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '));
+    commands.push(cutCmd);
 
     return this.combine(...commands);
   }

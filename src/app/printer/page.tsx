@@ -170,7 +170,7 @@ export default function PrinterPage() {
 
       if (response.ok && result.success) {
         setIsAuthenticated(true);
-        setCurrentView("categories");
+        setCurrentView("main");
       } else {
         alert("Невалидни данни за вход");
       }
@@ -248,10 +248,7 @@ export default function PrinterPage() {
           break;
         case 'pizza-5050':
           categoryProducts = menuData.pizza || []; // 50/50 uses same pizza data
-          setProducts(categoryProducts);
-          setCurrentView("pizza-5050");
-          setLoading(false);
-          return; // Exit early for 50/50
+          break;
         case 'doners':
           categoryProducts = menuData.doners || [];
           break;
@@ -269,7 +266,6 @@ export default function PrinterPage() {
       }
       
       setProducts(categoryProducts);
-      setCurrentView("products");
     } catch (error) {
       console.error("Error fetching products:", error);
       alert("Грешка при зареждане на продуктите");
@@ -425,8 +421,12 @@ export default function PrinterPage() {
 
   const handleCustomerFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
-      alert("Моля попълнете всички полета");
+    if (!customerInfo.name || !customerInfo.phone) {
+      alert("Моля попълнете име и телефон");
+      return;
+    }
+    if (customerInfo.orderType === 2 && !customerInfo.address) {
+      alert("Моля въведете адрес за доставка");
       return;
     }
     setShowCustomerForm(false);
@@ -462,16 +462,19 @@ export default function PrinterPage() {
 
       if (response.ok) {
         alert(`Поръчката е създадена успешно!`);
-        // Reset form
+        // Reset for next customer
+        setShowCustomerForm(false);
         setSelectedProducts([]);
         setCustomerInfo({ 
           name: "", 
           phone: "", 
           address: "",
           orderType: 1,
-          deliveryPrice: 3
+          deliveryPrice: 0
         });
-        setCurrentView("categories");
+        setSelectedCategory("");
+        resetFiftyFiftySelection();
+        setCurrentView("main");
       } else {
         throw new Error('Failed to create order');
       }
@@ -753,115 +756,132 @@ export default function PrinterPage() {
   console.log('Checking customer form modal, showCustomerForm:', showCustomerForm);
   if (showCustomerForm) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Данни за клиента</h1>
-            <p className="text-gray-400">Попълнете информацията за поръчката</p>
-          </div>
-          
-          <form onSubmit={handleCustomerFormSubmit} className="space-y-6">
-            <div>
-              <label className="block text-white text-lg font-medium mb-3">
-                Име *
-              </label>
-              <input
-                type="text"
-                value={customerInfo.name}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg"
-                placeholder="Въведете име"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white text-lg font-medium mb-3">
-                Телефон *
-              </label>
-              <input
-                type="tel"
-                value={customerInfo.phone}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg"
-                placeholder="Въведете телефон"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white text-lg font-medium mb-3">
-                Адрес *
-              </label>
-              <input
-                type="text"
-                value={customerInfo.address}
-                onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-lg"
-                placeholder="Въведете адрес"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white text-lg font-medium mb-3">
-                Тип на поръчка *
-              </label>
-              <div className="grid grid-cols-3 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 1, deliveryPrice: 0 }))}
-                  className={`p-4 border transition-colors duration-200 ${
-                    customerInfo.orderType === 1
-                      ? 'bg-green-600 border-green-600 text-white'
-                      : 'bg-gray-900 border-gray-700 text-white hover:border-green-500'
-                  }`}
-                >
-                  <div className="font-bold text-xl">Вземане</div>
-                  <div className="text-sm mt-1">Безплатно</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 3 }))}
-                  className={`p-4 border transition-colors duration-200 ${
-                    customerInfo.orderType === 2 && customerInfo.deliveryPrice === 3
-                      ? 'bg-yellow-600 border-yellow-600 text-white'
-                      : 'bg-gray-900 border-gray-700 text-white hover:border-yellow-500'
-                  }`}
-                >
-                  <div className="font-bold text-xl">Доставка</div>
-                  <div className="text-sm mt-1">Жълта - 3 BGN</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 7 }))}
-                  className={`p-4 border transition-colors duration-200 ${
-                    customerInfo.orderType === 2 && customerInfo.deliveryPrice === 7
-                      ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'bg-gray-900 border-gray-700 text-white hover:border-blue-500'
-                  }`}
-                >
-                  <div className="font-bold text-xl">Доставка</div>
-                  <div className="text-sm mt-1">Синя - 7 BGN</div>
-                </button>
+      <div className="h-screen bg-black flex items-start justify-center p-4">
+        <div className="w-full max-w-5xl h-[50vh] overflow-hidden">
+          <form onSubmit={handleCustomerFormSubmit} className="h-full flex gap-6">
+            {/* Left column: caption + first three fields */}
+            <div className="w-1/2 h-full overflow-y-auto pr-4">
+              <div className="mb-3">
+                <h1 className="text-2xl font-bold text-white mb-1">Данни за клиента</h1>
+                <p className="text-gray-400 text-sm">Попълнете информацията за поръчката</p>
+              </div>
+              <div>
+                <label className="block text-white text-sm font-medium mb-1">
+                  Име *
+                </label>
+                <input
+                  type="text"
+                  value={customerInfo.name}
+                  onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-base"
+                  placeholder="Въведете име"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white text-sm font-medium mb-1">
+                  Телефон *
+                </label>
+                <input
+                  type="tel"
+                  value={customerInfo.phone}
+                  onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-base"
+                  placeholder="Въведете телефон"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-white text-sm font-medium mb-1">
+                  Адрес *
+                </label>
+                <input
+                  type="text"
+                  value={customerInfo.address}
+                  onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-base"
+                  placeholder="Въведете адрес"
+                  required={customerInfo.orderType === 2}
+                />
               </div>
             </div>
-            
-            <div className="flex gap-4 mt-8">
-              <button
-                type="button"
-                onClick={() => setShowCustomerForm(false)}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-4 px-4 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isPrinting}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-4 px-4 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isPrinting ? "Създаване..." : "Confirm"}
-              </button>
+
+            {/* Right column: delivery type + action buttons */}
+            <div className="w-1/2 h-full overflow-y-auto pl-4 flex flex-col">
+              <div>
+                <label className="block text-white text-lg font-medium mb-3">
+                  Тип на поръчка *
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 1, deliveryPrice: 0 }))}
+                    className={`p-4 border transition-colors duration-200 ${
+                      customerInfo.orderType === 1
+                        ? 'bg-green-600 border-green-600 text-white'
+                        : 'bg-gray-900 border-gray-700 text-white hover:border-green-500'
+                    }`}
+                  >
+                    <div className="font-bold text-xl">Вземане</div>
+                    <div className="text-sm mt-1">Безплатно</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 3 }))}
+                    className={`p-4 border transition-colors duration-200 ${
+                      customerInfo.orderType === 2 && customerInfo.deliveryPrice === 3
+                        ? 'bg-yellow-600 border-yellow-600 text-white'
+                        : 'bg-gray-900 border-gray-700 text-white hover:border-yellow-500'
+                    }`}
+                  >
+                    <div className="font-bold text-xl">Доставка</div>
+                    <div className="text-sm mt-1">Жълта - 3 BGN</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 7 }))}
+                    className={`p-4 border transition-colors duration-200 ${
+                      customerInfo.orderType === 2 && customerInfo.deliveryPrice === 7
+                        ? 'bg-blue-600 border-blue-600 text-white'
+                        : 'bg-gray-900 border-gray-700 text-white hover:border-blue-500'
+                    }`}
+                  >
+                    <div className="font-bold text-xl">Доставка</div>
+                    <div className="text-sm mt-1">Синя - 7 BGN</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 0 }))}
+                    className={`p-4 border transition-colors duration-200 ${
+                      customerInfo.orderType === 2 && customerInfo.deliveryPrice === 0
+                        ? 'bg-purple-600 border-purple-600 text-white'
+                        : 'bg-gray-900 border-gray-700 text-white hover:border-purple-500'
+                    }`}
+                  >
+                    <div className="font-bold text-xl">Доставка</div>
+                    <div className="text-sm mt-1">Безплатна</div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-8 md:mt-auto pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomerForm(false)}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-4 px-4 transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPrinting}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-4 px-4 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPrinting ? "Създаване..." : "Confirm"}
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -929,55 +949,16 @@ export default function PrinterPage() {
     );
   }
 
-  if (currentView === "categories") {
+  if (currentView === "main") {
     return (
       <div className="h-screen bg-black w-full flex overflow-hidden">
-        {/* Left Side - Categories */}
-        <div className="flex-1 flex flex-col">
-          {/* Header - Compact for 702p */}
-          <div className="flex items-center justify-between p-2 border-b border-gray-800">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={goBack}
-                  className="p-2 bg-gray-800 hover:bg-gray-700 rounded-2xl transition-colors duration-200"
-                >
-                  <ArrowLeft className="w-5 h-5 text-white" />
-                </button>
-                <h1 className="text-2xl font-bold text-white">Избери категория</h1>
-              </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm">Изход</span>
-            </button>
+        {/* Left: Selected Items (Cart) */}
+        <div className="w-80 bg-gray-900 border-r border-gray-700 flex flex-col">
+          <div className="p-3 border-b border-gray-700 flex items-center justify-between">
+            <h2 className="text-l font-bold text-white">Поръчка</h2>
+
           </div>
 
-          {/* Categories Grid - Optimized for 702p */}
-          <div className="flex-1 grid grid-cols-5 gap-2 p-2 overflow-y-auto">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleCategorySelect(category.id)}
-                className="bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-red-500 flex flex-col items-center justify-center transition-all duration-200 hover:scale-105 group p-2 h-[100px]"
-              >
-                <span className="text-white font-medium text-base text-center leading-tight">
-                  {category.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Side - Cart */}
-        <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col">
-          {/* Cart Header */}
-          <div className="p-3 border-b border-gray-700">
-            <h2 className="text-xl font-bold text-white">Поръчка</h2>
-          </div>
-
-          {/* Cart Items */}
           <div className="flex-1 p-3 overflow-y-auto">
             {selectedProducts.length === 0 ? (
               <p className="text-gray-400 text-center">Няма избрани продукти</p>
@@ -1019,7 +1000,6 @@ export default function PrinterPage() {
             )}
           </div>
 
-          {/* Cart Footer - Compact for 702p */}
           {selectedProducts.length > 0 && (
             <div className="p-2 border-t border-gray-700">
               <div className="flex items-center justify-between text-white mb-2">
@@ -1030,10 +1010,7 @@ export default function PrinterPage() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
-                    console.log('Clear button clicked');
-                    setShowClearModal(true);
-                  }}
+                  onClick={() => setShowClearModal(true)}
                   className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-xs py-1.5 transition-colors duration-200"
                 >
                   Изчисти
@@ -1047,6 +1024,226 @@ export default function PrinterPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Middle: Categories */}
+        <div className="w-52 shrink-0 flex flex-col">
+          <div className="flex items-center justify-between p-2 border-b border-gray-800">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-white">Категории</h1>
+            </div>
+          </div>
+
+          <div className="flex-1 grid grid-cols-1 grid-rows-6 gap-0 p-1 overflow-y-auto">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => handleCategorySelect(category.id)}
+                className={`bg-gray-900 border flex flex-col items-center justify-center transition-all duration-200 group p-1 h-20 ${selectedCategory === category.id ? 'border-red-600 bg-gray-800' : 'border-gray-700 hover:border-red-500 hover:bg-gray-800'}`}
+              >
+                <span className="text-white font-medium text-sm text-center leading-tight">
+                  {category.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Subcategories / Products */}
+        <div className="flex-1 bg-gray-900 border-l border-gray-700 flex flex-col">
+          <div className="p-2 border-b border-gray-700">
+            <h2 className="text-lg font-bold text-white">
+              {selectedCategory ? (categories.find(c => c.id === selectedCategory)?.name || 'Продукти') : 'Изберете категория'}
+            </h2>
+          </div>
+
+          <div className="flex-1 p-2 overflow-y-auto">
+            {!selectedCategory && (
+              <p className="text-gray-400 text-center mt-8">Моля, изберете категория от средната колона</p>
+            )}
+
+            {selectedCategory && selectedCategory !== 'pizza-5050' && (
+              loading ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <p className="text-white">Зареждане...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {products.map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => handleProductSelect(product)}
+                      className="bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-red-500 p-2 flex flex-col items-center justify-center transition-all duration-200 h-[100px]"
+                    >
+                      <span className="text-white font-medium text-center text-sm mb-1 leading-tight line-clamp-2">
+                        {product.name}
+                      </span>
+                      <span className="text-red-500 font-bold text-base">
+                        {product.basePrice.toFixed(2)} лв
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )
+            )}
+
+            {selectedCategory === 'pizza-5050' && (
+              <div className="p-1">
+                {/* 50/50 steps rendered in this column */}
+                {/* Step 1 */}
+                {fiftyFiftySelection.step === 1 && (
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-3">Избери размер на пицата</h3>
+                    <div className="grid grid-cols-1 gap-2 max-w-md">
+                      <button
+                        onClick={() => setFiftyFiftySelection(prev => ({ ...prev, size: 'Голяма', step: 2 }))}
+                        className="p-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-red-500 transition-all"
+                      >
+                        <div className="text-base font-bold text-white mb-1">Голяма</div>
+                        <div className="text-xs text-gray-400">~2000г | 60см</div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {/* Step 2 */}
+                {fiftyFiftySelection.step === 2 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 1 }))}
+                        className="text-white hover:text-red-500 transition-colors text-sm"
+                      >
+                        ← Назад
+                      </button>
+                      <h3 className="text-lg font-bold text-white">Избери лявата половина</h3>
+                      <div className="w-16"></div>
+                    </div>
+                    <div className="mb-2">
+                      <div className="inline-block px-2 py-1 bg-red-900 border border-red-500 text-red-400 text-xs">
+                        Размер: {fiftyFiftySelection.size} (~2000г | 60см)
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {products.map((pizza) => (
+                        <button
+                          key={pizza.id}
+                          onClick={() => setFiftyFiftySelection(prev => ({ ...prev, leftHalf: pizza, step: 3 }))}
+                          className={`p-2 transition-all h-[85px] flex flex-col items-center justify-center ${
+                            fiftyFiftySelection.leftHalf?.id === pizza.id ? 'bg-green-900 border-2 border-green-500' : 'bg-gray-900 border border-gray-700 hover:border-red-500'
+                          }`}
+                        >
+                          <div className="text-white font-medium text-center text-[10px] mb-1 leading-tight line-clamp-2">{pizza.name}</div>
+                          <div className="text-red-500 font-bold text-xs text-center">{getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.</div>
+                          {fiftyFiftySelection.leftHalf?.id === pizza.id && (
+                            <div className="text-green-400 text-[9px] text-center mt-0.5">✓ ЛЯВА</div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Step 3 */}
+                {fiftyFiftySelection.step === 3 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 2, rightHalf: null }))}
+                        className="text-white hover:text-red-500 transition-colors text-sm"
+                      >
+                        ← Назад
+                      </button>
+                      <h3 className="text-lg font-bold text-white">Избери дясната половина</h3>
+                      <div className="w-16"></div>
+                    </div>
+                    <div className="flex gap-2 mb-2">
+                      <div className="inline-block px-2 py-1 bg-red-900 border border-red-500 text-red-400 text-xs">Размер: {fiftyFiftySelection.size}</div>
+                      <div className="inline-block px-2 py-1 bg-green-900 border border-green-500 text-green-400 text-xs">Лява: {fiftyFiftySelection.leftHalf?.name}</div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {products.map((pizza) => (
+                        <button
+                          key={pizza.id}
+                          onClick={() => {
+                            const finalPrice = calculateFiftyFiftyPrice(fiftyFiftySelection.leftHalf, pizza, fiftyFiftySelection.size)
+                            setFiftyFiftySelection(prev => ({ ...prev, rightHalf: pizza, finalPrice, step: 4 }))
+                          }}
+                          className={`p-2 transition-all h-[85px] flex flex-col items-center justify-center ${
+                            pizza.id === fiftyFiftySelection.leftHalf?.id ? 'bg-gray-700 border-2 border-gray-500' : (fiftyFiftySelection.rightHalf?.id === pizza.id ? 'bg-red-900 border-2 border-red-500' : 'bg-gray-900 border border-gray-700 hover:border-red-500')
+                          }`}
+                        >
+                          <div className="text-white font-medium text-center text-[10px] mb-1 leading-tight line-clamp-2">{pizza.name}</div>
+                          <div className="text-red-500 font-bold text-xs text-center">{getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.</div>
+                          {pizza.id === fiftyFiftySelection.leftHalf?.id && (
+                            <div className="text-gray-400 text-[9px] text-center mt-0.5">ЛЯВА</div>
+                          )}
+                          {fiftyFiftySelection.rightHalf?.id === pizza.id && (
+                            <div className="text-red-400 text-[9px] text-center mt-0.5">✓ ДЯСНА</div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Step 4 */}
+                {fiftyFiftySelection.step === 4 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 3 }))}
+                        className="text-white hover:text-red-500 transition-colors text-sm"
+                      >
+                        ← Назад
+                      </button>
+                      <h3 className="text-lg font-bold text-white">Избери добавки</h3>
+                      <div className="w-16"></div>
+                    </div>
+                    <div className="flex gap-2 mb-2 flex-wrap">
+                      <div className="inline-block px-2 py-1 bg-red-900 border border-red-500 text-red-400 text-[10px]">{fiftyFiftySelection.leftHalf?.name} / {fiftyFiftySelection.rightHalf?.name}</div>
+                      <div className="inline-block px-2 py-1 bg-green-900 border border-green-500 text-green-400 text-[10px]">{fiftyFiftySelection.size} (~2000г | 60см)</div>
+                      <div className="inline-block px-2 py-1 bg-orange-900 border border-orange-500 text-orange-400 text-[10px]">{fiftyFiftySelection.finalPrice.toFixed(2)} лв.</div>
+                    </div>
+                    <div className="mb-3 bg-gray-900 border border-gray-700 p-2 max-h-[calc(100vh-280px)] overflow-y-auto">
+                      {isLoadingFiftyFiftyAddons ? (
+                        <div className="text-center text-gray-400 py-4">Зареждане на добавки...</div>
+                      ) : fiftyFiftyAddons && fiftyFiftyAddons.length > 0 ? (
+                        <div className="space-y-4">
+                          {['sauce','vegetable','meat','cheese','pizza-addon'].map(type => (
+                            fiftyFiftyAddons.filter((a: any) => a.AddonType === type).length > 0 && (
+                              <div key={type}>
+                                <h5 className="text-xs text-white font-medium mb-2">{{sauce:'Сосове',vegetable:'Салати',meat:'Колбаси',cheese:'Сирена','pizza-addon':'Добавки'}[type as 'sauce']}:</h5>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {fiftyFiftyAddons.filter((a: any) => a.AddonType === type).map((addon: any) => {
+                                    const isSelected = (fiftyFiftySelection.selectedAddons || []).some((a: any) => a.AddonID === addon.AddonID)
+                                    return (
+                                      <button
+                                        key={addon.AddonID}
+                                        type="button"
+                                        onClick={() => setFiftyFiftySelection(prev => ({ ...prev, selectedAddons: isSelected ? prev.selectedAddons.filter((a: any) => a.AddonID !== addon.AddonID) : [...prev.selectedAddons, addon] }))}
+                                        className={`p-2 border transition-colors duration-200 text-center ${isSelected ? 'bg-green-600 border-green-600 text-white' : 'bg-gray-800 border-gray-600 text-white hover:border-green-500'}`}
+                                      >
+                                        <div className="font-medium text-xs leading-tight">{addon.Name}</div>
+                                        <div className={`text-xs mt-1 ${isSelected ? 'text-white' : 'text-red-400'}`}>{addon.Price.toFixed(2)} лв.</div>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8"><p className="text-gray-400">Няма налични добавки</p></div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setFiftyFiftySelection(prev => ({ ...prev, step: 3 }))} className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 text-sm transition-colors duration-200">← Назад</button>
+                      <button onClick={addFiftyFiftyToCart} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 text-sm transition-colors duration-200">Добави в кошницата</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1070,13 +1267,6 @@ export default function PrinterPage() {
                 {categories.find(cat => cat.id === selectedCategory)?.name || "Продукти"}
               </h1>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm">Изход</span>
-            </button>
           </div>
 
           {/* Products Grid - Optimized for 702p */}
@@ -1113,7 +1303,7 @@ export default function PrinterPage() {
             <h2 className="text-lg font-bold text-white">Поръчка</h2>
           </div>
 
-          {/* Cart Items */}
+          {/* Cart Items - Compact for 702p */}
           <div className="flex-1 p-2 overflow-y-auto">
             {selectedProducts.length === 0 ? (
               <p className="text-gray-400 text-center text-sm">Няма избрани продукти</p>
@@ -1205,13 +1395,6 @@ export default function PrinterPage() {
               </button>
               <h1 className="text-2xl font-bold text-white">Пица 50/50</h1>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors duration-200"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm">Изход</span>
-            </button>
           </div>
 
           {/* 50/50 Content - Optimized for 702p */}
@@ -1222,16 +1405,10 @@ export default function PrinterPage() {
                 <h3 className="text-xl font-bold text-white mb-4">Избери размер на пицата</h3>
                 <div className="grid grid-cols-1 gap-2 max-w-md">
                   <button
-                    onClick={() => {
-                      setFiftyFiftySelection(prev => ({
-                        ...prev,
-                        size: 'Голяма',
-                        step: 2
-                      }))
-                    }}
-                    className="p-4 bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-red-500 transition-all"
+                    onClick={() => setFiftyFiftySelection(prev => ({ ...prev, size: 'Голяма', step: 2 }))}
+                    className="p-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-red-500 transition-all"
                   >
-                    <div className="text-lg font-bold text-white mb-1">Голяма</div>
+                    <div className="text-base font-bold text-white mb-1">Голяма</div>
                     <div className="text-xs text-gray-400">~2000г | 60см</div>
                   </button>
                 </div>
@@ -1253,12 +1430,12 @@ export default function PrinterPage() {
                 </div>
                 
                 <div className="mb-3">
-                  <div className="inline-block px-3 py-1 bg-red-900 border border-red-500 text-red-400 text-xs">
+                  <div className="inline-block px-2 py-1 bg-red-900 border border-red-500 text-red-400 text-xs">
                     Размер: {fiftyFiftySelection.size} (~2000г | 60см)
                   </div>
                 </div>
 
-                <div className="grid grid-cols-6 gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5">
                   {products.map((pizza) => (
                     <button
                       key={pizza.id}
@@ -1305,15 +1482,15 @@ export default function PrinterPage() {
                 </div>
                 
                 <div className="flex gap-2 mb-3">
-                  <div className="inline-block px-3 py-1 bg-red-900 border border-red-500 text-red-400 text-xs">
+                  <div className="inline-block px-2 py-1 bg-red-900 border border-red-500 text-red-400 text-xs">
                     Размер: {fiftyFiftySelection.size}
                   </div>
-                  <div className="inline-block px-3 py-1 bg-green-900 border border-green-500 text-green-400 text-xs">
+                  <div className="inline-block px-2 py-1 bg-green-900 border border-green-500 text-green-400 text-xs">
                     Лява: {fiftyFiftySelection.leftHalf?.name}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-6 gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5">
                   {products.map((pizza) => (
                     <button
                       key={pizza.id}

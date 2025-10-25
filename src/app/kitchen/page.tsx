@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw, Settings } from 'lucide-react';
+import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw, Settings, Scissors } from 'lucide-react';
 import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_STATUS, KitchenOrder } from '../../lib/supabase';
 import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerator';
-import SerialPrinterManager from '../../components/SerialPrinterManager';
 import PrinterConfigModal from '../../components/PrinterConfigModal';
 import { useSerialPrinter } from '../../contexts/SerialPrinterContext';
 import { comPortPrinter, OrderData } from '../../utils/comPortPrinter';
+import { buildDatecsFrame, DatecsCommands, toHex, parseDatecsResponse, parseStatusBytes } from '../../utils/datecsFiscalProtocol';
 // AdminLogin moved to separate page at /admin-kitchen-login
 
 interface Order {
@@ -47,11 +47,8 @@ const KitchenCommandCenter = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
+  const [printedOrderIds, setPrintedOrderIds] = useState<Set<number>>(new Set());
   
-  const [newOrdersHeight, setNewOrdersHeight] = useState(70);
-  const [isDragging, setIsDragging] = useState(false);
-  const [workAreaWidth, setWorkAreaWidth] = useState(60);
-  const [isDraggingVertical, setIsDraggingVertical] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ show: boolean; order: Order | null; action: string | null }>({ show: false, order: null, action: null });
   const [readyTimeModal, setReadyTimeModal] = useState<{ show: boolean; order: Order | null; selectedMinutes: number | null }>({ show: false, order: null, selectedMinutes: null });
   const [orderDetailsModal, setOrderDetailsModal] = useState<{ show: boolean; order: Order | null }>({ show: false, order: null });
@@ -62,7 +59,7 @@ const KitchenCommandCenter = () => {
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   
   // Customization settings
-  const [cardSize, setCardSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [cardSize, setCardSize] = useState<'small' | 'medium' | 'large'>('small');
   const [showColumns, setShowColumns] = useState({ new: true, working: true, completed: true });
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundTheme, setSoundTheme] = useState<'classic' | 'modern' | 'kitchen' | 'custom'>('classic');
@@ -80,6 +77,31 @@ const KitchenCommandCenter = () => {
 
   // Serial printer integration
   const { printOrder, defaultPrinter: webSerialDefaultPrinter, connectedPrinters } = useSerialPrinter();
+
+  // Load printed order IDs from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('printedOrderIds');
+      if (stored) {
+        const ids = JSON.parse(stored);
+        setPrintedOrderIds(new Set(ids));
+        console.log('📋 Loaded printed order IDs from localStorage:', ids.length);
+      }
+    } catch (error) {
+      console.error('Failed to load printed order IDs:', error);
+    }
+  }, []);
+
+  // Save printed order IDs to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      if (printedOrderIds.size > 0) {
+        localStorage.setItem('printedOrderIds', JSON.stringify([...printedOrderIds]));
+      }
+    } catch (error) {
+      console.error('Failed to save printed order IDs:', error);
+    }
+  }, [printedOrderIds]);
 
   // Convert Supabase data to Order format
   const convertKitchenOrderToOrder = (kitchenOrder: KitchenOrder): Order => {
@@ -283,15 +305,28 @@ const KitchenCommandCenter = () => {
         console.log('Refresh - New orders from DB:', newOrders.length);
         console.log('Refresh - Total orders after update:', updatedOrders.length + newOrders.length);
         
-        // Auto-print new orders
+        // Auto-print new orders (only if not already printed)
         for (const newOrder of newOrders) {
-          if (newOrder.status === 'new') {
+          if (newOrder.status === 'new' && !printedOrderIds.has(newOrder.id)) {
+            // Mark as printed immediately to prevent duplicates
+            setPrintedOrderIds(prev => new Set(prev).add(newOrder.id));
+            
             // Delay auto-print to ensure UI updates first
             setTimeout(() => {
               autoPrintNewOrder(newOrder);
             }, 1000);
           }
         }
+        
+        // Clean up old printed order IDs (keep only current order IDs)
+        const currentOrderIds = new Set([...updatedOrders, ...newOrders].map(o => o.id));
+        setPrintedOrderIds(prev => {
+          const cleaned = new Set([...prev].filter(id => currentOrderIds.has(id)));
+          if (cleaned.size !== prev.size) {
+            console.log(`🧹 Cleaned up ${prev.size - cleaned.size} old printed order IDs`);
+          }
+          return cleaned;
+        });
         
         return [...updatedOrders, ...newOrders];
       });
@@ -707,28 +742,28 @@ const KitchenCommandCenter = () => {
     if (!order) return null;
 
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div 
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2">
+        <div
           ref={scrollRef}
-          className="modal-content bg-gray-900 border border-white/12 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          className="modal-content bg-gray-900 border border-white/12 rounded-2xl max-w-[95vw] w-full max-h-[95vh] overflow-y-auto"
           onScroll={handleScroll}
         >
           {/* Header */}
-          <div className="flex justify-between items-center p-6 border-b border-white/12">
+          <div className="flex justify-between items-center p-4 border-b border-white/12">
             <div>
-              <h2 className="text-xl font-bold text-white">Поръчка #{order.id}</h2>
+              <h2 className="text-lg font-bold text-white">Поръчка #{order.id}</h2>
               <p className="text-sm text-gray-400">{order.customerName}</p>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center"
             >
               <X size={24} />
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-6">
+          <div className="p-4 space-y-4">
             {/* Customer Info */}
             <div className="bg-white/5 rounded-xl p-4">
               <h3 className="text-lg font-semibold text-white mb-3">Информация за клиента</h3>
@@ -1028,6 +1063,109 @@ const KitchenCommandCenter = () => {
     } catch (error) {
       console.error(`❌ Manual print failed for order #${order.id}:`, error);
       addNotification(`Грешка при печат на поръчка #${order.id}`, 'warning');
+    }
+  };
+
+  // Handle cut command using proper Datecs fiscal protocol
+  const handleCutPaper = async () => {
+    try {
+      console.log('✂️ Sending Datecs cut sequence (0x2C → 0x2D)...');
+      
+      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
+        const port = webSerialDefaultPrinter;
+        
+        // According to FP-2000 manual (line 536-537):
+        // "The program must advance the paper with at least two lines or the document will not be cut off correctly"
+        // Step 1: Advance paper (0x2C) with 3 lines
+        // Step 2: Cut paper (0x2D) with NO parameters
+        
+        const advanceFrame = buildDatecsFrame(DatecsCommands.ADVANCE_PAPER, [0x33, 0x2C, 0x31]); // "3,1" = 3 lines, receipt paper
+        const cutFrame = buildDatecsFrame(DatecsCommands.CUT); // NO parameters for cut
+        
+        console.log('📤 TX (Advance 3 lines):', toHex(advanceFrame));
+        console.log('📤 TX (Cut):', toHex(cutFrame));
+        console.log('Advance bytes:', Array.from(advanceFrame));
+        console.log('Cut bytes:', Array.from(cutFrame));
+        
+        const writer = port.writable?.getWriter();
+        if (!writer) {
+          throw new Error('Не може да се запише в Web Serial принтер');
+        }
+        
+        // Send advance paper frame
+        await writer.write(advanceFrame);
+        await new Promise(resolve => setTimeout(resolve, 200)); // Wait for paper advance
+        
+        // Send cut frame
+        await writer.write(cutFrame);
+        writer.releaseLock();
+        
+        // Read responses from printer
+        const reader = port.readable?.getReader();
+        if (reader) {
+          try {
+            // Read response for advance command
+            const advanceTimeout = new Promise<Uint8Array>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout on advance')), 1000)
+            );
+            
+            const advanceRead = (async () => {
+              const { value, done } = await reader.read();
+              if (done) throw new Error('Stream closed');
+              return value || new Uint8Array();
+            })();
+            
+            const advanceResponse = await Promise.race([advanceRead, advanceTimeout]);
+            console.log('📥 RX (Advance response):', toHex(advanceResponse));
+            
+            // Wait a bit before reading cut response
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Read response for cut command
+            const cutTimeout = new Promise<Uint8Array>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout on cut')), 1000)
+            );
+            
+            const cutRead = (async () => {
+              const { value, done } = await reader.read();
+              if (done) throw new Error('Stream closed');
+              return value || new Uint8Array();
+            })();
+            
+            const cutResponse = await Promise.race([cutRead, cutTimeout]);
+            console.log('📥 RX (Cut response):', toHex(cutResponse));
+            console.log('RX bytes:', Array.from(cutResponse));
+            
+            reader.releaseLock();
+            
+            // Parse cut response - should be "P" for success or "F" for blocked
+            const parsed = parseDatecsResponse(cutResponse);
+            if (parsed.valid && parsed.payload && parsed.payload.length > 0) {
+              const result = String.fromCharCode(parsed.payload[0]);
+              console.log('Cut result:', result);
+              if (result === 'P') {
+                addNotification('✅ Хартията е изрязана успешно!', 'info');
+              } else if (result === 'F') {
+                addNotification('⚠️ Механизмът за рязане е блокиран', 'warning');
+              }
+            } else {
+              addNotification('✅ Команди за рязане изпратени', 'info');
+            }
+          } catch (readError) {
+            reader.releaseLock();
+            console.warn('⚠️ No full response from printer:', readError);
+            addNotification('✅ Команди изпратени (принтерът може да не върне пълен отговор)', 'info');
+          }
+        }
+      } else if (comPortPrinter.isConfigured()) {
+        addNotification('⚠️ COM порт не поддържа Datecs fiscal протокол. Използвайте Web Serial.', 'warning');
+        console.log('⚠️ COM port cut requires special protocol implementation');
+      } else {
+        throw new Error('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.');
+      }
+    } catch (error) {
+      console.error('❌ Cut command failed:', error);
+      addNotification('Грешка при изпращане на команда за рязане', 'warning');
     }
   };
 
@@ -1608,100 +1746,23 @@ const KitchenCommandCenter = () => {
       .sort((a, b) => new Date(a.orderTime).getTime() - new Date(b.orderTime).getTime());
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    e.preventDefault();
-  };
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-    
-    const container = document.querySelector('.main-work-area');
-    if (!container) return;
-    
-    const containerRect = container.getBoundingClientRect();
-    const containerHeight = containerRect.height;
-    const mouseY = e.clientY - containerRect.top;
-    
-    const newPercentage = Math.max(30, Math.min(85, (mouseY / containerHeight) * 100));
-    setNewOrdersHeight(newPercentage);
-  }, [isDragging]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  // Vertical resizer functions
-  const handleVerticalMouseDown = (e: React.MouseEvent) => {
-    setIsDraggingVertical(true);
-    e.preventDefault();
-  };
-
-  const handleVerticalMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDraggingVertical) return;
-    
-    const container = document.querySelector('.main-content-area');
-    if (!container) return;
-    
-    const containerRect = container.getBoundingClientRect();
-    const containerWidth = containerRect.width;
-    const mouseX = e.clientX - containerRect.left;
-    
-    const newPercentage = Math.max(30, Math.min(80, (mouseX / containerWidth) * 100));
-    setWorkAreaWidth(newPercentage);
-  }, [isDraggingVertical]);
-
-  const handleVerticalMouseUp = useCallback(() => {
-    setIsDraggingVertical(false);
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'ns-resize';
-      document.body.style.userSelect = 'none';
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  useEffect(() => {
-    if (isDraggingVertical) {
-      document.addEventListener('mousemove', handleVerticalMouseMove);
-      document.addEventListener('mouseup', handleVerticalMouseUp);
-      document.body.style.cursor = 'ew-resize';
-      document.body.style.userSelect = 'none';
-      
-      return () => {
-        document.removeEventListener('mousemove', handleVerticalMouseMove);
-        document.removeEventListener('mouseup', handleVerticalMouseUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      };
-    }
-  }, [isDraggingVertical, handleVerticalMouseMove, handleVerticalMouseUp]);
 
   const NewOrderCard = ({ order }: { order: Order }) => {
     const totalTime = getTotalTime(order.orderTime);
     const isUrgent = totalTime > 10;
     
     const cardSizeClasses = {
-      small: 'p-2 sm:p-1 text-xs',        // Mobile responsive minimal padding
-      medium: 'p-3 sm:p-3 text-sm',       // Mobile responsive medium padding
-      large: 'p-4 sm:p-5 text-sm sm:text-base'       // Mobile responsive large padding
+      small: 'p-2 text-sm',        // Optimized for 1024x768 - no responsive scaling
+      medium: 'p-3 text-base',       // Larger text for touchscreen readability
+      large: 'p-4 text-lg'       // Even larger for maximum readability
     };
     
     return (
-      <div 
-        className={`bg-gray-800 border-2 ${isUrgent ? 'border-red-500' : 'border-blue-500'} rounded-lg transition-all duration-300 hover:bg-gray-700 ${!debugMode ? 'animate-pulse' : ''} touch-manipulation select-none ${cardSizeClasses[cardSize]}`}
+      <div
+        className={`bg-gray-800 border-2 ${isUrgent ? 'border-red-500' : 'border-blue-500'} rounded-lg transition-all duration-300 hover:bg-gray-700 ${!debugMode ? 'animate-pulse' : ''} touch-manipulation select-none ${cardSizeClasses[cardSize]} min-h-[88px] cursor-pointer`}
         onTouchStart={(e) => handleTouchStart(e, order.id)}
         onTouchEnd={handleTouchEnd}
+        onClick={() => setOrderDetailsModal({ show: true, order })}
       >
         <div className="flex justify-between items-start mb-1.5">
           <div className="flex-1 min-w-0">
@@ -1752,9 +1813,9 @@ const KitchenCommandCenter = () => {
           {order.items.length > 3 && (
             <button
               onClick={() => setOrderDetailsModal({ show: true, order })}
-              className="flex items-center space-x-0.5 text-blue-400 hover:text-blue-300 text-[10px] mt-1 transition-colors"
+              className="flex items-center justify-center space-x-1 text-blue-400 hover:text-blue-300 text-xs mt-2 px-2 py-1.5 rounded-lg bg-blue-900/20 hover:bg-blue-900/40 transition-colors min-w-[40px] min-h-[40px] touch-manipulation"
             >
-              <Eye size={10} />
+              <Eye size={14} />
               <span>Покажи всички ({order.items.length})</span>
             </button>
           )}
@@ -1777,27 +1838,27 @@ const KitchenCommandCenter = () => {
           </div>
         )}
 
-        <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center">
           <span className="text-green-400 font-bold text-xs">
             Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} лв
           </span>
-          <div className="flex space-x-1">
+          <div className="flex space-x-2">
             <button
               onClick={() => startOrderWithReadyTime(order.id)}
-              className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-1 px-2 rounded text-[10px] hover:from-orange-600 hover:to-red-600 transition-all"
+                className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-1.5 px-2 rounded-lg text-xs hover:from-orange-600 hover:to-red-600 transition-all min-w-[40px] min-h-[40px] touch-manipulation flex items-center justify-center"
             >
               🔥 Започвам
             </button>
             <button
               onClick={() => handlePrintOrder(order)}
-              className="bg-gray-600 text-white font-bold py-1 px-1.5 rounded text-[10px] hover:bg-gray-700 transition-all flex items-center space-x-0.5"
+                className="bg-gray-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-gray-700 transition-all flex items-center justify-center min-w-[40px] min-h-[40px] touch-manipulation"
               title="Принтирай на термален принтер"
             >
-              <Printer className="w-3 h-3" />
+                <Printer className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => handleBrowserPrint(order)}
-              className="bg-blue-600 text-white font-bold py-1 px-1.5 rounded text-[10px] hover:bg-blue-700 transition-all"
+                className="bg-blue-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-blue-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation"
               title="Преглед за печат (Ctrl+P)"
             >
               👁️
@@ -1813,14 +1874,18 @@ const KitchenCommandCenter = () => {
     const workingTime = getWorkingTime(order.workingStartTime);
     
     const workingCardSizeClasses = {
-      small: 'p-2 sm:p-1 text-xs',        // Mobile responsive minimal padding
-      medium: 'p-3 sm:p-3 text-sm',       // Mobile responsive medium padding
-      large: 'p-4 sm:p-5 text-sm sm:text-base'       // Mobile responsive large padding
+      small: 'p-2 text-sm',        // Optimized for 1024x768 - no responsive scaling
+      medium: 'p-3 text-base',       // Larger text for touchscreen readability
+      large: 'p-4 text-lg'       // Even larger for maximum readability
     };
     
     return (
-      <div className={`bg-orange-900 border-2 border-orange-500 rounded-lg transition-all duration-300 hover:bg-orange-800 ${workingCardSizeClasses[cardSize]}`}>
-        <div className="flex justify-between items-start mb-2">
+      <div className={`bg-orange-900 border-2 border-orange-500 rounded-lg transition-all duration-300 hover:bg-orange-800 ${workingCardSizeClasses[cardSize]} min-h-[88px] cursor-pointer touch-manipulation select-none`}
+        onClick={() => setOrderDetailsModal({ show: true, order })}
+        onTouchStart={(e) => handleTouchStart(e, order.id)}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="flex flex-wrap justify-between items-start mb-2">
           <div>
             <div className="text-lg font-bold text-white flex items-center space-x-2">
               <span>#{order.id}</span>
@@ -1834,7 +1899,7 @@ const KitchenCommandCenter = () => {
           </div>
           <button
             onClick={() => updateOrderStatus(order.id, 'new', true)}
-            className="text-blue-400 hover:text-blue-300 p-1 rounded transition-colors"
+            className="text-blue-400 hover:text-blue-300 p-1.5 rounded-lg transition-colors min-w-[40px] min-h-[40px] touch-manipulation flex items-center justify-center"
             title="Върни към нови поръчки"
           >
             <RotateCcw className="w-4 h-4" />
@@ -1872,9 +1937,9 @@ const KitchenCommandCenter = () => {
           {order.items.length > 3 && (
             <button
               onClick={() => setOrderDetailsModal({ show: true, order })}
-              className="flex items-center space-x-1 text-orange-400 hover:text-orange-300 text-xs mt-2 transition-colors"
+              className="flex items-center justify-center space-x-1 text-orange-400 hover:text-orange-300 text-xs mt-2 px-2 py-1.5 rounded-lg bg-orange-800/20 hover:bg-orange-800/40 transition-colors min-w-[40px] min-h-[40px] touch-manipulation"
             >
-              <Eye size={12} />
+              <Eye size={14} />
               <span>Покажи всички ({order.items.length})</span>
             </button>
           )}
@@ -1895,28 +1960,28 @@ const KitchenCommandCenter = () => {
           </div>
         )}
 
-        <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center">
           <span className="text-green-400 font-bold text-sm">
             Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} лв
           </span>
           <div className="flex space-x-2">
             <button
               onClick={() => handlePrintOrder(order)}
-              className="bg-gray-600 text-white font-bold py-1 px-2 rounded text-xs hover:bg-gray-700 transition-all"
+                className="bg-gray-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-gray-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation flex items-center justify-center"
               title="Принтирай на термален принтер"
             >
-              <Printer className="w-3 h-3" />
+                <Printer className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => handleBrowserPrint(order)}
-              className="bg-blue-600 text-white font-bold py-1 px-2 rounded text-xs hover:bg-blue-700 transition-all"
+                className="bg-blue-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-blue-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation"
               title="Преглед за печат (Ctrl+P)"
             >
               👁️
             </button>
             <button
               onClick={() => updateOrderStatus(order.id, 'completed', true)}
-              className="bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-1 px-2 rounded text-xs hover:from-green-600 hover:to-green-700 transition-all"
+                className="bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-1.5 px-2 rounded-lg text-xs hover:from-green-600 hover:to-green-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation"
             >
               ✅ Готова
             </button>
@@ -1931,21 +1996,21 @@ const KitchenCommandCenter = () => {
     const workingTime = getWorkingTime(order.workingStartTime);
     
     const historyCardSizeClasses = {
-      small: 'p-1.5 text-xs',     // Minimal padding
-      medium: 'p-4 text-sm',      // Real medium: more padding
-      large: 'p-5 text-base'      // Large: even more padding
+      small: 'p-1 text-sm',     // Optimized for 1024x768
+      medium: 'p-3 text-base',      // Larger text for touchscreen readability
+      large: 'p-4 text-lg'      // Even larger for maximum readability
     };
     
     const buttonSizeClasses = {
-      small: 'p-2 text-sm',
-      medium: 'p-4 text-lg', 
-      large: 'p-6 text-xl'
+      small: 'p-1.5 text-sm min-w-[40px] min-h-[40px]',
+      medium: 'p-2 text-base min-w-[44px] min-h-[44px]',
+      large: 'p-3 text-lg min-w-[48px] min-h-[48px]'
     };
     
     const emojiSizeClasses = {
-      small: 'text-2xl',   // 24px (40% smaller than 36px)
-      medium: 'text-4xl',  // 36px (40% smaller than 60px)
-      large: 'text-5xl'    // 48px (40% smaller than 72px)
+      small: 'text-lg',
+      medium: 'text-2xl',
+      large: 'text-4xl'
     };
     
     const iconSizes = {
@@ -1954,54 +2019,51 @@ const KitchenCommandCenter = () => {
       large: 48,
     };
     
-    console.log('HistoryOrderCard cardSize:', cardSize, 'emojiClass:', emojiSizeClasses[cardSize]);
-    console.log('CARD SIZE DEBUG:', cardSize, 'EMOJI SIZE:', emojiSizeClasses[cardSize]);
-    
     return (
       <div className={`bg-gray-700 border border-gray-600 rounded mb-2 ${historyCardSizeClasses[cardSize]}`}>
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <div className="text-white font-bold">#{order.id}</div>
-            <div className="text-gray-300">{order.customerName}</div>
-            <div className="text-gray-400 text-xs">📞 {order.phone}</div>
-            <div className="text-gray-400 text-xs">📍 {order.address}</div>
-          </div>
+        <div className="flex flex-wrap justify-between items-start mb-2">
           <div className="flex space-x-2">
             <button
               onClick={() => handlePrintOrder(order)}
-              className={`bg-purple-500 hover:bg-purple-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
+              className={`bg-purple-500 hover:bg-purple-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
               title="Принтирай на термален принтер"
             >
               <Printer className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleBrowserPrint(order)}
-              className={`bg-blue-500 hover:bg-blue-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
+              className={`bg-blue-500 hover:bg-blue-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
               title="Преглед за печат (Ctrl+P)"
             >
               <span className={`${emojiSizeClasses[cardSize]}`}>👁️</span>
             </button>
             <button
               onClick={() => updateOrderStatus(order.id, 'working', true)}
-              className={`bg-orange-500 hover:bg-orange-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
+              className={`bg-orange-500 hover:bg-orange-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
               title="Върни към работни поръчки"
             >
               <span className={`${emojiSizeClasses[cardSize]}`}>▶️</span>
             </button>
           <button
             onClick={() => returnOrderToNew(order)}
-              className={`bg-blue-500 hover:bg-blue-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
+              className={`bg-blue-500 hover:bg-blue-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
             title="Върни към нови поръчки"
           >
               <span className={`${emojiSizeClasses[cardSize]}`}>🔄</span>
           </button>
             <button
               onClick={() => order.orderType === 1 ? markPickupAsTaken(order) : sendToDriver(order)}
-              className={`bg-gray-500 hover:bg-gray-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors`}
+              className={`bg-gray-500 hover:bg-gray-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
               title={order.orderType === 1 ? "Маркирай като взета" : "Препрати към доставка"}
             >
               <span className={`${emojiSizeClasses[cardSize]}`}>{order.orderType === 1 ? "✅" : "🚚"}</span>
             </button>
+          </div>
+          <div>
+            <div className="text-white font-bold">#{order.id}</div>
+            <div className="text-gray-300">{order.customerName}</div>
+            <div className="text-gray-400 text-xs">📞 {order.phone}</div>
+            <div className="text-gray-400 text-xs">📍 {order.address}</div>
           </div>
         </div>
         
@@ -2076,6 +2138,7 @@ const KitchenCommandCenter = () => {
   const newOrders = getFilteredOrders('new');
   const workingOrders = getFilteredOrders('working');
   const completedOrders = getFilteredOrders('completed');
+  const combinedOrders = [...newOrders, ...workingOrders, ...completedOrders];
 
   if (loading) {
     return (
@@ -2091,41 +2154,71 @@ const KitchenCommandCenter = () => {
 
   return (
     <div className="h-screen bg-black text-white font-sans flex flex-col">
-      {/* Enhanced Header Bar */}
+      {/* Enhanced Header Bar - Optimized for 1024x768 */}
       <div className="bg-gray-900 border-b-2 border-red-600 flex-shrink-0">
         {/* Top Row - Logo, Time, Network, Sound */}
-        <div className="h-16 flex items-center justify-center px-2 sm:px-8 relative">
+        <div className="h-12 flex items-center justify-center px-1 relative">
+          {/* Left group: Counters + Logo */}
+          <div className="absolute left-1 flex items-center space-x-2">
+            {(() => {
+              const { newOrders, workingOrders, completedOrders } = getOrderCounts();
+              return (
+                <div className="flex items-center space-x-2">
+                  <span className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold min-w-[60px] text-center touch-manipulation">
+                    Нов: {newOrders.length}
+                  </span>
+                  <span className="bg-orange-600 text-white px-3 py-2 rounded-lg text-sm font-bold min-w-[60px] text-center touch-manipulation">
+                    Работи: {workingOrders.length}
+                  </span>
+                  <span className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold min-w-[60px] text-center touch-manipulation">
+                    Готов: {completedOrders.length}
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
+
           {/* Centered Logo */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <img 
+          <div className="flex items-center space-x-1">
+            <img
               src="https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU4NzE1NjI1LCJleHAiOjI3MTg3MDYwMjV9.PEJqf8J-Su8iIHobLQ3CZrmq1XnYiT2lRbnqwyiX1jE"
               alt="Pizza Stop Logo"
-              className="h-12 w-auto"
+              className="h-8 w-auto"
             />
-            <div className="text-xl sm:text-3xl font-bold text-red-500">PIZZA STOP</div>
+            <div className="text-lg font-bold text-red-500">PIZZA STOP</div>
           </div>
-          
+
           {/* Right side info */}
-          <div className="absolute right-2 sm:right-8 flex items-center space-x-2 sm:space-x-4">
-            <div className="text-xl sm:text-3xl font-mono">
+          <div className="absolute right-1 flex items-center space-x-1">
+            {/* Cut Button - Datecs Protocol */}
+            <button
+              onClick={handleCutPaper}
+              className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors flex items-center space-x-1 min-w-[60px] min-h-[44px] touch-manipulation"
+              title="Рязвай хартия (Datecs 0x2D)"
+            >
+              <Scissors className="w-4 h-4" />
+              <span className="hidden sm:inline">РЕЖИ</span>
+            </button>
+
+            <div className="text-lg font-mono">
               {formatTimeForDisplay(currentTime)}
               {debugMode && (
-                <span className="ml-2 text-red-500 text-xs font-bold">🐛 DEBUG MODE</span>
+                <span className="ml-1 text-red-500 text-xs font-bold">🐛</span>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-1">
               {isOnline ? (
-                <Wifi className="text-green-500 w-3 h-3" />
+                <Wifi className="text-green-500 w-4 h-4" />
               ) : (
-                <WifiOff className="text-red-500 w-3 h-3" />
+                <WifiOff className="text-red-500 w-4 h-4" />
               )}
             </div>
 
             {/* Sound Toggle */}
-            <button 
+            <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className={`px-1.5 py-0.5 rounded text-[10px] ${soundEnabled ? 'bg-green-600' : 'bg-gray-600'} hover:opacity-80 transition-opacity`}
+              className={`px-2 py-2 rounded-lg text-sm min-w-[44px] min-h-[44px] touch-manipulation ${soundEnabled ? 'bg-green-600' : 'bg-gray-600'} hover:opacity-80 transition-opacity`}
               title={soundEnabled ? 'Звук включен' : 'Звук изключен'}
             >
               {soundEnabled ? '🔊' : '🔇'}
@@ -2135,175 +2228,64 @@ const KitchenCommandCenter = () => {
             <button
               onClick={() => fetchOrders()}
               disabled={isRefreshing}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors flex items-center space-x-0.5 ${
-                isRefreshing 
-                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
+              className={`px-2 py-2 rounded-lg text-sm font-bold transition-colors flex items-center justify-center min-w-[44px] min-h-[44px] touch-manipulation ${
+                isRefreshing
+                  ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
               title="Обнови поръчките"
             >
-              <RefreshCw size={10} className={isRefreshing ? 'animate-spin' : ''} />
+              <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
             </button>
 
             {/* Printer Configuration Button */}
             <div className="flex items-center space-x-1">
               <button
                 onClick={() => setPrinterConfigModal(true)}
-                className="px-2 py-1 bg-orange-600 text-white rounded text-[10px] font-bold hover:bg-orange-700 transition-colors flex items-center space-x-1"
+                className="px-2 py-2 bg-orange-600 text-white rounded-lg text-sm font-bold hover:bg-orange-700 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px] touch-manipulation"
                 title="Конфигурирай принтер"
               >
-                <Settings className="w-3 h-3" />
+                <Settings className="w-4 h-4" />
               </button>
-              
+
               {/* Printer Status Indicator */}
               {webSerialDefaultPrinter && connectedPrinters.length > 0 ? (
-                <div className="flex items-center space-x-0.5 bg-blue-600 text-white px-1 py-0.5 rounded text-[9px]">
-                  <Printer className="w-2.5 h-2.5" />
+                <div className="flex items-center justify-center bg-blue-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]">
+                  <Printer className="w-3 h-3" />
                 </div>
               ) : comPortPrinter.isConfigured() ? (
-                <div className="flex items-center space-x-0.5 bg-green-600 text-white px-1 py-0.5 rounded text-[9px]">
-                  <Printer className="w-2.5 h-2.5" />
+                <div className="flex items-center justify-center bg-green-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]">
+                  <Printer className="w-3 h-3" />
                 </div>
               ) : (
-                <div className="flex items-center space-x-0.5 bg-gray-600 text-white px-1 py-0.5 rounded text-[9px]">
-                  <Printer className="w-2.5 h-2.5" />
+                <div className="flex items-center justify-center bg-gray-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]">
+                  <Printer className="w-3 h-3" />
                 </div>
               )}
             </div>
 
-            {/* Serial Printer Manager */}
-            <SerialPrinterManager autoPrint={true} showStatus={true} className="ml-1" />
-          </div>
+                     </div>
         </div>
 
-        {/* Second Row - Order Counts - Compact for 702p */}
-        <div className="h-8 bg-gray-800 border-t border-gray-700 flex items-center justify-center px-2">
-          <div className="flex items-center space-x-1.5">
-            {/* Order Count Badges */}
-            {(() => {
-              const { newOrders, workingOrders, completedOrders } = getOrderCounts();
-              return (
-                <>
-                  <span className="bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-bold">
-                    Нов: {newOrders.length}
-                  </span>
-                  <span className="bg-orange-600 text-white px-2 py-1 rounded text-[10px] font-bold">
-                    Работи: {workingOrders.length}
-                  </span>
-                  <span className="bg-green-600 text-white px-2 py-1 rounded text-[10px] font-bold">
-                    Готов: {completedOrders.length}
-                  </span>
-                </>
-              );
-            })()}
-
-            {/* Overdue Orders Alert */}
-            {(() => {
-              const overdueOrders = getOverdueOrders();
-              return overdueOrders.length > 0 && (
-                <span className="bg-red-600 text-white px-2 py-1 rounded text-[10px] font-bold animate-pulse">
-                  ⚠️ {overdueOrders.length}
-                </span>
-              );
-            })()}
-
-          </div>
-        </div>
+        {/* Second Row removed to save vertical space */}
 
       </div>
 
-      {/* Main Content Area - Mobile Optimized */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden main-content-area">
-        {/* Left Work Area - Resizable */}
-        <div 
-          className="flex flex-col main-work-area"
-          style={{ width: `${workAreaWidth}%` }}
-        >
-          {/* New Orders Grid - Compact for 702p */}
-          <div 
-            className="bg-gray-900 p-2 overflow-hidden"
-            style={{ height: `${newOrdersHeight}%` }}
-          >
-            <div className="h-full flex flex-col">
-              <h2 className="text-base font-bold text-blue-400 mb-2 flex items-center">
-                📋 НОВИ ПОРЪЧКИ ({newOrders.length})
-              </h2>
-              <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-1.5">
-                  {newOrders.map(order => (
-                    <NewOrderCard key={order.id} order={order} />
-                  ))}
-                </div>
-              </div>
+      {/* Unified Orders List - compact for 1024x768 */}
+      <div className="flex-1 bg-gray-900 overflow-hidden">
+        <div className="h-full flex flex-col">
+          <div className="flex-1 overflow-y-auto p-2">
+            <div className="grid grid-cols-3-kitchen gap-2">
+              {combinedOrders.map(order => (
+                order.status === 'new' ? (
+                  <NewOrderCard key={order.id} order={order} />
+                ) : order.status === 'working' ? (
+                  <WorkingOrderCard key={order.id} order={order} />
+                ) : (
+                  <HistoryOrderCard key={order.id} order={order} cardSize={cardSize} />
+                )
+              ))}
             </div>
-          </div>
-
-          {/* Resizable Divider */}
-          <div 
-            className={`h-2 bg-gray-700 border-y-2 border-orange-600 cursor-ns-resize hover:bg-orange-600 transition-colors flex items-center justify-center ${
-              isDragging ? 'bg-orange-600' : ''
-            }`}
-            onMouseDown={handleMouseDown}
-          >
-            <div className="w-12 h-1 bg-gray-400 rounded"></div>
-          </div>
-
-          {/* Working Orders Grid - Resizable */}
-          <div 
-            className="bg-orange-950 p-4 overflow-hidden"
-            style={{ height: `${100 - newOrdersHeight}%` }}
-          >
-            <div className="h-full flex flex-col">
-              <h3 className="text-lg font-bold text-orange-400 mb-2 flex items-center">
-                🔥 РАБОТИ СЕ ({workingOrders.length})
-              </h3>
-              <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-4">
-                  {workingOrders.map(order => (
-                    <WorkingOrderCard key={order.id} order={order} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Vertical Resizable Divider */}
-        <div 
-          className={`w-2 bg-gray-700 border-x-2 border-blue-600 cursor-ew-resize hover:bg-blue-600 transition-colors flex items-center justify-center ${
-            isDraggingVertical ? 'bg-blue-600' : ''
-          }`}
-          onMouseDown={handleVerticalMouseDown}
-        >
-          <div className="h-12 w-1 bg-gray-400 rounded"></div>
-        </div>
-
-        {/* Right History Panel - Resizable */}
-        <div 
-          className="bg-gray-800 flex flex-col"
-          style={{ width: `${100 - workAreaWidth}%` }}
-        >
-          <div className="p-4 border-b border-gray-600">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-300 flex items-center">
-                📜 ЗАВЪРШЕНИ ({completedOrders.length})
-              </h2>
-              {completedOrders.length > 0 && (
-                <button
-                  onClick={() => bulkSendToDriver(completedOrders)}
-                  className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition-colors flex items-center space-x-2"
-                  title="Изпрати всички готови поръчки към доставката"
-                >
-                  <span>🚚</span>
-                  <span>Изпрати всички</span>
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="flex-1 p-4 overflow-y-auto">
-            {completedOrders.map(order => (
-              <HistoryOrderCard key={order.id} order={order} cardSize={cardSize} />
-            ))}
           </div>
         </div>
       </div>
@@ -2339,13 +2321,13 @@ const KitchenCommandCenter = () => {
 
       {/* Ready Time Modal */}
       {readyTimeModal.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 max-w-[90vw] w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white">Кога ще е готова поръчката?</h3>
+              <h3 className="text-lg font-bold text-white">Кога ще е готова поръчката?</h3>
               <button
                 onClick={() => setReadyTimeModal({ show: false, order: null, selectedMinutes: null })}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center"
               >
                 <X size={24} />
               </button>
@@ -2369,9 +2351,9 @@ const KitchenCommandCenter = () => {
             <div className="grid grid-cols-2 gap-3 mb-6">
               <button
                 onClick={() => selectReadyTime(15)}
-                className={`font-bold py-3 px-4 rounded transition-colors ${
-                  readyTimeModal.selectedMinutes === 15 
-                    ? 'bg-green-600 text-white' 
+                className={`font-bold py-4 px-4 rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation text-base ${
+                  readyTimeModal.selectedMinutes === 15
+                    ? 'bg-green-600 text-white'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -2379,9 +2361,9 @@ const KitchenCommandCenter = () => {
               </button>
               <button
                 onClick={() => selectReadyTime(30)}
-                className={`font-bold py-3 px-4 rounded transition-colors ${
-                  readyTimeModal.selectedMinutes === 30 
-                    ? 'bg-green-600 text-white' 
+                className={`font-bold py-4 px-4 rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation text-base ${
+                  readyTimeModal.selectedMinutes === 30
+                    ? 'bg-green-600 text-white'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -2389,9 +2371,9 @@ const KitchenCommandCenter = () => {
               </button>
               <button
                 onClick={() => selectReadyTime(45)}
-                className={`font-bold py-3 px-4 rounded transition-colors ${
-                  readyTimeModal.selectedMinutes === 45 
-                    ? 'bg-green-600 text-white' 
+                className={`font-bold py-4 px-4 rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation text-base ${
+                  readyTimeModal.selectedMinutes === 45
+                    ? 'bg-green-600 text-white'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -2399,9 +2381,9 @@ const KitchenCommandCenter = () => {
               </button>
               <button
                 onClick={() => selectReadyTime(60)}
-                className={`font-bold py-3 px-4 rounded transition-colors ${
-                  readyTimeModal.selectedMinutes === 60 
-                    ? 'bg-green-600 text-white' 
+                className={`font-bold py-4 px-4 rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation text-base ${
+                  readyTimeModal.selectedMinutes === 60
+                    ? 'bg-green-600 text-white'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -2409,9 +2391,9 @@ const KitchenCommandCenter = () => {
               </button>
               <button
                 onClick={() => selectReadyTime(90)}
-                className={`font-bold py-3 px-4 rounded transition-colors ${
-                  readyTimeModal.selectedMinutes === 90 
-                    ? 'bg-green-600 text-white' 
+                className={`font-bold py-4 px-4 rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation text-base ${
+                  readyTimeModal.selectedMinutes === 90
+                    ? 'bg-green-600 text-white'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -2419,9 +2401,9 @@ const KitchenCommandCenter = () => {
               </button>
               <button
                 onClick={() => selectReadyTime(120)}
-                className={`font-bold py-3 px-4 rounded transition-colors ${
-                  readyTimeModal.selectedMinutes === 120 
-                    ? 'bg-green-600 text-white' 
+                className={`font-bold py-4 px-4 rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation text-base ${
+                  readyTimeModal.selectedMinutes === 120
+                    ? 'bg-green-600 text-white'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -2429,9 +2411,9 @@ const KitchenCommandCenter = () => {
               </button>
               <button
                 onClick={() => selectReadyTime(180)}
-                className={`font-bold py-3 px-4 rounded transition-colors col-span-2 ${
-                  readyTimeModal.selectedMinutes === 180 
-                    ? 'bg-green-600 text-white' 
+                className={`font-bold py-4 px-4 rounded-lg transition-colors col-span-2 min-w-[44px] min-h-[44px] touch-manipulation text-base ${
+                  readyTimeModal.selectedMinutes === 180
+                    ? 'bg-green-600 text-white'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
@@ -2443,9 +2425,9 @@ const KitchenCommandCenter = () => {
               <button
                 onClick={confirmReadyTime}
                 disabled={!readyTimeModal.selectedMinutes}
-                className={`flex-1 font-bold py-2 px-4 rounded transition-colors ${
-                  readyTimeModal.selectedMinutes 
-                    ? 'bg-green-600 text-white hover:bg-green-700' 
+                className={`flex-1 font-bold py-4 px-4 rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation text-base ${
+                  readyTimeModal.selectedMinutes
+                    ? 'bg-green-600 text-white hover:bg-green-700'
                     : 'bg-gray-500 text-gray-300 cursor-not-allowed'
                 }`}
               >
@@ -2453,7 +2435,7 @@ const KitchenCommandCenter = () => {
               </button>
               <button
                 onClick={() => setReadyTimeModal({ show: false, order: null, selectedMinutes: null })}
-                className="flex-1 bg-gray-600 text-white font-bold py-2 px-4 rounded hover:bg-gray-700 transition-colors"
+                className="flex-1 bg-gray-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-gray-700 transition-colors min-w-[44px] min-h-[44px] touch-manipulation text-base"
               >
                 Отказ
               </button>
