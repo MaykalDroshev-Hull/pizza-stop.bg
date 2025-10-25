@@ -337,10 +337,12 @@ export class ComPortPrinter {
     // Footer
     commands += '================\n';
     commands += this.utf8ToCp1251(`Телефон: ${order.restaurantPhone}\n`);
-    commands += this.utf8ToCp1251('Благодарим за поръчката!\n\n\n');
+    commands += this.utf8ToCp1251('Благодарим за поръчката!\n');
     
-    // Cut paper
-    commands += '\x1D\x56\x00'; // GS V 0 - Full cut
+    // Add line feeds for paper positioning
+    // The FP-2000's auto-cut (DIP Switch 5) will handle the actual cutting
+    // No manual cut command needed - fiscal protocol cut (0x2D) requires special framing
+    commands += '\n\n\n\n\n';
     
     return commands;
   }
@@ -394,10 +396,11 @@ export class ComPortPrinter {
     
     // Footer
     commands += '================\n';
-    commands += this.utf8ToCp1251('Тест завършен успешно!\n\n\n');
+    commands += this.utf8ToCp1251('Тест завършен успешно!\n');
     
-    // Cut paper
-    commands += '\x1D\x56\x00'; // GS V 0 - Full cut
+    // Add line feeds for paper positioning
+    // The FP-2000's auto-cut (DIP Switch 5) will handle the actual cutting
+    commands += '\n\n\n\n\n';
     
     return commands;
   }

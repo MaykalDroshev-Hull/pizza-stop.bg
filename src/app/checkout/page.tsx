@@ -59,7 +59,7 @@ export default function CheckoutPage() {
   const [addressZone, setAddressZone] = useState<'yellow' | 'blue' | 'outside' | null>(null)
   const [addressConfirmed, setAddressConfirmed] = useState(false)
   const [isCollection, setIsCollection] = useState(false)
-  const [selectedDeliveryType, setSelectedDeliveryType] = useState<'pickup' | 'delivery-yellow' | 'delivery-blue'>('pickup')
+  const [selectedDeliveryType, setSelectedDeliveryType] = useState<'pickup' | 'delivery'>('pickup')
   const [paymentMethodId, setPaymentMethodId] = useState<number | null>(null)
   const [unavailableItems, setUnavailableItems] = useState<string[]>([])
   const [cachedProfileData, setCachedProfileData] = useState<any>(null)
@@ -708,23 +708,17 @@ export default function CheckoutPage() {
 
 
     // Delivery cost calculation based on selected delivery type
-  const calculateDeliveryCost = (orderTotal: number, deliveryType: 'pickup' | 'delivery-yellow' | 'delivery-blue') => {
-    switch (deliveryType) {
-      case 'pickup':
-        return 0 // Free pickup
-      case 'delivery-yellow':
-        if (orderTotal < 15) {
-          return null // Order too small for yellow zone delivery
-        }
-        return 3 // 3 BGN for yellow zone delivery
-      case 'delivery-blue':
-        if (orderTotal < 30) {
-          return null // Order too small for blue zone delivery
-        }
-        return 7 // 7 BGN for blue zone delivery
-      default:
-        return null
+  const calculateDeliveryCost = (orderTotal: number, zone: 'yellow' | 'blue' | 'outside' | null, deliveryType: 'pickup' | 'delivery') => {
+    if (deliveryType === 'pickup') return 0
+    if (zone === 'yellow') {
+      if (orderTotal < 15) return null
+      return 3
     }
+    if (zone === 'blue') {
+      if (orderTotal < 30) return null
+      return 7
+    }
+    return null
   }
 
   // Haversine formula to calculate distance between two points on Earth
@@ -878,8 +872,8 @@ export default function CheckoutPage() {
       console.log('✅ Pickup order - no address validation needed')
     }
     
-    // Calculate delivery cost based on selected delivery type
-    const cost = calculateDeliveryCost(totalPrice, selectedDeliveryType)
+    // Calculate delivery cost automatically based on zone
+    const cost = calculateDeliveryCost(totalPrice, zone, selectedDeliveryType)
     console.log('💰 Delivery cost calculated:', cost)
     setDeliveryCost(cost || 0)
     
@@ -1181,10 +1175,12 @@ export default function CheckoutPage() {
     totalPrice >= 15 && // Minimum order amount
     (
       selectedDeliveryType === 'pickup' || // Pickup orders don't need address validation
-      (selectedDeliveryType === 'delivery-yellow' && totalPrice >= 15) || // Yellow zone delivery needs 15+ BGN
-      (selectedDeliveryType === 'delivery-blue' && totalPrice >= 30) // Blue zone delivery needs 30+ BGN
+      (selectedDeliveryType === 'delivery' && (
+        (addressZone === 'yellow' && totalPrice >= 15) ||
+        (addressZone === 'blue' && totalPrice >= 30)
+      ))
     ) && // Delivery orders need address validation
-    (selectedDeliveryType === 'pickup' || (customerInfo.LocationText && customerInfo.LocationCoordinates && addressConfirmed)) &&
+    (selectedDeliveryType === 'pickup' || (customerInfo.LocationText && customerInfo.LocationCoordinates && addressConfirmed && addressZone !== 'outside')) &&
     (paymentMethodId !== 5 || (paymentData && paymentData.isValid)) // Online payment requires valid payment data
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1234,8 +1230,8 @@ export default function CheckoutPage() {
          return
        }
        
-       if (deliveryCost === null) {
-         alert('❌ Не може да се изчисли цената за доставка. Моля, проверете адреса.')
+       if (deliveryCost === null || addressZone === 'outside') {
+         alert('❌ Не може да се изчисли цената за доставка или адресът е извън зона.')
          setIsLoading(false)
          return
        }
@@ -1296,7 +1292,7 @@ export default function CheckoutPage() {
      }
      
      // Handle order submission
-     const finalTotal = totalPrice + (selectedDeliveryType === 'pickup' ? 0 : deliveryCost)
+    const finalTotal = totalPrice + (selectedDeliveryType === 'pickup' ? 0 : deliveryCost)
      
     console.log('📦 Order details being sent to API:')
     console.log('   - Customer:', customerInfo.name, customerInfo.email)
@@ -1337,9 +1333,9 @@ export default function CheckoutPage() {
        scheduledTime: orderTime.scheduledTime ? orderTime.scheduledTime.toISOString() : undefined
      },
      orderType,
-     deliveryCost: selectedDeliveryType === 'pickup' ? 0 : deliveryCost,
+    deliveryCost: selectedDeliveryType === 'pickup' ? 0 : deliveryCost,
      totalPrice,
-     isCollection: selectedDeliveryType === 'pickup',
+    isCollection: selectedDeliveryType === 'pickup',
      paymentMethodId,
      paymentData: paymentMethodId === 5 ? paymentData : null, // Include payment data for online payments
      loginId: user?.id || null
