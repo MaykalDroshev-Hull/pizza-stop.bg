@@ -1204,20 +1204,19 @@ export default function MenuPage() {
             }}
           >
             {filteredItems.map(item => (
-              <div key={item.id} className="bg-card border border-white/12 rounded-xl p-4 md:p-6 group hover:shadow-xl transition-all overflow-hidden flex flex-col h-full min-h-[400px]">
-                <div className="text-center py-4 md:py-6 bg-gradient-to-br from-red/10 to-orange/10 transition-transform duration-300 min-h-[120px] md:min-h-[160px] flex items-center justify-center">
+              <div key={item.id} className="bg-card border border-white/12 rounded-xl p-4 md:p-6 overflow-hidden flex flex-col h-full min-h-[400px]">                <div className="text-center py-3 md:py-4 bg-gradient-to-br from-red/10 to-orange/10 min-h-[120px] md:min-h-[160px] flex items-center justify-center relative overflow-hidden">
                   {(() => {
                     console.log(`🖼️ Rendering image for ${item.name}: ${item.image}`)
                     return item.image.startsWith('http') ? (
                     <img 
                       src={item.image} 
                       alt={item.name}
-                      className="w-full h-full object-cover rounded-lg"
+                      className="absolute inset-0 w-full h-full object-cover"
                       onError={(e) => {
                         // Fallback to emoji if image fails to load
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
-                        (target.nextElementSibling as HTMLElement)!.style.display = 'block';
+                        (target.nextElementSibling as HTMLElement)!.style.display = 'flex';
                       }}
                     />
                     ) : (
@@ -1225,7 +1224,7 @@ export default function MenuPage() {
                     )
                   })()}
                   {item.image.startsWith('http') && (
-                    <div className="text-4xl md:text-6xl hidden">{fallbackEmojis[item.category] || '🍽️'}</div>
+                    <div className="absolute inset-0 hidden items-center justify-center text-4xl md:text-6xl">{fallbackEmojis[item.category] || '🍽️'}</div>
                   )}
                 </div>
                 <div className="flex flex-col flex-1">
