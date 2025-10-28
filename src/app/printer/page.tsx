@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Printer, LogOut, ArrowLeft } from "lucide-react";
+import { Printer, LogOut, ArrowLeft, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { fetchMenuData, fetchAddons } from "@/lib/menuData";
+import styles from '../../styles/admin-login.module.css';
 
 interface Category {
   id: string;
@@ -52,6 +53,8 @@ export default function PrinterPage() {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
@@ -154,6 +157,7 @@ export default function PrinterPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     
     try {
       const response = await fetch('/api/auth/admin-login', {
@@ -172,11 +176,11 @@ export default function PrinterPage() {
         setIsAuthenticated(true);
         setCurrentView("main");
       } else {
-        alert("Невалидни данни за вход");
+        setError("Невалиден имейл адрес или парола");
       }
     } catch (error) {
       console.error('Printer login error:', error);
-      alert("Грешка при влизане");
+      setError("Грешка при влизане");
     }
   };
 
@@ -891,58 +895,84 @@ export default function PrinterPage() {
 
   if (!isAuthenticated || currentView === "login") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <Printer className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-white mb-2">Принтер</h1>
-            <p className="text-gray-400">Вход за персонал</p>
-          </div>
-          
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-white text-sm font-medium mb-2">
-                Имейл адрес
-              </label>
-              <input
-                type="email"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Въведете имейл адрес"
-                required
-              />
+      <div className={styles.adminLoginPage}>
+        <div className={styles.backgroundPattern}></div>
+        
+        <div className={styles.container}>
+          <div className={styles.loginCard}>
+            {/* Header */}
+            <div className={styles.header}>
+              <div className={styles.iconWrapper}>
+                <Printer size={32} />
+              </div>
+              <h1 className={styles.title}>Принтер</h1>
+              <p className={styles.subtitle}>Вход за персонал</p>
             </div>
-            
-            <div>
-              <label className="block text-white text-sm font-medium mb-2">
-                Парола
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Въведете парола"
-                required
-              />
+
+            {/* Error Message */}
+            {error && (
+              <div className={`${styles.errorMessage} ${styles.error}`}>
+                <AlertCircle size={20} />
+                {error}
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleLogin} className={styles.form}>
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Имейл адрес</label>
+                <div className={styles.inputWrapperWithIcon}>
+                  <Mail className={styles.inputIcon} size={20} />
+                  <input
+                    type="email"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className={styles.input}
+                    placeholder="Въведете имейл адрес"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className={styles.inputGroup}>
+                <label className={styles.inputLabel}>Парола</label>
+                <div className={styles.inputWrapperWithIcon}>
+                  <Lock className={styles.inputIcon} size={20} />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`${styles.input} ${styles.inputWithPasswordToggle}`}
+                    placeholder="Въведете парола"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className={styles.passwordToggle}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+              
+              <button
+                type="submit"
+                className={styles.submitButton}
+              >
+                Вход
+              </button>
+            </form>
+
+            {/* Back Link */}
+            <div className={styles.backLink}>
+              <button
+                onClick={() => router.back()}
+                className={styles.backLinkButton}
+              >
+                ← Назад към сайта
+              </button>
             </div>
-            
-            <button
-              type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-2xl transition-colors duration-200"
-            >
-              Вход
-            </button>
-          </form>
-          
-          <div className="text-center mt-6">
-            <button
-              onClick={() => router.back()}
-              className="text-gray-400 hover:text-white transition-colors duration-200"
-            >
-              ← Назад към сайта
-            </button>
           </div>
         </div>
       </div>

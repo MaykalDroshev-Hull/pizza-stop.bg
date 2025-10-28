@@ -49,7 +49,8 @@ export default function AdminKitchenLoginPage() {
 
   return (
     <AdminLogin 
-      title="KITCHEN DASHBOARD" 
+      title="Кухня" 
+      subtitle="Влезте в административния панел на кухнята"
       onLogin={handleLogin}
       redirectPath="/kitchen"
     />

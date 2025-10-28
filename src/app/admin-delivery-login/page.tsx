@@ -49,7 +49,8 @@ export default function AdminDeliveryLoginPage() {
 
   return (
     <AdminLogin 
-      title="DELIVERY DASHBOARD" 
+      title="Доставки" 
+      subtitle="Влезте в административния панел за доставки"
       onLogin={handleLogin}
       redirectPath="/delivery"
     />
