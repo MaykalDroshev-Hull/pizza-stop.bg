@@ -23,10 +23,10 @@ export default function ETASelectionModal({
   if (!isOpen) return null
 
   const timeOptions = [
-    { minutes: 15, label: '15 минути' },
-    { minutes: 30, label: '30 минути'},
-    { minutes: 45, label: '45 минути' },
-    { minutes: 60, label: '60 минути' }
+    { minutes: 15, label: '15 минути', icon: '⏱️' },
+    { minutes: 30, label: '30 минути', icon: '🕐'},
+    { minutes: 45, label: '45 минути', icon: '🕑' },
+    { minutes: 60, label: '60 минути', icon: '🕒' }
   ]
 
   const handleTimeSelection = (minutes: number) => {
