@@ -23,10 +23,10 @@ export default function ETASelectionModal({
   if (!isOpen) return null
 
   const timeOptions = [
-    { minutes: 15, label: '15 минути', icon: '⚡' },
-    { minutes: 30, label: '30 минути', icon: '🚗' },
-    { minutes: 45, label: '45 минути', icon: '🛣️' },
-    { minutes: 60, label: '60 минути', icon: '📍' }
+    { minutes: 15, label: '15 минути' },
+    { minutes: 30, label: '30 минути'},
+    { minutes: 45, label: '45 минути' },
+    { minutes: 60, label: '60 минути' }
   ]
 
   const handleTimeSelection = (minutes: number) => {
@@ -110,19 +110,6 @@ export default function ETASelectionModal({
               </button>
             ))}
           </div>
-
-          {/* Selected Time Display */}
-          {selectedMinutes && (
-            <div className="bg-orange-900/20 border border-orange-500/30 rounded-xl p-4 mb-6">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="w-5 h-5 text-orange-400 flex-shrink-0" />
-                <div className="text-sm text-orange-200">
-                  <p className="font-medium mb-1">Избрано време: <span className="text-orange-300 font-bold">{selectedMinutes} минути</span></p>
-                  <p className="text-orange-300/80">Клиентът ще получи имейл с това време за доставка.</p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Info */}
           <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 mb-6">

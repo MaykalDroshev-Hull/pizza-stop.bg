@@ -1812,7 +1812,10 @@ const KitchenCommandCenter = () => {
           ))}
           {order.items.length > 3 && (
             <button
-              onClick={() => setOrderDetailsModal({ show: true, order })}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOrderDetailsModal({ show: true, order });
+              }}
               className="flex items-center justify-center space-x-1 text-blue-400 hover:text-blue-300 text-xs mt-2 px-2 py-1.5 rounded-lg bg-blue-900/20 hover:bg-blue-900/40 transition-colors min-w-[40px] min-h-[40px] touch-manipulation"
             >
               <Eye size={14} />
@@ -1844,20 +1847,29 @@ const KitchenCommandCenter = () => {
           </span>
           <div className="flex space-x-2">
             <button
-              onClick={() => startOrderWithReadyTime(order.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                startOrderWithReadyTime(order.id);
+              }}
                 className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold py-1.5 px-2 rounded-lg text-xs hover:from-orange-600 hover:to-red-600 transition-all min-w-[40px] min-h-[40px] touch-manipulation flex items-center justify-center"
             >
               🔥 Започвам
             </button>
             <button
-              onClick={() => handlePrintOrder(order)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrintOrder(order);
+              }}
                 className="bg-gray-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-gray-700 transition-all flex items-center justify-center min-w-[40px] min-h-[40px] touch-manipulation"
               title="Принтирай на термален принтер"
             >
                 <Printer className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => handleBrowserPrint(order)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleBrowserPrint(order);
+              }}
                 className="bg-blue-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-blue-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation"
               title="Преглед за печат (Ctrl+P)"
             >
@@ -1898,7 +1910,10 @@ const KitchenCommandCenter = () => {
             <div className="text-orange-300 text-xs">📍 {order.address}</div>
           </div>
           <button
-            onClick={() => updateOrderStatus(order.id, 'new', true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              updateOrderStatus(order.id, 'new', true);
+            }}
             className="text-blue-400 hover:text-blue-300 p-1.5 rounded-lg transition-colors min-w-[40px] min-h-[40px] touch-manipulation flex items-center justify-center"
             title="Върни към нови поръчки"
           >
@@ -1936,7 +1951,10 @@ const KitchenCommandCenter = () => {
           ))}
           {order.items.length > 3 && (
             <button
-              onClick={() => setOrderDetailsModal({ show: true, order })}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOrderDetailsModal({ show: true, order });
+              }}
               className="flex items-center justify-center space-x-1 text-orange-400 hover:text-orange-300 text-xs mt-2 px-2 py-1.5 rounded-lg bg-orange-800/20 hover:bg-orange-800/40 transition-colors min-w-[40px] min-h-[40px] touch-manipulation"
             >
               <Eye size={14} />
@@ -1966,21 +1984,30 @@ const KitchenCommandCenter = () => {
           </span>
           <div className="flex space-x-2">
             <button
-              onClick={() => handlePrintOrder(order)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrintOrder(order);
+              }}
                 className="bg-gray-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-gray-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation flex items-center justify-center"
               title="Принтирай на термален принтер"
             >
                 <Printer className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => handleBrowserPrint(order)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleBrowserPrint(order);
+              }}
                 className="bg-blue-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-blue-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation"
               title="Преглед за печат (Ctrl+P)"
             >
               👁️
             </button>
             <button
-              onClick={() => updateOrderStatus(order.id, 'completed', true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                updateOrderStatus(order.id, 'completed', true);
+              }}
                 className="bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-1.5 px-2 rounded-lg text-xs hover:from-green-600 hover:to-green-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation"
             >
               ✅ Готова
@@ -2024,35 +2051,50 @@ const KitchenCommandCenter = () => {
         <div className="flex flex-wrap justify-between items-start mb-2">
           <div className="flex space-x-2">
             <button
-              onClick={() => handlePrintOrder(order)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrintOrder(order);
+              }}
               className={`bg-purple-500 hover:bg-purple-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
               title="Принтирай на термален принтер"
             >
               <Printer className="w-4 h-4" />
             </button>
             <button
-              onClick={() => handleBrowserPrint(order)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleBrowserPrint(order);
+              }}
               className={`bg-blue-500 hover:bg-blue-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
               title="Преглед за печат (Ctrl+P)"
             >
               <span className={`${emojiSizeClasses[cardSize]}`}>👁️</span>
             </button>
             <button
-              onClick={() => updateOrderStatus(order.id, 'working', true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                updateOrderStatus(order.id, 'working', true);
+              }}
               className={`bg-orange-500 hover:bg-orange-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
               title="Върни към работни поръчки"
             >
               <span className={`${emojiSizeClasses[cardSize]}`}>▶️</span>
             </button>
           <button
-            onClick={() => returnOrderToNew(order)}
+            onClick={(e) => {
+              e.stopPropagation();
+              returnOrderToNew(order);
+            }}
               className={`bg-blue-500 hover:bg-blue-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
             title="Върни към нови поръчки"
           >
               <span className={`${emojiSizeClasses[cardSize]}`}>🔄</span>
           </button>
             <button
-              onClick={() => order.orderType === 1 ? markPickupAsTaken(order) : sendToDriver(order)}
+              onClick={(e) => {
+                e.stopPropagation();
+                order.orderType === 1 ? markPickupAsTaken(order) : sendToDriver(order);
+              }}
               className={`bg-gray-500 hover:bg-gray-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
               title={order.orderType === 1 ? "Маркирай като взета" : "Препрати към доставка"}
             >
@@ -2092,7 +2134,10 @@ const KitchenCommandCenter = () => {
           ))}
           {order.items.length > 3 && (
             <button
-              onClick={() => setOrderDetailsModal({ show: true, order })}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOrderDetailsModal({ show: true, order });
+              }}
               className="flex items-center space-x-1 text-gray-400 hover:text-gray-300 text-xs mt-2 transition-colors"
             >
               <Eye size={12} />

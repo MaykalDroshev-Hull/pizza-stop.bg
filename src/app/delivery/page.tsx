@@ -1,15 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MapPin, 
   Phone, 
-  Navigation,
   User,
   Car,
-  X,
-  Wifi,
-  WifiOff
+  X
 } from 'lucide-react';
 import { updateOrderStatusInDB, ORDER_STATUS, KitchenOrder, LkOrderProducts } from '../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
@@ -46,16 +43,29 @@ interface DeliveryOrder {
   tips?: number;
 }
 
+// Helper function to convert issue reason to readable text
+const getIssueReasonText = (reason: string): string => {
+  const reasonMap: { [key: string]: string } = {
+    'customer_not_home': 'Клиентът не е вкъщи',
+    'wrong_address': 'Грешен адрес',
+    'customer_refused': 'Клиентът отказа поръчката',
+    'payment_issue': 'Проблем с плащането',
+    'accident': 'Инцидент/Авария',
+    'other': 'Друго'
+  };
+  return reasonMap[reason] || reason;
+};
+
 // Convert KitchenOrder to DeliveryOrder format
 const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
   const orderTime = new Date(kitchenOrder.OrderDT);
   
   // Parse coordinates from OrderLocationCoordinates
-  let coordinates = { lat: 42.7339, lng: 25.4858 }; // Default to Lovech
+  let coordinates = { lat: 0, lng: 0 }; // Default to 0,0 if no valid coordinates
   if (kitchenOrder.OrderLocationCoordinates) {
     try {
       const parsedCoords = JSON.parse(kitchenOrder.OrderLocationCoordinates);
-      if (parsedCoords.lat && parsedCoords.lng) {
+      if (parsedCoords.lat !== undefined && parsedCoords.lng !== undefined) {
         coordinates = { lat: parsedCoords.lat, lng: parsedCoords.lng };
       }
     } catch (error) {
@@ -111,17 +121,12 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
 
 const DeliveryDashboard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<DeliveryOrder | null>(null);
   const [showIssueDialog, setShowIssueDialog] = useState(false);
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [deliveryPhoto, setDeliveryPhoto] = useState<string>('');
   const [signature, setSignature] = useState<string>('');
   const [issueReason, setIssueReason] = useState<string>('');
-  const [driverLocation, setDriverLocation] = useState({ lat: 42.7339, lng: 25.4858 }); // Default to Lovech coordinates
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [selectedOrderForMap, setSelectedOrderForMap] = useState<DeliveryOrder | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   
   // ETA Modal State
@@ -152,25 +157,48 @@ const DeliveryDashboard = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Override body padding for delivery page
+  useEffect(() => {
+    // Store original padding
+    const originalPadding = document.body.style.paddingTop;
+    
+    // Apply custom padding for delivery page
+    const applyCustomPadding = () => {
+      document.body.style.paddingTop = '0px'; // Always 0px for delivery page
+    };
+    
+    // Apply initially
+    applyCustomPadding();
+    
+    // Listen for resize
+    window.addEventListener('resize', applyCustomPadding);
+    
+    // Cleanup function
+    return () => {
+      document.body.style.paddingTop = originalPadding;
+      window.removeEventListener('resize', applyCustomPadding);
+    };
+  }, []);
+
   // Function to open address in maps app (mobile only)
   const openAddressInMaps = (address: string) => {
     if (!isMobile) return; // Only work on mobile devices
-    
+
     const encodedAddress = encodeURIComponent(address);
-    
+
     // Detect platform and use appropriate deeplink
     const userAgent = navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(userAgent);
     const isAndroid = /android/.test(userAgent);
-    
+
     let mapsUrl = '';
-    
+
     if (isIOS) {
       // Try Apple Maps first, fallback to Google Maps
       mapsUrl = `maps://?q=${encodedAddress}`;
       // Fallback URL for Google Maps
       const fallbackUrl = `https://maps.google.com/?q=${encodedAddress}`;
-      
+
       // Try to open Apple Maps, if it fails, open Google Maps
       window.location.href = mapsUrl;
       setTimeout(() => {
@@ -180,7 +208,7 @@ const DeliveryDashboard = () => {
       // Try Google Maps app first, fallback to web
       mapsUrl = `geo:0,0?q=${encodedAddress}`;
       const fallbackUrl = `https://maps.google.com/?q=${encodedAddress}`;
-      
+
       window.location.href = mapsUrl;
       setTimeout(() => {
         window.open(fallbackUrl, '_blank');
@@ -192,32 +220,13 @@ const DeliveryDashboard = () => {
     }
   };
 
-  // Get driver's current location
-  const getCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by this browser');
-      return;
-    }
+  // Function to open coordinates in Google Maps (works on all devices)
+  const openCoordinatesInMaps = (lat: number, lng: number) => {
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(mapsUrl, '_blank');
+  };
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setDriverLocation({ lat: latitude, lng: longitude });
-        setLocationError(null);
-        console.log('Driver location updated:', { lat: latitude, lng: longitude });
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        setLocationError(`Location error: ${error.message}`);
-        // Keep default location if geolocation fails
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes
-      }
-    );
-  }, []);
+  // Driver geolocation and map have been removed for a simplified delivery view
 
 
   // Fetch delivery orders from database
@@ -341,30 +350,17 @@ const DeliveryDashboard = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Initialize time on client side to prevent hydration mismatch
-      setCurrentTime(new Date());
-      
-      const timer = setInterval(() => {
-        setCurrentTime(new Date());
-      }, 1000);
-      
-      // Database connection will be tested when fetching data
-      
-      // Get driver's current location
-      getCurrentLocation();
-      
       // Fetch orders on component mount
       fetchDeliveryOrders();
-      
+
       // Refresh orders every 30 seconds
       const refreshInterval = setInterval(fetchDeliveryOrders, 30000);
-      
+
       return () => {
-        clearInterval(timer);
         clearInterval(refreshInterval);
       };
     }
-  }, [isAuthenticated, getCurrentLocation]);
+  }, [isAuthenticated]);
 
   const updateOrderStatus = async (orderId: number, newStatus: DeliveryOrder['status']) => {
     const now = new Date();
@@ -406,12 +402,12 @@ const DeliveryDashboard = () => {
     }
     
     // Note: Database update for delivered orders moved after UI update
-    
-    setOrders(prevOrders => 
+
+    setOrders(prevOrders =>
       prevOrders.map(order => {
         if (order.id === orderId) {
           const updatedOrder = { ...order, status: newStatus };
-          
+
           if (newStatus === 'en_route') {
             updatedOrder.pickupTime = now;
           } else if (newStatus === 'delivered') {
@@ -419,15 +415,15 @@ const DeliveryDashboard = () => {
             updatedOrder.deliveryPhoto = deliveryPhoto;
             updatedOrder.signature = signature;
             updatedOrder.customerRating = 5; // Default rating
-            
+
             // Remove from active orders
             setTimeout(() => {
               setOrders(current => current.filter(o => o.id !== orderId));
             }, 1000);
-            
+
             // Show success message
             console.log(`Order #${orderId} marked as delivered`);
-            
+
             // Update stats
             setStats(prev => ({
               ...prev,
@@ -436,8 +432,12 @@ const DeliveryDashboard = () => {
             }));
           } else if (newStatus === 'issue') {
             updatedOrder.issueReason = issueReason;
+            // Remove from active orders immediately for cancelled orders
+            setTimeout(() => {
+              setOrders(current => current.filter(o => o.id !== orderId));
+            }, 1000);
           }
-          
+
           return updatedOrder;
         }
         return order;
@@ -456,6 +456,38 @@ const DeliveryDashboard = () => {
       } catch (error) {
         console.error('Error updating order status in database:', error);
         // Order is still moved to history even if database update fails
+      }
+    }
+
+    // Update database for cancelled orders (issue reports)
+    if (newStatus === 'issue') {
+      try {
+        // Create a comment with the issue reason
+        const issueComments = getIssueReasonText(issueReason);
+
+        // Update order to CANCELLED status with issue comment
+        const response = await fetch('/api/kitchen-and-delivery', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderId,
+            statusId: ORDER_STATUS.CANCELLED,
+            comments: issueComments
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Failed to update order status to CANCELLED in database:', errorData);
+          alert('Грешка при обновяване на статуса на поръчката в базата данни, но поръчката е премахната от списъка.');
+        } else {
+          console.log(`Successfully updated order ${orderId} to CANCELLED status with issue: ${issueComments}`);
+        }
+      } catch (error) {
+        console.error('Error updating order status to CANCELLED in database:', error);
+        alert('Грешка при обновяване на статуса на поръчката в базата данни, но поръчката е премахната от списъка.');
       }
     }
     
@@ -573,17 +605,9 @@ const DeliveryDashboard = () => {
     });
   };
 
-  const getTimeSince = (date: Date) => {
-    const minutes = Math.floor((new Date().getTime() - date.getTime()) / 1000 / 60);
-    return minutes;
-  };
-
   const OrderCard = ({ order }: { order: DeliveryOrder }) => {
-    const timeSince = getTimeSince(order.orderTime);
-    const isUrgent = timeSince > 20;
-    
     return (
-      <div className={`rounded-lg p-3 sm:p-4 mb-3 border-2 transition-all duration-300 hover:bg-opacity-80 ${getStatusColor(order.status, order.priority)} ${isUrgent ? 'animate-pulse' : ''}`}>
+      <div className={`rounded-lg p-3 sm:p-4 mb-3 border-2 transition-all duration-300 hover:bg-opacity-80 ${getStatusColor(order.status, order.priority)}`}>
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center space-x-2 flex-1 min-w-0">
             <span className="text-lg sm:text-xl font-bold text-white">#{order.id}</span>
@@ -686,6 +710,32 @@ const DeliveryDashboard = () => {
             <>
               <button
                 onClick={() => {
+                  console.log(`🗺️ Google Maps button clicked for order ${order.id}: lat=${order.coordinates.lat}, lng=${order.coordinates.lng}, address="${order.address}"`);
+                  if (order.coordinates.lat === 0 && order.coordinates.lng === 0) {
+                    // Use address search when coordinates are 0,0
+                    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`;
+                    window.open(mapsUrl, '_blank');
+                  } else {
+                    // Use coordinates for navigation
+                    openCoordinatesInMaps(order.coordinates.lat, order.coordinates.lng);
+                  }
+                }}
+                className="bg-blue-600 text-white font-bold py-2 px-3 rounded text-sm hover:bg-blue-700 transition-colors"
+                title="Отвори в Google Maps"
+              >
+                🗺️
+              </button>
+              <button
+                onClick={() => {
+                  window.location.href = `tel:${order.phone}`;
+                }}
+                className="bg-cyan-600 text-white font-bold py-2 px-3 rounded text-sm hover:bg-cyan-700 transition-colors"
+                title="Позвъни на клиента"
+              >
+                📞
+              </button>
+              <button
+                onClick={() => {
                   setSelectedOrder(order);
                   setShowDeliveryDialog(true);
                 }}
@@ -735,39 +785,12 @@ const DeliveryDashboard = () => {
 
   return (
     <div className="h-screen bg-black text-white font-sans flex flex-col">
-      {/* Header - Mobile Optimized */}
-      <div className="h-16 bg-gray-900 border-b-2 border-red-600 flex items-center justify-between px-2 sm:px-4 flex-shrink-0">
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <div className="text-lg sm:text-2xl font-bold text-red-500">🍕 PIZZA STOP</div>
-          <div className="text-sm sm:text-lg text-gray-400 hidden sm:block">Доставчик</div>
-        </div>
-        
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <div className="text-sm sm:text-xl font-mono">
-            {currentTime ? currentTime.toLocaleTimeString('bg-BG', { 
-              hour: '2-digit', 
-              minute: '2-digit', 
-              second: '2-digit' 
-            }) : '--:--:--'}
-          </div>
-          
-          <button
-            onClick={() => setIsOnline(!isOnline)}
-            className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1 rounded text-xs sm:text-sm ${
-              isOnline ? 'bg-green-600' : 'bg-red-600'
-            }`}
-          >
-            {isOnline ? <Wifi size={14} className="sm:w-4 sm:h-4" /> : <WifiOff size={14} className="sm:w-4 sm:h-4" />}
-            <span className="hidden sm:inline">{isOnline ? 'Онлайн' : 'Офлайн'}</span>
-          </button>
-        </div>
-      </div>
 
       {/* Main Content - Mobile Optimized */}
       <div className="flex-1 overflow-hidden">
           <div className="h-full flex flex-col lg:flex-row">
             {/* Orders List */}
-            <div className="w-full lg:w-1/2 p-2 sm:p-4 overflow-y-auto">
+            <div className="w-full p-2 sm:p-4 overflow-y-auto">
               {loading ? (
                 <div className="text-center text-gray-400 mt-20">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
@@ -808,216 +831,7 @@ const DeliveryDashboard = () => {
               )}
             </div>
             
-            {/* Delivery Map */}
-            <div className="hidden lg:block w-1/2 bg-gray-800 p-4">
-              <div className="h-full bg-gray-900 rounded-lg border border-gray-600 flex flex-col">
-                {/* Map Header */}
-                <div className="p-4 border-b border-gray-600">
-                  <h2 className="text-xl font-bold text-white mb-2">🗺️ Карта на доставките</h2>
-                  <div className="text-sm text-gray-400 mb-3">
-                    Активни доставки: {activeOrders.length} | Готови за вземане: {readyOrders.length}
-                  </div>
-                  
-                  {/* Legend */}
-                  <div className="flex items-center space-x-4 text-xs">
-                    <div className="flex items-center space-x-1">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-gray-300">Готови за вземане</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <span className="text-gray-300">В процес на доставка</span>
-                    </div>
-                    <div className="text-gray-400">
-                      Номерата показват реда на доставка
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Location Controls */}
-                <div className="p-4 border-b border-gray-600">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-sm text-gray-300">
-                        <span className="font-medium">Текущо местоположение:</span>
-                        <span className="ml-2 text-green-400">
-                          {driverLocation.lat.toFixed(6)}, {driverLocation.lng.toFixed(6)}
-                        </span>
-                      </div>
-                      {locationError && (
-                        <div className="text-sm text-red-400">
-                          ⚠️ {locationError}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={getCurrentLocation}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center space-x-1"
-                      title="Обнови местоположение"
-                    >
-                      <Navigation size={14} />
-                      <span>Обнови</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Map Content */}
-                <div className="flex-1 p-4">
-                  {(() => {
-                    const allOrders = [...readyOrders, ...activeOrders];
-                    if (allOrders.length > 0) {
-                      // Sort orders by order time (earliest first) to assign numbers
-                      const sortedOrders = [...allOrders].sort((a, b) => 
-                        new Date(a.orderTime).getTime() - new Date(b.orderTime).getTime()
-                      );
-                      
-                      // Debug: Log order coordinates
-                      console.log('Order coordinates:', sortedOrders.map(order => ({
-                        id: order.id,
-                        coordinates: order.coordinates,
-                        address: order.address
-                      })));
-                      
-                      // Calculate center point based on order locations
-                      const avgLat = sortedOrders.reduce((sum, order) => sum + order.coordinates.lat, 0) / sortedOrders.length;
-                      const avgLng = sortedOrders.reduce((sum, order) => sum + order.coordinates.lng, 0) / sortedOrders.length;
-                      
-                      console.log('Average coordinates:', { avgLat, avgLng });
-                      
-                      // Check if all orders have the same default coordinates (Lovech)
-                      const isAllDefaultCoords = sortedOrders.every(order => 
-                        order.coordinates.lat === 42.7339 && order.coordinates.lng === 25.4858
-                      );
-                      
-                      let mapsUrl;
-                      
-                      if (selectedOrderForMap) {
-                        // Show directions to the selected order
-                        console.log('Showing directions to selected order:', selectedOrderForMap.id);
-                        mapsUrl = `https://www.google.com/maps/embed/v1/directions?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&origin=${driverLocation.lat},${driverLocation.lng}&destination=${selectedOrderForMap.coordinates.lat},${selectedOrderForMap.coordinates.lng}&mode=driving`;
-                      } else if (isAllDefaultCoords) {
-                        // If all orders have default coordinates, show Lovech area with a general view
-                        console.log('All orders have default coordinates, showing Lovech area');
-                        mapsUrl = `https://www.google.com/maps/embed/v1/view?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&center=42.7339,25.4858&zoom=13`;
-                      } else {
-                        // Use actual order coordinates for directions
-                        const firstOrder = sortedOrders[0];
-                        const otherOrders = sortedOrders.slice(1);
-                        
-                        // Create waypoints string for the remaining orders
-                        const waypoints = otherOrders.map(order => 
-                          `${order.coordinates.lat},${order.coordinates.lng}`
-                        ).join('|');
-                        
-                        // Create directions URL that shows the route
-                        if (otherOrders.length > 0) {
-                          mapsUrl = `https://www.google.com/maps/embed/v1/directions?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&origin=${driverLocation.lat},${driverLocation.lng}&destination=${firstOrder.coordinates.lat},${firstOrder.coordinates.lng}&waypoints=${waypoints}&mode=driving`;
-                        } else {
-                          mapsUrl = `https://www.google.com/maps/embed/v1/directions?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&origin=${driverLocation.lat},${driverLocation.lng}&destination=${firstOrder.coordinates.lat},${firstOrder.coordinates.lng}&mode=driving`;
-                        }
-                      }
-                      
-                      return (
-                        <div className="h-full bg-gray-800 rounded-lg border border-gray-600 overflow-hidden relative">
-                          <iframe
-                            src={mapsUrl}
-                            width="100%"
-                            height="100%"
-                            style={{ border: 0 }}
-                            allowFullScreen
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            className="rounded-lg"
-                          />
-                          
-                          {/* Overlay with order destinations list */}
-                          <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 max-w-xs">
-                            <div className="text-white text-sm font-medium mb-2">
-                              Маршрут на доставките:
-                              {selectedOrderForMap && (
-                                <div className="text-xs text-blue-400 mt-1">
-                                  🗺️ Показва маршрут до поръчка #{selectedOrderForMap.id}
-                                </div>
-                              )}
-                              {isAllDefaultCoords && (
-                                <div className="text-xs text-yellow-400 mt-1">
-                                  ⚠️ Използват се координати по подразбиране (Ловеч)
-                                </div>
-                              )}
-                            </div>
-                            {selectedOrderForMap && (
-                              <button
-                                onClick={() => setSelectedOrderForMap(null)}
-                                className="mb-2 text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded transition-colors"
-                              >
-                                ✕ Изчисти избора
-                              </button>
-                            )}
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                              {sortedOrders.map((order, index) => {
-                                const number = index + 1;
-                                const statusColor = order.status === 'ready' ? 'bg-blue-500' : 'bg-orange-500';
-                                const statusText = order.status === 'ready' ? 'Готов' : 'В процес';
-                                const isSelected = selectedOrderForMap?.id === order.id;
-                                
-                                return (
-                                  <div 
-                                    key={order.id} 
-                                    className={`flex items-center space-x-2 text-xs p-2 rounded-lg cursor-pointer transition-all hover:bg-white/10 ${
-                                      isSelected ? 'bg-blue-500/20 border border-blue-400' : ''
-                                    }`}
-                                    onClick={() => {
-                                      if (isSelected) {
-                                        setSelectedOrderForMap(null); // Deselect if already selected
-                                      } else {
-                                        setSelectedOrderForMap(order); // Select this order
-                                      }
-                                    }}
-                                    title={isSelected ? 'Кликнете за да скриете маршрута' : 'Кликнете за да видите маршрута до тази доставка'}
-                                  >
-                                    <div className={`w-6 h-6 rounded-full ${statusColor} flex items-center justify-center text-white font-bold text-xs`}>
-                                      {number}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-white font-medium truncate">#{order.id}</div>
-                                      <div className="text-gray-300 truncate">{order.customerName}</div>
-                                      <div className="text-gray-400 text-xs">{statusText}</div>
-                                      {isSelected && (
-                                        <div className="text-blue-400 text-xs font-medium">
-                                          🗺️ Маршрут активен
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-green-400 font-medium">
-                                        {(order.totalPrice + order.deliveryFee).toFixed(2)}лв
-                                      </div>
-                                      <div className="text-gray-400 text-xs">
-                                        {order.distance.toFixed(1)}км
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div className="h-full bg-gray-800 rounded-lg flex items-center justify-center border border-gray-600">
-                          <div className="text-center text-gray-400">
-                            <MapPin size={64} className="mx-auto mb-4 opacity-50" />
-                            <div className="text-lg">Няма активни доставки</div>
-                            <div className="text-sm">Картата ще се появи когато има поръчки</div>
-                          </div>
-                        </div>
-                      );
-                    }
-                  })()}
-                </div>
-              </div>
-            </div>
+            {/* Map section removed */}
           </div>
       </div>
 
@@ -1154,7 +968,10 @@ const DeliveryDashboard = () => {
             
             <div className="flex space-x-3">
               <button
-                onClick={() => updateOrderStatus(selectedOrder.id, 'issue')}
+                onClick={() => {
+                  updateOrderStatus(selectedOrder.id, 'issue');
+                  alert(`✅ Проблемът е докладван успешно! Поръчка #${selectedOrder.id} е отменена.`);
+                }}
                 disabled={!issueReason}
                 className="flex-1 bg-red-600 text-white font-bold py-3 px-4 rounded hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >

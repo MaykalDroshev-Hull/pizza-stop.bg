@@ -325,7 +325,8 @@ export const ORDER_STATUS = {
   READY: 3,              // Приготвена - Ready/Finished
   WITH_DRIVER: 4,        // При шофьора - With driver
   IN_DELIVERY: 5,        // В процес на доставка - In delivery
-  DELIVERED: 6           // Доставена - Delivered
+  DELIVERED: 6,          // Доставена - Delivered
+  CANCELLED: 7           // Отменена - Cancelled
 } as const;
 
 // Database types based on your structure
