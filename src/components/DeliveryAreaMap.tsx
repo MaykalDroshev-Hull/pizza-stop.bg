@@ -430,7 +430,8 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
              <li><strong>Онлайн поръчки:</strong><br/> Понеделник – Петък: 09:00 - 22:30<br/>Събота и Неделя: 11:00 - 20:30</li>
              <li><strong>Телефон за поръчки:</strong> <br/> 068 670 070</li>
              <li><strong>Минимална сума за доставка:</strong> 15 лв.</li>
-             <li><strong>Безплатна доставка за поръчки над:</strong> 50 лв.</li>
+             <li><strong>Безплатна доставка в града при поръчка над 50 лв.</strong></li>
+             <li><strong>Доставка извън града: 7 лв.</strong></li>
              <li><strong>Поръчки с отложен час:</strong> <br/> приемат се до 5 дни предварително</li>
            </ul>
          </div>
