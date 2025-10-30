@@ -18,7 +18,7 @@ export default function AdminKitchenLoginPage() {
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     try {
       console.log('👨‍🍳 Kitchen Login Attempt:', { username, provided: '***' })
-      
+
       const response = await fetch('/api/auth/admin-login', {
         method: 'POST',
         headers: {
@@ -35,7 +35,15 @@ export default function AdminKitchenLoginPage() {
 
       if (response.ok && result.success) {
         console.log('✅ Kitchen login successful')
+        // Set sessionStorage immediately for authentication check
+        sessionStorage.setItem('admin_kitchen', 'true')
         setIsAuthenticated(true)
+
+        // Redirect to kitchen after successful login
+        setTimeout(() => {
+          window.location.href = '/kitchen'
+        }, 100)
+
         return true
       } else {
         console.log('❌ Kitchen login failed')
@@ -48,11 +56,10 @@ export default function AdminKitchenLoginPage() {
   }
 
   return (
-    <AdminLogin 
-      title="Кухня" 
+    <AdminLogin
+      title="Кухня"
       subtitle="Влезте в административния панел на кухнята"
       onLogin={handleLogin}
-      redirectPath="/kitchen"
     />
   )
 }

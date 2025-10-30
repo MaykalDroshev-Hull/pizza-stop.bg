@@ -8,7 +8,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: NextRequest) {
   try {
-    const { orderId, statusId, readyTime } = await request.json();
+    const { orderId, statusId, readyTime, comments } = await request.json();
 
     if (!orderId) {
       return NextResponse.json(
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`API: Updating order ${orderId} to status ${statusId}`);
+    console.log(`API: Updating order ${orderId} to status ${statusId}${comments ? ` with comments: ${comments}` : ''}`);
 
     // First check if order exists
     const { data: existingOrder, error: fetchError } = await supabaseAdmin
@@ -80,10 +80,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update the order status
+    // Prepare update object
+    const updateData: any = { OrderStatusID: statusId };
+    if (comments !== undefined) {
+      updateData.Comments = comments;
+    }
+
+    // Update the order status and/or comments
     const { data, error } = await supabaseAdmin
       .from('Order')
-      .update({ OrderStatusID: statusId })
+      .update(updateData)
       .eq('OrderID', orderId)
       .select();
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Printer, LogOut, ArrowLeft, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { fetchMenuData, fetchAddons } from "@/lib/menuData";
@@ -69,7 +69,11 @@ export default function PrinterPage() {
   const [productModalData, setProductModalData] = useState<ProductModalData | null>(null);
   const [showClearModal, setShowClearModal] = useState(false);
   const [menuData, setMenuData] = useState<{ [key: string]: any[] }>({});
-  
+
+  // Address autocomplete
+  const [autocomplete, setAutocomplete] = useState<any>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+
   // 50/50 Pizza state
   const [fiftyFiftySelection, setFiftyFiftySelection] = useState<{
     size: string | null;
@@ -226,6 +230,81 @@ export default function PrinterPage() {
 
     fetchFiftyFiftyAddons();
   }, [fiftyFiftySelection.step, fiftyFiftyAddons.length]);
+
+  // Initialize Google Places Autocomplete for address field
+  const initializeAutocomplete = () => {
+    if (!addressInputRef.current || !window.google?.maps?.places) return;
+
+    // Clean up existing autocomplete instance if it exists
+    if (autocomplete) {
+      window.google.maps.event.clearInstanceListeners(autocomplete);
+    }
+
+    const autocompleteInstance = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+      types: ['address'],
+      componentRestrictions: { country: 'bg' }, // Restrict to Bulgaria
+      fields: ['formatted_address', 'geometry', 'place_id']
+    });
+
+    autocompleteInstance.addListener('place_changed', () => {
+      const place = autocompleteInstance.getPlace();
+      console.log('🏠 Place selected from printer autocomplete:', place);
+
+      if (place.formatted_address) {
+        // Update the address with the selected place
+        setCustomerInfo(prev => ({
+          ...prev,
+          address: place.formatted_address || ''
+        }));
+      } else {
+        console.log('❌ No formatted_address found in place:', place);
+      }
+    });
+
+    setAutocomplete(autocompleteInstance as any);
+  };
+
+  // Load Google Maps script and initialize autocomplete when customer form is shown
+  useEffect(() => {
+    if (showCustomerForm) {
+      const loadGoogleMaps = async () => {
+        // Check if Google Maps is already loaded
+        if (window.google && window.google.maps && window.google.maps.places) {
+          initializeAutocomplete();
+          return;
+        }
+
+        // Check if script already exists to prevent duplicate loading
+        const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+        if (existingScript) {
+          // Wait for existing script to load
+          existingScript.addEventListener('load', () => {
+            initializeAutocomplete();
+          });
+          return;
+        }
+
+        // Load Google Maps script
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+
+        script.addEventListener('load', () => {
+          console.log('🗺️ Google Maps script loaded for printer page');
+          initializeAutocomplete();
+        });
+
+        script.addEventListener('error', (error) => {
+          console.error('❌ Failed to load Google Maps script:', error);
+        });
+
+        document.head.appendChild(script);
+      };
+
+      loadGoogleMaps();
+    }
+  }, [showCustomerForm]);
 
   const categories: Category[] = [
     { id: "pizza", name: "Пици", emoji: "" },
@@ -469,9 +548,9 @@ export default function PrinterPage() {
         // Reset for next customer
         setShowCustomerForm(false);
         setSelectedProducts([]);
-        setCustomerInfo({ 
-          name: "", 
-          phone: "", 
+        setCustomerInfo({
+          name: "",
+          phone: "",
           address: "",
           orderType: 1,
           deliveryPrice: 0
@@ -802,11 +881,12 @@ export default function PrinterPage() {
                   Адрес *
                 </label>
                 <input
+                  ref={addressInputRef}
                   type="text"
                   value={customerInfo.address}
                   onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
                   className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-base"
-                  placeholder="Въведете адрес"
+                  placeholder="Град/Село, адрес"
                   required={customerInfo.orderType === 2}
                 />
               </div>
