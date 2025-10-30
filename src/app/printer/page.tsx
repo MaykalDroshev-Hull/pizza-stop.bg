@@ -526,7 +526,8 @@ export default function PrinterPage() {
         quantity: product.quantity,
         addons: product.addons || [],
         comment: product.comment || "",
-        size: product.size || 'Standard'
+        size: product.size || 'Standard',
+        category: product.category || 'unknown'
       }));
 
       const response = await fetch('/api/printer/order', {
