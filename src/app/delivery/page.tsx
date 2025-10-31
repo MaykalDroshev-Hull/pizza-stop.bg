@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  MapPin, 
-  Phone, 
+import {
+  MapPin,
+  Phone,
   User,
   Car,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { updateOrderStatusInDB, ORDER_STATUS, KitchenOrder, LkOrderProducts } from '../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
@@ -141,6 +142,14 @@ const DeliveryDashboard = () => {
     rating: 4.8,
     totalTips: 45.20
   });
+
+  // Logout function
+  const handleLogout = () => {
+    // Clear authentication from session storage
+    sessionStorage.removeItem('admin_delivery');
+    // Redirect to login page
+    window.location.href = '/admin-delivery-login';
+  };
 
   // Real delivery orders from database
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
@@ -785,6 +794,17 @@ const DeliveryDashboard = () => {
 
   return (
     <div className="h-screen bg-black text-white font-sans flex flex-col">
+
+      {/* Header with Logout Button */}
+      <div className="flex justify-end items-center p-4 border-b border-gray-800">
+        <button
+          onClick={handleLogout}
+          className="px-2 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px] touch-manipulation"
+          title="Излез"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
+      </div>
 
       {/* Main Content - Mobile Optimized */}
       <div className="flex-1 overflow-hidden">

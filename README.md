@@ -154,11 +154,22 @@ See [GOOGLE_MAPS_SETUP.md](./GOOGLE_MAPS_SETUP.md) for detailed instructions.
 
 ### 7. Run Development Server
 
+For local development:
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+For mobile testing (accessible from phone/tablet):
+```bash
+npm run dev:mobile
+```
+
+Open the provided URL in your browser. For mobile access:
+1. Use `npm run dev:mobile` to bind to all network interfaces
+2. Find your computer's local IP address (run `ipconfig` on Windows or `ifconfig` on Linux/Mac)
+3. Use `http://YOUR_LOCAL_IP:3000` on your mobile device
+4. Make sure both devices are on the same WiFi network
+5. Disable firewall or allow port 3000 if needed
 
 ### 8. Build for Production
 
