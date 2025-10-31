@@ -2022,7 +2022,7 @@ export default function CheckoutPage() {
                <Truck size={20} className="inline mr-2" />
                Тип на поръчка *
              </h2>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <button
                  type="button"
                  onClick={() => setSelectedDeliveryType('pickup')}
@@ -2035,44 +2035,25 @@ export default function CheckoutPage() {
                  <div className="flex items-center gap-3">
                    <div className="w-3 h-3 rounded-full bg-green"></div>
                    <Store size={20} />
-                   <span className="font-medium">Вземане</span>
+                   <span className="font-medium">Вземане от ресторант</span>
                  </div>
-                 <p className="text-sm text-muted mt-1">Безплатно</p>
                </button>
                
-               <button
-                 type="button"
-                 onClick={() => setSelectedDeliveryType('delivery-yellow')}
-                 className={`p-4 rounded-lg border-2 transition-all ${
-                   selectedDeliveryType === 'delivery-yellow'
-                     ? 'border-yellow bg-yellow/10 text-yellow'
-                     : 'border-white/20 bg-white/5 text-text hover:border-white/30'
-                 }`}
-               >
-                 <div className="flex items-center gap-3">
-                   <div className="w-3 h-3 rounded-full bg-yellow"></div>
-                   <Truck size={20} />
-                   <span className="font-medium">Доставка</span>
-                 </div>
-                 <p className="text-sm text-muted mt-1">Жълта зона - 3 BGN</p>
-               </button>
-               
-               <button
-                 type="button"
-                 onClick={() => setSelectedDeliveryType('delivery-blue')}
-                 className={`p-4 rounded-lg border-2 transition-all ${
-                   selectedDeliveryType === 'delivery-blue'
-                     ? 'border-blue bg-blue/10 text-blue'
-                     : 'border-white/20 bg-white/5 text-text hover:border-white/30'
-                 }`}
-               >
-                 <div className="flex items-center gap-3">
-                   <div className="w-3 h-3 rounded-full bg-blue"></div>
-                   <Truck size={20} />
-                   <span className="font-medium">Доставка</span>
-                 </div>
-                 <p className="text-sm text-muted mt-1">Синя зона - 7 BGN</p>
-               </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDeliveryType('delivery')}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  selectedDeliveryType === 'delivery'
+                    ? 'border-yellow bg-yellow/10 text-yellow'
+                    : 'border-white/20 bg-white/5 text-text hover:border-white/30'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-yellow"></div>
+                  <Truck size={20} />
+                  <span className="font-medium">Доставка</span>
+                </div>
+              </button>
              </div>
            </div>
 
@@ -2392,9 +2373,9 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">Тип на поръчка:</span>
                   <span className="text-white font-medium">
-                    {selectedDeliveryType === 'delivery-yellow' ? 'Доставка - Жълта зона' :
-                     selectedDeliveryType === 'delivery-blue' ? 'Доставка - Синя зона' :
-                     'Не е избран'}
+                    {addressZone === 'yellow' ? 'Доставка - Жълта зона' :
+                     addressZone === 'blue' ? 'Доставка - Синя зона' :
+                     'Доставка'}
                   </span>
                 </div>
               )}
@@ -2438,15 +2419,15 @@ export default function CheckoutPage() {
 
               {/* Validation Messages */}
               <div className="space-y-2">
-                {/* Minimum order amount errors by delivery type */}
-                {selectedDeliveryType === 'delivery-yellow' && totalPrice < 15 && (
+                {/* Minimum order amount errors by delivery zone */}
+                {addressZone === 'yellow' && selectedDeliveryType !== 'pickup' && totalPrice < 15 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за жълта зона</div>
                     <div>Минималната сума за доставка в жълта зона е 15 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
                   </div>
                 )}
                 
-                {selectedDeliveryType === 'delivery-blue' && totalPrice < 30 && (
+                {addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < 30 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за синя зона</div>
                     <div>Минималната сума за доставка в синя зона е 30 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
@@ -2500,7 +2481,7 @@ export default function CheckoutPage() {
                 )}
                 
                 {/* Action Buttons for Low Order */}
-                {(totalPrice < 15 || (selectedDeliveryType === 'delivery-blue' && totalPrice < 30)) && (
+                {(totalPrice < 15 || (addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < 30)) && (
                   <div className="flex space-x-3">
                     <a
                       href="/order"

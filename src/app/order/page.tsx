@@ -421,14 +421,7 @@ export default function MenuPage() {
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 h-full">
             <h1 className="text-3xl font-bold text-text">Поръчай сега!</h1>
               
-              {/* Logo Container - Smaller on mobile */}
-              <div className="flex items-center justify-center overflow-hidden">
-                <img 
-                  src="https://ktxdniqhrgjebmabudoc.supabase.co/storage/v1/object/sign/pizza-stop-bucket/pizza-stop-logo/428599730_7269873796441978_7859610568299247248_n-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80ODQ2MWExYi0yOTZiLTQ4MDEtYjRiNy01ZGYwNzc1ZjYyZjciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwaXp6YS1zdG9wLWJ1Y2tldC9waXp6YS1zdG9wLWxvZ28vNDI4NTk5NzMwXzcyNjk4NzM3OTY0NDE5NzhfNzg1OTYxMDU2ODI5OTI0NzI0OF9uLXJlbW92ZWJnLXByZXZpZXcucG5nIiwiaWF0IjoxNzU2Mzk1NzY5LCJleHAiOjI3MDI0NzU3Njl9.BzjSV5QdUHUyFM8_cf5k1SFWfKqqeRQnCZ09sRjtLvg"
-                  alt="PIZZA STOP Logo"
-                  className="w-20 h-20 object-contain"
-                />
-              </div>
+           
             
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={20} />
@@ -472,39 +465,50 @@ export default function MenuPage() {
           /* 50/50 Pizza Special UI */
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-8">
-              <div className="text-6xl mb-4">🍕</div>
               <h2 className="text-3xl font-bold text-text mb-2">Пица 50/50</h2>
-              <p className="text-muted text-lg">Избери две различни пици и плащай цената на по-скъпата</p>
             </div>
 
-            {/* Step Indicator */}
-            <div className="flex justify-center mb-8">
-              <div className="flex items-center space-x-4">
-                {[1, 2, 3, 4].map((step) => (
-                  <div key={step} className={`flex items-center ${step < 4 ? 'space-x-4' : ''}`}>
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                      fiftyFiftySelection.step >= step 
-                        ? 'bg-gradient-to-r from-red to-orange text-white' 
-                        : 'bg-white/8 text-muted'
-                    }`}>
-                      {step}
+            {/* Step Indicator with Labels */}
+            <div className="mb-8 px-2 sm:px-8">
+              {/* Progress Bar Container */}
+              <div className="flex justify-between items-center relative mb-4">
+                {/* Background line - full width */}
+                <div className="absolute left-0 right-0 h-0.5 bg-white/20" style={{ top: '50%', transform: 'translateY(-50%)', zIndex: 1 }} />
+                
+                {/* Progress line - continuous and passes over circles */}
+                <div 
+                  className="absolute left-0 h-0.5 bg-orange transition-all duration-300"
+                  style={{ 
+                    top: '50%', 
+                    transform: 'translateY(-50%)',
+                    zIndex: 2,
+                    width: `${((fiftyFiftySelection.step - 1) / 3) * 100}%` // Same calculation for mobile and desktop (4 steps)
+                  }} 
+                />
+                
+                {/* Step Dots - numbers sit above the line */}
+                <div className="relative flex justify-between items-center w-full" style={{ zIndex: 3 }}>
+                  {[1, 2, 3, 4].map((step) => (
+                    <div key={step} className="relative flex-1 flex justify-center">
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold relative ${
+                        fiftyFiftySelection.step >= step 
+                          ? 'bg-gradient-to-r from-red to-orange text-white' 
+                          : 'bg-card text-muted'
+                      }`}>
+                        {step}
+                      </div>
                     </div>
-                    {step < 4 && (
-                      <div className={`w-8 h-0.5 ${
-                        fiftyFiftySelection.step > step ? 'bg-orange' : 'bg-white/20'
-                      }`} />
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Step Labels */}
-            <div className="flex justify-between items-center mb-8 px-8">
-              <div className="text-sm text-muted text-center flex-1">Размер</div>
-              <div className="text-sm text-muted text-center flex-1">Лява половина</div>
-              <div className="text-sm text-muted text-center flex-1 hidden sm:block">Дясна половина</div>
-              <div className="text-sm text-muted text-center flex-1 hidden sm:block">Добавки</div>
+              {/* Step Labels */}
+              <div className="flex justify-between items-center">
+                <div className="text-xs sm:text-sm text-muted text-center flex-1 px-1">Размер</div>
+                <div className="text-xs sm:text-sm text-muted text-center flex-1 px-1">Лява половина</div>
+                <div className="text-xs sm:text-sm text-muted text-center flex-1 px-1">Дясна половина</div>
+                <div className="text-xs sm:text-sm text-muted text-center flex-1 px-1">Добавки</div>
+              </div>
             </div>
 
             {/* 50/50 Content */}
