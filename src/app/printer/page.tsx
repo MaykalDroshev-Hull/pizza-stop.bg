@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Printer, LogOut, ArrowLeft, Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Printer, ArrowLeft, Mail, Lock, AlertCircle, Eye, EyeOff, LogOut } from "lucide-react";
 import { fetchMenuData, fetchAddons } from "@/lib/menuData";
 import styles from '../../styles/admin-login.module.css';
 
@@ -194,6 +194,8 @@ export default function PrinterPage() {
     setUsername("");
     setPassword("");
     setSelectedProducts([]);
+    setSelectedCategory("");
+    resetFiftyFiftySelection();
   };
 
   // Load menu data on component mount
@@ -526,7 +528,8 @@ export default function PrinterPage() {
         quantity: product.quantity,
         addons: product.addons || [],
         comment: product.comment || "",
-        size: product.size || 'Standard'
+        size: product.size || 'Standard',
+        category: product.category || 'unknown'
       }));
 
       const response = await fetch('/api/printer/order', {
@@ -1142,6 +1145,13 @@ export default function PrinterPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-white">Категории</h1>
             </div>
+            <button
+              onClick={handleLogout}
+              className="px-2 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px] touch-manipulation"
+              title="Излез"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
 
           <div className="flex-1 grid grid-cols-1 grid-rows-6 gap-0 p-1 overflow-y-auto">

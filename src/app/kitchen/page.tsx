@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw, Settings, Scissors } from 'lucide-react';
+import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw, Settings, Scissors, LogOut } from 'lucide-react';
 import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_STATUS, KitchenOrder } from '../../lib/supabase';
 import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerator';
 import PrinterConfigModal from '../../components/PrinterConfigModal';
@@ -349,6 +349,14 @@ const KitchenCommandCenter = () => {
     }
     setIsAuthenticated(isLoggedIn);
   }, []);
+
+  // Logout function
+  const handleLogout = () => {
+    // Clear authentication from session storage
+    sessionStorage.removeItem('admin_kitchen');
+    // Redirect to login page
+    window.location.href = '/admin-kitchen-login';
+  };
 
   useEffect(() => {
     if (isAuthenticated && !debugMode) {
@@ -1058,7 +1066,8 @@ const KitchenCommandCenter = () => {
         addNotification(`Поръчка #${order.id} отпечатана на COM порт принтер (${config?.comPort})`, 'info');
         console.log(`✅ Manual print: Order #${order.id} sent to COM port printer (${config?.comPort})`);
       } else {
-        throw new Error('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.');
+        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
+        return;
       }
     } catch (error) {
       console.error(`❌ Manual print failed for order #${order.id}:`, error);
@@ -1161,7 +1170,8 @@ const KitchenCommandCenter = () => {
         addNotification('⚠️ COM порт не поддържа Datecs fiscal протокол. Използвайте Web Serial.', 'warning');
         console.log('⚠️ COM port cut requires special protocol implementation');
       } else {
-        throw new Error('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.');
+        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
+        return;
       }
     } catch (error) {
       console.error('❌ Cut command failed:', error);
@@ -2283,7 +2293,7 @@ const KitchenCommandCenter = () => {
               <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
             </button>
 
-            {/* Printer Configuration Button */}
+            {/* Printer Configuration and Logout Buttons */}
             <div className="flex items-center space-x-1">
               <button
                 onClick={() => setPrinterConfigModal(true)}
@@ -2291,6 +2301,15 @@ const KitchenCommandCenter = () => {
                 title="Конфигурирай принтер"
               >
                 <Settings className="w-4 h-4" />
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="px-2 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px] touch-manipulation"
+                title="Излез"
+              >
+                <LogOut className="w-4 h-4" />
               </button>
 
               {/* Printer Status Indicator */}
@@ -2367,7 +2386,7 @@ const KitchenCommandCenter = () => {
       {/* Ready Time Modal */}
       {readyTimeModal.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-          <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 max-w-[90vw] w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 max-w-[90vw] max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-white">Кога ще е готова поръчката?</h3>
               <button

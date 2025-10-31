@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { 
-  Package, 
-  Plus, 
-  Coffee, 
+import React, { useState } from "react";
+import {
+  Package,
+  Plus,
+  Coffee,
   BarChart3,
   LogOut,
-  Search,
   LucideIcon
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -17,7 +16,6 @@ import ProductsTab from "./components/ProductsTab";
 import AddonsTab from "./components/AddonsTab";
 import BeverageTab from "./components/BeverageTab";
 import AnalysisTab from "./components/AnalysisTab";
-import DebugTab from "./components/DebugTab";
 
 interface Tab {
   id: string;
@@ -29,12 +27,34 @@ const AdminPage = (): React.JSX.Element => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("products");
 
+  // Override body padding for admin page
+  React.useEffect(() => {
+    // Store original padding
+    const originalPadding = document.body.style.paddingTop;
+
+    // Apply custom padding for admin page
+    const applyCustomPadding = () => {
+      document.body.style.paddingTop = '0px'; // Always 0px for admin page
+    };
+
+    // Apply initially
+    applyCustomPadding();
+
+    // Listen for resize
+    window.addEventListener('resize', applyCustomPadding);
+
+    // Cleanup function
+    return () => {
+      document.body.style.paddingTop = originalPadding;
+      window.removeEventListener('resize', applyCustomPadding);
+    };
+  }, []);
+
   const tabs: Tab[] = [
     { id: "products", label: "Продукти ", icon: Package },
     { id: "addons", label: "Добавки", icon: Plus },
     { id: "beverage", label: "Напитки", icon: Coffee },
     { id: "analysis", label: "Анализи", icon: BarChart3 },
-    { id: "debug", label: "Debug", icon: Search },
   ];
 
   const renderTabContent = (): React.JSX.Element => {
@@ -47,8 +67,6 @@ const AdminPage = (): React.JSX.Element => {
         return <BeverageTab />;
       case "analysis":
         return <AnalysisTab />;
-      case "debug":
-        return <DebugTab />;
       default:
         return <ProductsTab />;
     }
