@@ -296,9 +296,34 @@ export default function UserPage() {
       }
     }
     
-    // Validate password length
-    if (registerData.password.length < 6) {
-      setError('Паролата трябва да е поне 6 символа дълга')
+    // Validate phone - must match backend requirements
+    if (!registerData.phone) {
+      setError('Телефонът е задължителен')
+      return
+    }
+    
+    // Remove spaces from phone for validation
+    const cleanedPhone = registerData.phone.replace(/\s/g, '')
+    const phoneRegex = /^(\+359|0)[0-9]{9}$/
+    if (!phoneRegex.test(cleanedPhone)) {
+      setError('Невалиден формат на телефонния номер. Използвайте формат: +359XXXXXXXXX или 089XXXXXXX')
+      return
+    }
+    
+    // Validate password - must match backend requirements
+    if (!registerData.password) {
+      setError('Паролата е задължителна')
+      return
+    }
+    
+    if (registerData.password.length < 8) {
+      setError('Паролата трябва да е поне 8 символа дълга')
+      return
+    }
+    
+    // Check if password contains at least one letter and one digit
+    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(registerData.password)) {
+      setError('Паролата трябва да съдържа поне една буква и една цифра')
       return
     }
     
@@ -307,10 +332,17 @@ export default function UserPage() {
     setSuccess('')
 
     try {
+      // Prepare data for backend - remove spaces from phone
+      const cleanedPhone = registerData.phone.replace(/\s/g, '')
+      const dataToSend = {
+        ...registerData,
+        phone: cleanedPhone
+      }
+      
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(registerData)
+        body: JSON.stringify(dataToSend)
       })
 
       const data = await response.json()
@@ -319,8 +351,9 @@ export default function UserPage() {
         // Check if the error response contains multiple validation errors
         if (data && typeof data === 'object' && data.details) {
           // Extract individual errors from the details object
+          // Check both error_ prefixed keys and field names (name, email, phone, password)
           const errorMessages = Object.keys(data.details)
-            .filter(key => key.startsWith('error_'))
+            .filter(key => key.startsWith('error_') || ['name', 'email', 'phone', 'password'].includes(key))
             .map(key => data.details[key])
             .filter(Boolean)
           
@@ -329,6 +362,9 @@ export default function UserPage() {
           } else {
             setError(data.error || 'Грешка при регистрация')
           }
+        } else if (data && data.error) {
+          // If there's a direct error message, use it (it may contain format examples)
+          setError(data.error)
         } else {
           throw new Error(data.error || 'Registration failed')
         }
