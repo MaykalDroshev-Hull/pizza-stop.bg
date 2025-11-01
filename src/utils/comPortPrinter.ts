@@ -14,6 +14,7 @@ export interface ComPortConfig {
 
 export interface OrderData {
   orderId: number;
+  dailyOrderNumber?: number; // Daily order sequence number
   orderType: string;
   customerName: string;
   phone: string;
@@ -22,6 +23,7 @@ export interface OrderData {
     name: string;
     quantity: number;
     price: number;
+    size?: string; // Product size (e.g., "30cm", "60cm")
     addons: string[];
     comment?: string;
   }>;
@@ -29,6 +31,7 @@ export interface OrderData {
   deliveryCharge: number;
   total: number;
   paymentMethod: string;
+  paymentMethodId?: number; // Payment method ID for status determination
   isPaid: boolean;
   placedTime: string;
   restaurantPhone: string;
@@ -280,8 +283,11 @@ export class ComPortPrinter {
     commands += '\x1B\x21\x30'; // ESC ! 48 - Double size
     commands += 'PIZZA STOP\n';
     commands += '\x1B\x21\x00'; // ESC ! 0 - Normal text
-    commands += '================\n';
-    commands += this.utf8ToCp1251(`Поръчка #${order.orderId}\n`);
+    commands += '================================================\n';
+    // Use daily order number if available
+    const orderNumber = order.dailyOrderNumber || order.orderId;
+    commands += this.utf8ToCp1251(`Поръчка #${orderNumber}\n`);
+    commands += '================================================\n';
     commands += this.utf8ToCp1251(`Дата: ${order.placedTime}\n\n`);
     
     // Set alignment to left
@@ -300,33 +306,48 @@ export class ComPortPrinter {
     commands += '\n';
     
     // Order items
-    commands += this.utf8ToCp1251('ПОРЪЧКА:\n');
-    commands += '================\n';
+    commands += this.utf8ToCp1251('АРТИКУЛИ:\n');
+    commands += '------------------------------------------------\n';
     
     for (const item of order.items) {
-      commands += this.utf8ToCp1251(`${item.quantity}x ${item.name}\n`);
+      // Include size if available (e.g., "30cm", "60cm")
+      const sizeText = item.size ? ` (${item.size})` : '';
+      commands += this.utf8ToCp1251(`${item.quantity}x ${item.name}${sizeText}\n`);
       
       if (item.addons && item.addons.length > 0) {
-        commands += this.utf8ToCp1251(`  Добавки: ${item.addons.join(', ')}\n`);
+        commands += this.utf8ToCp1251(`  + ${item.addons.join(', ')}\n`);
       }
       
       if (item.comment) {
-        commands += this.utf8ToCp1251(`  Коментар: ${item.comment}\n`);
+        commands += this.utf8ToCp1251(`  Забележка: ${item.comment}\n`);
       }
       
       commands += '\n';
     }
     
-    // No payment required
-    commands += '================\n';
+    commands += '================================================\n';
     commands += '\n';
+    
+    // Payment status based on payment method
+    // Payment method ID 5 = Online (Paid), 3/4 = On delivery (Unpaid)
+    let paymentStatusText = 'НЕ СЕ ИЗИСКВА ПЛАЩАНЕ';
+    
+    if (order.paymentMethodId !== undefined) {
+      if (order.paymentMethodId === 5) {
+        // Online payment - Paid
+        paymentStatusText = 'ПЛАТЕНО ОНЛАЙН';
+      } else if (order.paymentMethodId === 3 || order.paymentMethodId === 4) {
+        // Payment on delivery - Unpaid
+        paymentStatusText = 'НЕПЛАТЕНО - ПЛАЩАНЕ ПРИ ДОСТАВКА';
+      }
+    }
     
     // Set alignment to center
     commands += '\x1B\x61\x01'; // ESC a 1 - Center alignment
     // Bold on and double size
     commands += '\x1B\x45\x01'; // ESC E 1 - Bold ON
     commands += '\x1B\x21\x30'; // ESC ! 48 - Double size
-    commands += this.utf8ToCp1251('НЕ СЕ ИЗИСКВА ПЛАЩАНЕ\n');
+    commands += this.utf8ToCp1251(`${paymentStatusText}\n`);
     // Normal text and bold off
     commands += '\x1B\x21\x00'; // ESC ! 0 - Normal size
     commands += '\x1B\x45\x00'; // ESC E 0 - Bold OFF
@@ -339,10 +360,11 @@ export class ComPortPrinter {
     commands += this.utf8ToCp1251(`Телефон: ${order.restaurantPhone}\n`);
     commands += this.utf8ToCp1251('Благодарим за поръчката!\n');
     
-    // Add line feeds for paper positioning
-    // The FP-2000's auto-cut (DIP Switch 5) will handle the actual cutting
-    // No manual cut command needed - fiscal protocol cut (0x2D) requires special framing
-    commands += '\n\n\n\n\n';
+    // Cut paper using GS V command (Datecs EP-2000 manual section 87)
+    // GS V [1Dh] [56h] + m + n
+    // m = 66 (0x42): Feed n steps before cutting
+    // n = 40: Extra feed (40 x 0.125mm = 5mm)
+    commands += '\x1D\x56\x42\x28'; // GS V mode=66 n=40
     
     return commands;
   }
@@ -398,9 +420,8 @@ export class ComPortPrinter {
     commands += '================\n';
     commands += this.utf8ToCp1251('Тест завършен успешно!\n');
     
-    // Add line feeds for paper positioning
-    // The FP-2000's auto-cut (DIP Switch 5) will handle the actual cutting
-    commands += '\n\n\n\n\n';
+    // Cut paper using GS V command (Datecs EP-2000 manual section 87)
+    commands += '\x1D\x56\x42\x28'; // GS V mode=66 n=40 (feed 5mm before cut)
     
     return commands;
   }

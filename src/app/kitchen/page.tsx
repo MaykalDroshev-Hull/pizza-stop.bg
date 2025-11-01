@@ -20,6 +20,7 @@ interface Order {
     name: string;
     quantity: number;
     price: number;
+    size?: string; // Product size (e.g., "30cm", "60cm")
     customizations: string[];
     comment?: string;
   }>;
@@ -1021,9 +1022,23 @@ const KitchenCommandCenter = () => {
       // Determine order type: 1 = Collection, 2 = Delivery
       const orderTypeText = order.orderType === 1 ? 'ВЗИМАНЕ' : 'ДОСТАВКА';
       
+      // Fetch daily order number from API
+      let dailyOrderNumber: number | undefined;
+      try {
+        const response = await fetch(`/api/order/daily-number?orderId=${order.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          dailyOrderNumber = data.dailyOrderNumber;
+          console.log(`📊 Order ${order.id} is daily order #${dailyOrderNumber}`);
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch daily order number, using database ID:', error);
+      }
+      
       // Convert Order to OrderData format with formatted pizza names
       const orderData: OrderData = {
         orderId: order.id,
+        dailyOrderNumber,
         orderType: orderTypeText,
         customerName: order.customerName,
         phone: order.phone,
@@ -1042,6 +1057,7 @@ const KitchenCommandCenter = () => {
             name: formattedName,
             quantity: item.quantity,
             price: item.price,
+            size: item.size, // Include size (e.g., "30cm", "60cm")
             addons: item.customizations,
             comment: item.comment
           };
@@ -1050,6 +1066,7 @@ const KitchenCommandCenter = () => {
         deliveryCharge: order.deliveryPrice,
         total: order.totalPrice + order.deliveryPrice,
         paymentMethod: order.paymentMethodId ? getPaymentMethodName(order.paymentMethodId) : 'Неопределен',
+        paymentMethodId: order.paymentMethodId, // Add payment method ID for status determination
         isPaid: order.isPaid,
         placedTime: order.orderTime.toLocaleString('bg-BG'),
         restaurantPhone: '068 670 070'
@@ -1349,9 +1366,23 @@ const KitchenCommandCenter = () => {
       // Determine order type: 1 = Collection, 2 = Delivery
       const orderTypeText = order.orderType === 1 ? 'ВЗИМАНЕ' : 'ДОСТАВКА';
       
+      // Fetch daily order number from API
+      let dailyOrderNumber: number | undefined;
+      try {
+        const response = await fetch(`/api/order/daily-number?orderId=${order.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          dailyOrderNumber = data.dailyOrderNumber;
+          console.log(`📊 Auto-print: Order ${order.id} is daily order #${dailyOrderNumber}`);
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch daily order number for auto-print, using database ID:', error);
+      }
+      
       // Convert Order to OrderData format for COM port printer with formatted pizza names
       const orderData: OrderData = {
         orderId: order.id,
+        dailyOrderNumber,
         orderType: orderTypeText,
         customerName: order.customerName,
         phone: order.phone,
@@ -1370,6 +1401,7 @@ const KitchenCommandCenter = () => {
             name: formattedName,
             quantity: item.quantity,
             price: item.price,
+            size: item.size, // Include size (e.g., "30cm", "60cm")
             addons: item.customizations,
             comment: item.comment
           };
@@ -1378,6 +1410,7 @@ const KitchenCommandCenter = () => {
         deliveryCharge: order.deliveryPrice,
         total: order.totalPrice + order.deliveryPrice,
         paymentMethod: order.paymentMethodId ? getPaymentMethodName(order.paymentMethodId) : 'Неопределен',
+        paymentMethodId: order.paymentMethodId, // Add payment method ID for status determination
         isPaid: order.isPaid,
         placedTime: order.orderTime.toLocaleString('bg-BG'),
         restaurantPhone: '068 670 070'
