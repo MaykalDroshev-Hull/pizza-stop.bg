@@ -179,25 +179,13 @@ export async function calculateServerSidePrice(
   const warnings: string[] = []
   let totalItemsPrice = 0
 
-  console.log('🔍🔍🔍 SERVER PRICE VALIDATION - FULL DEBUG 🔍🔍🔍')
-  console.log(`Total items to process: ${orderItems.length}`)
-  console.log('All items:', JSON.stringify(orderItems, null, 2))
 
   for (const item of orderItems) {
     try {
-      console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      console.log(`🔍 Processing item: ${item.name}`)
-      console.log(`   - ID: ${item.id}`)
-      console.log(`   - ProductID: ${item.productId}`)
-      console.log(`   - Category: ${item.category}`)
-      console.log(`   - Size: ${item.size}`)
-      console.log(`   - Quantity: ${item.quantity}`)
-      console.log(`   - Base Price (client): ${item.price}`)
-      console.log(`   - Addons count: ${item.addons?.length || 0}`)
+ 
       
       // Special handling for 50/50 pizzas - they don't exist in Product table
       if (item.category === 'pizza-5050') {
-        console.log(`🍕 50/50 Pizza detected - using client-provided base price: ${item.price}`)
         
         // For 50/50 pizzas, we trust the client's base price (already calculated from two halves)
         // but we still validate and calculate addon prices
@@ -205,7 +193,6 @@ export async function calculateServerSidePrice(
         const validatedAddons: Array<{ AddonID: number; Name: string; Price: number }> = []
         
         if (item.addons && Array.isArray(item.addons) && item.addons.length > 0) {
-          console.log(`   Client sent ${item.addons.length} addons`)
           const addonIds = item.addons.map((addon: any) => 
             typeof addon === 'number' ? addon : (addon.AddonID || addon.id)
           ).filter((id: any) => id)
@@ -219,7 +206,6 @@ export async function calculateServerSidePrice(
             if (!addonError && addons) {
               // For pizzas, all addons are paid
               addonTotal = addons.reduce((sum, addon) => sum + (addon.Price || 0), 0)
-              console.log(`   → 50/50 Pizza: ALL addons paid = ${addonTotal} лв`)
               
               addons.forEach(addon => {
                 validatedAddons.push({
@@ -247,13 +233,7 @@ export async function calculateServerSidePrice(
           comment: item.comment
         })
         
-        console.log(`💵 Item calculation:`)
-        console.log(`   Base price: ${item.price} лв`)
-        console.log(`   Addon total: ${addonTotal} лв`)
-        console.log(`   Quantity: ${item.quantity}`)
-        console.log(`   Item total: (${item.price} + ${addonTotal}) × ${item.quantity} = ${itemTotal} лв`)
-        console.log(`✅ SUCCESSFULLY VALIDATED: ${item.name} = ${itemTotal} лв`)
-        console.log(`   Running total: ${totalItemsPrice} лв`)
+       
         
         continue // Skip regular product lookup
       }
@@ -266,14 +246,11 @@ export async function calculateServerSidePrice(
         const idStr = String(item.id)
         if (idStr.includes('_')) {
           productIdToLookup = parseInt(idStr.split('_')[0])
-          console.log(`   - Extracted ProductID from composite ID: ${productIdToLookup}`)
         } else {
           productIdToLookup = item.id
         }
       }
-      
-      console.log(`   - Looking up ProductID: ${productIdToLookup}`)
-      
+            
       const { data: product, error: productError } = await supabase
         .from('Product')
         .select('ProductID, Product, SmallPrice, MediumPrice, LargePrice, IsDisabled')
@@ -281,46 +258,34 @@ export async function calculateServerSidePrice(
         .single()
 
       if (productError || !product) {
-        console.log(`❌ SKIPPED: Product ID ${productIdToLookup} (from item.id: ${item.id}) not found in database`)
-        console.log(`   Error:`, productError)
+     
         warnings.push(`Product ID ${productIdToLookup} not found`)
         continue
       }
 
       if (product.IsDisabled === 1) {
-        console.log(`❌ SKIPPED: Product ${product.Product} is disabled`)
         warnings.push(`Product ${product.Product} is currently disabled`)
         continue
       }
       
-      console.log(`✅ Found product: ${product.Product}`)
-      console.log(`   - SmallPrice: ${product.SmallPrice}`)
-      console.log(`   - MediumPrice: ${product.MediumPrice}`)
-      console.log(`   - LargePrice: ${product.LargePrice}`)
-
+      
       // 2. Get correct price based on size
       let productPrice = 0
       const sizeLower = (item.size || '').toLowerCase()
       
-      console.log(`🔍 Determining price for size: "${item.size}" (lowercase: "${sizeLower}")`)
       
       if (sizeLower.includes('малка') || sizeLower.includes('малък')) {
         productPrice = product.SmallPrice || product.MediumPrice || product.LargePrice || 0
-        console.log(`   → Using SmallPrice: ${productPrice}`)
       } else if (sizeLower.includes('средна') || sizeLower.includes('среден')) {
         productPrice = product.MediumPrice || product.SmallPrice || product.LargePrice || 0
-        console.log(`   → Using MediumPrice: ${productPrice}`)
       } else if (sizeLower.includes('голяма') || sizeLower.includes('голям')) {
         productPrice = product.LargePrice || product.MediumPrice || product.SmallPrice || 0
-        console.log(`   → Using LargePrice: ${productPrice}`)
       } else {
         // No size or unrecognized size - use any available price
         productPrice = product.SmallPrice || product.MediumPrice || product.LargePrice || 0
-        console.log(`   → No/unrecognized size, using available price: ${productPrice}`)
       }
 
       if (productPrice === 0) {
-        console.log(`❌ SKIPPED: Product ${product.Product} has no valid price`)
         warnings.push(`Product ${product.Product} has no valid price`)
         continue
       }
@@ -329,17 +294,14 @@ export async function calculateServerSidePrice(
       let addonTotal = 0
       const validatedAddons: Array<{ AddonID: number; Name: string; Price: number }> = []
 
-      console.log(`🔍 Processing addons...`)
       
       if (item.addons && Array.isArray(item.addons) && item.addons.length > 0) {
-        console.log(`   Client sent ${item.addons.length} addons:`, item.addons.map((a: any) => ({ id: a.AddonID || a.id, name: a.Name || a.name })))
         
         // Extract addon IDs (handle both {AddonID: X} and direct ID formats)
         const addonIds = item.addons.map((addon: any) => 
           typeof addon === 'number' ? addon : (addon.AddonID || addon.id)
         ).filter((id: any) => id)
 
-        console.log(`   Extracted addon IDs:`, addonIds)
 
         if (addonIds.length > 0) {
           const { data: addons, error: addonError } = await supabase
@@ -347,8 +309,7 @@ export async function calculateServerSidePrice(
             .select('AddonID, Name, Price, ProductTypeID')
             .in('AddonID', addonIds)
 
-          console.log(`   Database returned ${addons?.length || 0} addons`)
-          if (addonError) console.log(`   Addon error:`, addonError)
+          if (addonError) console.error(`   Addon error:`, addonError)
 
           if (!addonError && addons) {
             // Store validated addons with database-provided ProductTypeID (NEVER trust client for pricing logic)
@@ -367,16 +328,13 @@ export async function calculateServerSidePrice(
                 Name: addon.Name,
                 Price: addon.Price
               })
-              console.log(`      → ${addon.Name}: ${addon.Price} лв (ProductTypeID: ${addon.ProductTypeID})`)
             })
             
-            console.log(`🔍 Calculating addon costs for category: ${item.category}`)
             
             // Calculate addon total using database ProductTypeID
             // For pizzas (including 50/50), all addons are paid
             if (item.category === 'pizza' || item.category === 'pizza-5050') {
               addonTotal = enrichedAddons.reduce((sum, addon) => sum + (addon.Price || 0), 0)
-              console.log(`   → Pizza: ALL addons paid = ${addonTotal} лв`)
             } else {
               // For other products (burgers, doners, sauces), first 3 of each type are free
               const addonBreakdown = enrichedAddons
@@ -390,28 +348,20 @@ export async function calculateServerSidePrice(
                   
                   // First 3 of each type are free
                   const finalPrice = positionInType < 3 ? 0 : addonPrice
-                  console.log(`      → ${addon.Name} (ProductTypeID: ${productTypeId}): position ${positionInType + 1} = ${finalPrice === 0 ? 'FREE' : finalPrice + ' лв'}`)
                   return finalPrice
                 })
               
               addonTotal = addonBreakdown.reduce((sum: number, price: number) => sum + price, 0)
-              console.log(`   → Non-pizza: First 3/type free, total = ${addonTotal} лв`)
             }
           }
         }
-      } else {
-        console.log(`   No addons for this item`)
-      }
+      } 
 
       // 4. Calculate item total
       const itemTotal = (productPrice + addonTotal) * item.quantity
       totalItemsPrice += itemTotal
 
-      console.log(`💵 Item calculation:`)
-      console.log(`   Base price: ${productPrice} лв`)
-      console.log(`   Addon total: ${addonTotal} лв`)
-      console.log(`   Quantity: ${item.quantity}`)
-      console.log(`   Item total: (${productPrice} + ${addonTotal}) × ${item.quantity} = ${itemTotal} лв`)
+    
 
       // 5. Store validated item
       validatedItems.push({
@@ -426,37 +376,18 @@ export async function calculateServerSidePrice(
         comment: item.comment
       })
 
-      console.log(`✅ SUCCESSFULLY VALIDATED: ${product.Product} = ${itemTotal} лв`)
-      console.log(`   Running total: ${totalItemsPrice} лв`)
-
+   
     } catch (error) {
       console.error(`❌❌❌ ERROR validating item ${item.id}:`, error)
       warnings.push(`Error processing item ID ${item.id}`)
     }
   }
-
-  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-  console.log(`📊 VALIDATION SUMMARY`)
-  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-  console.log(`Total items received: ${orderItems.length}`)
-  console.log(`Successfully validated: ${validatedItems.length}`)
-  console.log(`Skipped/Failed: ${orderItems.length - validatedItems.length}`)
-  if (warnings.length > 0) {
-    console.log(`⚠️ Warnings:`)
-    warnings.forEach(w => console.log(`   - ${w}`))
-  }
-
+ 
   // 6. Calculate delivery cost
   const deliveryCost = calculateDeliveryCost(isCollection, coordinates)
 
   // 7. Calculate total
   const totalPrice = totalItemsPrice + deliveryCost
-
-  console.log(`\n💰💰💰 FINAL SERVER-SIDE PRICE CALCULATION:`)
-  console.log(`   Items total: ${totalItemsPrice.toFixed(2)} лв`)
-  console.log(`   Delivery: ${deliveryCost.toFixed(2)} лв`)
-  console.log(`   GRAND TOTAL: ${totalPrice.toFixed(2)} лв`)
-  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`)
 
   return {
     validatedItems,
