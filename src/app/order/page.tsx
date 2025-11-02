@@ -439,20 +439,25 @@ export default function MenuPage() {
 
       {/* Category tabs */}
       <div className="bg-card border-b border-white/8 sticky top-16 sm:top-20 z-30">
-        <div className="container py-2 sm:py-4 px-4 tab-gap-container">
-          <div className="flex justify-start sm:justify-center overflow-x-auto pb-2 scrollbar-hide tab-gap-flex">
+        <div className="container py-2 sm:py-4 px-4">
+          <div 
+            className="grid gap-2 sm:flex sm:justify-center sm:gap-4 sm:flex-wrap sm:overflow-x-auto sm:scrollbar-hide"
+            style={{ 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            }}
+          >
             {categories.map(category => (
               <button
                 key={category.key}
                 onClick={() => handleCategoryChange(category.key)}
-                className={`px-3 sm:px-7 py-2 sm:py-4 rounded-xl transition-all transform hover:scale-105 text-sm sm:text-base min-w-0 flex-shrink-0 ${
+                className={`px-3 sm:px-7 py-2 sm:py-4 rounded-xl transition-all transform hover:scale-105 text-xs sm:text-sm md:text-base min-w-0 flex-shrink-0 touch-manipulation active:scale-95 ${
                   activeCategory === category.key
-                    ? 'bg-gradient-to-r from-red to-orange text-white shadow-lg'
-                    : 'text-muted hover:text-orange hover:bg-white/6'
+                    ? 'bg-gradient-to-r from-red to-orange text-white shadow-lg shadow-orange/30'
+                    : 'text-muted hover:text-orange hover:bg-white/6 bg-white/4'
                 }`}
               >
-                <span className="font-medium whitespace-pre-line text-center leading-tight">{category.label}</span>
-                <span className="ml-1 sm:ml-2 text-xs sm:text-sm opacity-75">({category.count})</span>
+                <span className="font-medium whitespace-pre-line text-center leading-tight block">{category.label}</span>
+                <span className="ml-1 sm:ml-2 text-xs sm:text-sm opacity-75 block mt-0.5">({category.count})</span>
               </button>
             ))}
           </div>

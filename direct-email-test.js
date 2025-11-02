@@ -5,7 +5,6 @@ const nodemailer = require('nodemailer');
 
 async function sendTestEmail() {
   try {
-    console.log('🚀 Sending direct email test...');
 
     // Create transporter
     const transporter = nodemailer.createTransport({
@@ -41,10 +40,6 @@ async function sendTestEmail() {
 
     // Send email
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully!');
-    console.log('📧 Message ID:', info.messageId);
-    console.log('📧 Preview URL:', nodemailer.getTestMessageUrl(info));
-
   } catch (error) {
     console.error('❌ Failed to send email:', error.message);
     console.error('Stack:', error.stack);
