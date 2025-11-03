@@ -28,11 +28,13 @@ interface DeliveryOrder {
   }>;
   totalPrice: number;
   deliveryFee: number;
+  totalAmount: number;
   status: 'ready' | 'picked_up' | 'en_route' | 'delivered' | 'issue';
   orderTime: Date;
   pickupTime?: Date;
   deliveredTime?: Date;
   specialInstructions: string;
+  comments?: string;
   distance: number; // in km
   estimatedTime: number; // in minutes
   coordinates: { lat: number; lng: number };
@@ -107,12 +109,14 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
       })() : [],
       comment: product.Comment || undefined
     })),
-    totalPrice: kitchenOrder.Products.reduce((sum, product) => sum + product.TotalPrice, 0),
-    deliveryFee: 3.00, // Fixed delivery fee
+    totalPrice: kitchenOrder.TotalOrderPrice - (kitchenOrder.DeliveryPrice || 0),
+    deliveryFee: kitchenOrder.DeliveryPrice || 3.00, // Use delivery price from order or default to 3.00
+    totalAmount: kitchenOrder.TotalOrderPrice,
     status,
     orderTime,
     deliveredTime: status === 'delivered' ? orderTime : undefined, // Set deliveredTime for delivered orders
     specialInstructions: kitchenOrder.SpecialInstructions || '',
+    comments: kitchenOrder.Comments || undefined,
     distance,
     estimatedTime: Math.round(distance * 3 + 5), // Rough estimate
     coordinates,
@@ -265,7 +269,8 @@ const DeliveryDashboard = () => {
           OrderType,
           DeliveryPrice,
           Comments,
-          RfPaymentMethodID
+          RfPaymentMethodID,
+          TotalAmount
         `)
         .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
         .neq('OrderType', 1) // Exclude pickup orders (OrderType = 1)
@@ -326,7 +331,7 @@ const DeliveryDashboard = () => {
               CustomerEmail: customer?.email || '',
               CustomerLocation: order.OrderLocation,
               Products: (products as LkOrderProducts[]) || [],
-              TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
+              TotalOrderPrice: order.TotalAmount || 0,
               DeliveryPrice: order.DeliveryPrice || 0,
               SpecialInstructions: '',
               Comments: order.Comments || null
@@ -629,7 +634,7 @@ const DeliveryDashboard = () => {
           </div>
           <div className="text-right flex-shrink-0 ml-2">
             <div className="text-green-400 font-bold text-sm sm:text-base">
-              {(order.totalPrice + order.deliveryFee).toFixed(2)} лв
+              {(order.totalAmount).toFixed(2)} лв
             </div>
             <div className="text-xs text-gray-400">
               {order.distance.toFixed(1)}км • {order.estimatedTime}мин
@@ -655,7 +660,13 @@ const DeliveryDashboard = () => {
               {order.address}
             </span>
           </div>
-          
+
+          {order.comments && (
+            <div className="ml-5 text-xs text-gray-400 italic">
+              {order.comments}
+            </div>
+          )}
+
           <div className="flex items-center space-x-2">
             <Phone size={14} className="text-green-400 flex-shrink-0" />
             <a href={`tel:${order.phone}`} className="text-green-400 hover:text-green-300 text-sm">
