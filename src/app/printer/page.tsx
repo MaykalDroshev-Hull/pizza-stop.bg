@@ -132,7 +132,6 @@ export default function PrinterPage() {
 
   const addFiftyFiftyToCart = () => {
     if (!fiftyFiftySelection.leftHalf || !fiftyFiftySelection.rightHalf || !fiftyFiftySelection.size) {
-      console.error('50/50 pizza incomplete selection')
       return
     }
 
@@ -156,7 +155,6 @@ export default function PrinterPage() {
 
     setSelectedProducts(prev => [...prev, cartItem])
     resetFiftyFiftySelection()
-    console.log('50/50 пица добавена в кошницата:', cartItem)
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -183,7 +181,6 @@ export default function PrinterPage() {
         setError("Невалиден имейл адрес или парола");
       }
     } catch (error) {
-      console.error('Printer login error:', error);
       setError("Грешка при влизане");
     }
   };
@@ -205,7 +202,6 @@ export default function PrinterPage() {
         const data = await fetchMenuData();
         setMenuData(data);
       } catch (error) {
-        console.error("Error loading menu data:", error);
       }
     }
     loadMenuData();
@@ -217,12 +213,9 @@ export default function PrinterPage() {
       if (fiftyFiftySelection.step === 4 && fiftyFiftyAddons.length === 0) {
         setIsLoadingFiftyFiftyAddons(true);
         try {
-          console.log('🍕 Fetching large pizza addons for 50/50 pizza');
           const addons = await fetchAddons(1, 'голяма'); // ProductTypeID = 1 for pizza, 'голяма' for large
           setFiftyFiftyAddons(addons);
-          console.log(`✅ Loaded ${addons.length} addons for 50/50 pizza`);
         } catch (error) {
-          console.error('Error fetching 50/50 pizza addons:', error);
           setFiftyFiftyAddons([]);
         } finally {
           setIsLoadingFiftyFiftyAddons(false);
@@ -250,7 +243,6 @@ export default function PrinterPage() {
 
     autocompleteInstance.addListener('place_changed', () => {
       const place = autocompleteInstance.getPlace();
-      console.log('🏠 Place selected from printer autocomplete:', place);
 
       if (place.formatted_address) {
         // Update the address with the selected place
@@ -259,7 +251,6 @@ export default function PrinterPage() {
           address: place.formatted_address || ''
         }));
       } else {
-        console.log('❌ No formatted_address found in place:', place);
       }
     });
 
@@ -293,12 +284,10 @@ export default function PrinterPage() {
         script.defer = true;
 
         script.addEventListener('load', () => {
-          console.log('🗺️ Google Maps script loaded for printer page');
           initializeAutocomplete();
         });
 
         script.addEventListener('error', (error) => {
-          console.error('❌ Failed to load Google Maps script:', error);
         });
 
         document.head.appendChild(script);
@@ -353,7 +342,6 @@ export default function PrinterPage() {
       setProducts(categoryProducts);
     } catch (error) {
       console.error("Error fetching products:", error);
-      alert("Грешка при зареждане на продуктите");
     } finally {
       setLoading(false);
     }
@@ -413,7 +401,6 @@ export default function PrinterPage() {
         isLoadingAddons: false
       } : null);
     } catch (error) {
-      console.error('Error loading addons:', error);
       setProductModalData(prev => prev ? {
         ...prev,
         availableAddons: [],
@@ -495,12 +482,10 @@ export default function PrinterPage() {
   };
 
   const handleReady = () => {
-    console.log('Ready button clicked, selectedProducts:', selectedProducts.length);
     if (selectedProducts.length === 0) {
       alert("Моля изберете поне един продукт");
       return;
     }
-    console.log('Setting showCustomerForm to true');
     setShowCustomerForm(true);
   };
 
@@ -565,7 +550,6 @@ export default function PrinterPage() {
         throw new Error('Failed to create order');
       }
     } catch (error) {
-      console.error('Error creating order:', error);
       alert('Грешка при създаване на поръчката');
     } finally {
       setIsPrinting(false);
@@ -809,7 +793,6 @@ export default function PrinterPage() {
   }
 
   // Clear Order Confirmation Modal
-  console.log('Modal states:', { showClearModal, showCustomerForm, showProductModal });
   if (showClearModal) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
@@ -839,7 +822,6 @@ export default function PrinterPage() {
   }
 
   // Customer Details Modal
-  console.log('Checking customer form modal, showCustomerForm:', showCustomerForm);
   if (showCustomerForm) {
     return (
       <div className="h-screen bg-black flex items-start justify-center p-4">

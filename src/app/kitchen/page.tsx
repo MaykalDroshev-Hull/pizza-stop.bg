@@ -98,7 +98,6 @@ const KitchenCommandCenter = () => {
         localStorage.setItem('printedOrderIds', JSON.stringify([...printedOrderIds]));
       }
     } catch (error) {
-      console.error('Failed to save printed order IDs:', error);
     }
   }, [printedOrderIds]);
 
@@ -323,7 +322,6 @@ const KitchenCommandCenter = () => {
         return [...updatedOrders, ...newOrders];
       });
     } catch (error) {
-      console.error('Error fetching orders:', error);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -911,7 +909,6 @@ const KitchenCommandCenter = () => {
         addNotification(`Failed to update order #${orderId}`, 'warning');
       }
     } catch (error) {
-      console.error('Error updating order status:', error);
       addNotification(`Error updating order #${orderId}`, 'urgent');
     }
   };
@@ -1019,7 +1016,6 @@ const KitchenCommandCenter = () => {
           dailyOrderNumber = data.dailyOrderNumber;
         }
       } catch (error) {
-        console.warn('⚠️ Failed to fetch daily order number, using database ID:', error);
       }
       
       // Convert Order to OrderData format with formatted pizza names
@@ -1072,7 +1068,6 @@ const KitchenCommandCenter = () => {
         return;
       }
     } catch (error) {
-      console.error(`❌ Manual print failed for order #${order.id}:`, error);
       addNotification(`Грешка при печат на поръчка #${order.id}`, 'warning');
     }
   };
@@ -1154,7 +1149,6 @@ const KitchenCommandCenter = () => {
             }
           } catch (readError) {
             reader.releaseLock();
-            console.warn('⚠️ No full response from printer:', readError);
             addNotification('✅ Команди изпратени (принтерът може да не върне пълен отговор)', 'info');
           }
         }
@@ -1165,7 +1159,6 @@ const KitchenCommandCenter = () => {
         return;
       }
     } catch (error) {
-      console.error('❌ Cut command failed:', error);
       addNotification('Грешка при изпращане на команда за рязане', 'warning');
     }
   };
@@ -1350,7 +1343,6 @@ const KitchenCommandCenter = () => {
           dailyOrderNumber = data.dailyOrderNumber;
         }
       } catch (error) {
-        console.warn('⚠️ Failed to fetch daily order number for auto-print, using database ID:', error);
       }
       
       // Convert Order to OrderData format for COM port printer with formatted pizza names
