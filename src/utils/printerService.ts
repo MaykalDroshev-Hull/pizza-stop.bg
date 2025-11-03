@@ -27,7 +27,7 @@ const GS = 0x1D;
 
 const Commands = {
   INIT: [ESC, 0x40],                    // Initialize printer
-  CUT: [ESC, 0x69],                     // Cut paper
+  CUT: [GS, 0x56, 0x42, 40],            // Cut paper (GS V, mode 66, 40 steps = 5mm feed)
   BOLD_ON: [ESC, 0x45, 0x01],           // Bold text ON
   BOLD_OFF: [ESC, 0x45, 0x00],          // Bold text OFF
   UNDERLINE_ON: [ESC, 0x2D, 0x02],      // Underline ON

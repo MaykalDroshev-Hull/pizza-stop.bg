@@ -4,6 +4,7 @@
 
 export interface OrderData {
   orderId: number;
+  dailyOrderNumber?: number; // Daily order sequence number
   orderType: string;
   customerName: string;
   phone: string;
@@ -12,6 +13,7 @@ export interface OrderData {
     name: string;
     quantity: number;
     price: number;
+    size?: string; // Product size (e.g., "30cm", "60cm")
     addons?: string[];
     comment?: string;
   }>;
@@ -19,6 +21,7 @@ export interface OrderData {
   deliveryCharge: number;
   total: number;
   paymentMethod?: string;
+  paymentMethodId?: number; // Payment method ID for status determination
   isPaid: boolean;
   placedTime: string;
   restaurantPhone: string;
@@ -90,27 +93,24 @@ export class ESCPOSCommands {
   }
 
   /**
-   * Cut paper - For Datecs FP2000
+   * Cut paper - For Datecs EP-2000
    * 
-   * IMPORTANT: Datecs FP-2000 uses a fiscal protocol, not ESC/POS for cut commands.
-   * The manual cut command is 0x2D in a Datecs protocol frame, not ESC/POS.
+   * According to Datecs EP-2000 manual (section 87, lines 2892-2920):
+   * Command: GS V [1Dh] [56h] + m + n
    * 
-   * RECOMMENDED: Use auto-cut feature (DIP Switch 5 = ON) on the FP-2000.
-   * When auto-cut is enabled, the printer automatically cuts after finishing a receipt.
+   * m = 1: Feeds paper to cutting position and cuts receipt (n not significant)
+   * m = 66 (0x42): Feeds paper + n steps (n x 0.125mm), then cuts
+   * m = 104 (0x68): Feeds paper + n steps, cuts, and feeds paper back to print position
    * 
-   * This function only adds line feeds to position paper for auto-cut.
-   * No manual cut command is sent.
+   * Using mode m=66 with n=40 (5mm extra feed) for clean cuts.
    */
   static cut(): Uint8Array {
-    // Only send line feeds to position paper for auto-cut
-    // The FP-2000's auto-cut (DIP Switch 5) will handle the actual cutting
-    return new Uint8Array([
-      0x0A, // Line feed
-      0x0A, // Line feed
-      0x0A, // Line feed
-      0x0A, // Line feed
-      0x0A  // Line feed
-    ]);
+    const GS = 0x1D;
+    const V = 0x56;
+    const mode = 0x42; // 66 decimal - Feed extra lines before cutting
+    const extraFeed = 40; // 40 steps x 0.125mm = 5mm extra feed
+    
+    return new Uint8Array([GS, V, mode, extraFeed]);
   }
 
   /**
@@ -268,19 +268,23 @@ export class ESCPOSCommands {
     // Separator
     commands.push(
       this.setAlign('left'),
-      this.separator(),
+      this.separator('=', 48),
       this.lineFeed()
     );
 
-    // Order number
+    // Order number (with daily sequence if available)
+    const orderNumberText = order.dailyOrderNumber 
+      ? `ПОРЪЧКА #${order.dailyOrderNumber}` 
+      : `ПОРЪЧКА #${order.orderId}`;
+    
     commands.push(
       this.setBold(true),
       this.setAlign('center'),
-      this.text(`ПОРЪЧКА #${order.orderId}`),
+      this.text(orderNumberText),
       this.lineFeed(),
       this.setBold(false),
       this.setAlign('left'),
-      this.separator(),
+      this.separator('=', 48),
       this.lineFeed()
     );
 
@@ -288,7 +292,7 @@ export class ESCPOSCommands {
     commands.push(
       this.text(`Дата/Час: ${order.placedTime}`),
       this.lineFeed(),
-      this.separator('-'),
+      this.separator('-', 48),
       this.lineFeed()
     );
 
@@ -333,7 +337,7 @@ export class ESCPOSCommands {
     }
 
     commands.push(
-      this.separator(),
+      this.separator('=', 48),
       this.lineFeed()
     );
 
@@ -343,12 +347,14 @@ export class ESCPOSCommands {
       this.text('АРТИКУЛИ:'),
       this.lineFeed(),
       this.setBold(false),
-      this.separator('-'),
+      this.separator('-', 48),
       this.lineFeed()
     );
 
     for (const item of order.items) {
-      const itemLine = `${item.quantity}x ${item.name}`;
+      // Include size if available (e.g., "30cm", "60cm")
+      const sizeText = item.size ? ` (${item.size})` : '';
+      const itemLine = `${item.quantity}x ${item.name}${sizeText}`;
       
       commands.push(
         this.text(itemLine),
@@ -381,17 +387,30 @@ export class ESCPOSCommands {
     }
 
     commands.push(
-      this.separator(),
+      this.separator('=', 48),
       this.lineFeed()
     );
 
-    // Payment info - No payment required
+    // Payment status based on payment method
+    // Payment method ID 5 = Online (Paid), 3/4 = On delivery (Unpaid)
+    let paymentStatusText = 'НЕ СЕ ИЗИСКВА ПЛАЩАНЕ';
+    
+    if (order.paymentMethodId !== undefined) {
+      if (order.paymentMethodId === 5) {
+        // Online payment - Paid
+        paymentStatusText = 'ПЛАТЕНО ОНЛАЙН';
+      } else if (order.paymentMethodId === 3 || order.paymentMethodId === 4) {
+        // Payment on delivery - Unpaid
+        paymentStatusText = 'НЕПЛАТЕНО - ПЛАЩАНЕ ПРИ ДОСТАВКА';
+      }
+    }
+    
     commands.push(
       this.feedLines(1),
       this.setAlign('center'),
       this.setBold(true),
       this.setSize(1, 2),
-      this.text('НЕ СЕ ИЗИСКВА ПЛАЩАНЕ'),
+      this.text(paymentStatusText),
       this.lineFeed(),
       this.setSize(1, 1),
       this.setBold(false),
@@ -408,9 +427,9 @@ export class ESCPOSCommands {
       this.text('Приятен апетит!')
     );
 
-    // Cut paper - the cut() function now includes the required line feeds
+    // Cut paper using GS V command (Datecs EP-2000 manual section 87)
     const cutCmd = this.cut();
-    console.log('🔪 [Cut Command] Sending cut:', Array.from(cutCmd).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '));
+    console.log('🔪 [Cut Command] Sending GS V cut:', Array.from(cutCmd).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '));
     commands.push(cutCmd);
 
     return this.combine(...commands);
@@ -434,7 +453,7 @@ export class ESCPOSCommands {
       this.text('Test Print'),
       this.lineFeed(),
       this.lineFeed(),
-      this.separator(),
+      this.separator('=', 48),
       this.lineFeed(),
       this.setAlign('left'),
       this.text(`Time: ${new Date().toLocaleString('bg-BG')}`),

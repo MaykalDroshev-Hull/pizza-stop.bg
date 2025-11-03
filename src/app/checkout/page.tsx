@@ -8,8 +8,7 @@ declare global {
     inputType?: string
   }
 }
-import { ArrowLeft, MapPin, User, Phone, CreditCard, Banknote, Clock, Calendar, LogIn, UserCheck, MessageSquare, RotateCcw, Database, Navigation, FileText, Map, CheckCircle, XCircle, Info, AlertTriangle, Lightbulb, Home, ShoppingCart, Pizza, Search, ClipboardList, Edit, Target, AlertCircle, HelpCircle, Truck, Store, Mail } from 'lucide-react'
-import PaymentForm from '../../components/PaymentForm'
+import { Globe, ArrowLeft, MapPin, User, Phone, CreditCard, Banknote, Clock, Calendar, LogIn, UserCheck, MessageSquare, RotateCcw, Database, Navigation, FileText, Map, CheckCircle, XCircle, Info, AlertTriangle, Lightbulb, Home, ShoppingCart, Pizza, Search, ClipboardList, Edit, Target, AlertCircle, HelpCircle, Truck, Store, Mail } from 'lucide-react'
 import { useCart } from '../../components/CartContext'
 import CartSummaryDisplay from '../../components/CartSummaryDisplay'
 import DrinksSuggestionBox from '../../components/DrinksSuggestionBox'
@@ -64,7 +63,6 @@ export default function CheckoutPage() {
   const [unavailableItems, setUnavailableItems] = useState<string[]>([])
   const [cachedProfileData, setCachedProfileData] = useState<any>(null)
   const [dateTimeError, setDateTimeError] = useState<string>('')
-  const [paymentData, setPaymentData] = useState<any>(null)
   const addressInputRef = useRef<HTMLInputElement>(null)
   
   // Map modal state (from dashboard)
@@ -482,6 +480,16 @@ export default function CheckoutPage() {
     setDeliveryCost(cost || 0)
   }, [totalPrice, addressZone, selectedDeliveryType])
 
+  // Default payment method to cash when collection is selected
+  useEffect(() => {
+    if (selectedDeliveryType === 'pickup') {
+      setPaymentMethodId(2) // Cash at restaurant
+      setIsCollection(true)
+    } else {
+      setIsCollection(false)
+    }
+  }, [selectedDeliveryType])
+
   // Validate address zone when user data is loaded and order type is 'user'
   useEffect(() => {
     console.log('👤 User data effect triggered:', { orderType, user: !!user, hasCoordinates: !!user?.LocationCoordinates })
@@ -884,6 +892,165 @@ export default function CheckoutPage() {
     return zone
   }
 
+  const handleInitiatePayment = async () => {
+    setIsLoading(true)
+
+    try {
+      // First, validate the form (reuse the same validation logic as handleSubmit)
+      if (!items || items.length === 0) {
+        alert('❌ Вашата количка е празна! Моля, добавете продукти преди да поръчате.')
+        setIsLoading(false)
+        return
+      }
+
+      const invalidItems = items.filter(item => !item.name || !item.price || item.quantity <= 0)
+      if (invalidItems.length > 0) {
+        console.error('❌ Invalid items in cart:', invalidItems)
+        alert('❌ Някои продукти в количката са невалидни. Моля, опреснете страницата.')
+        setIsLoading(false)
+        return
+      }
+
+      if (totalPrice < 15) {
+        alert('❌ Минималната сума за поръчка е 15 лв.')
+        setIsLoading(false)
+        return
+      }
+
+      if (selectedDeliveryType !== 'pickup') {
+        if (!customerInfo.LocationText || !customerInfo.LocationCoordinates) {
+          alert('❌ Моля, въведете адрес за доставка.')
+          setIsLoading(false)
+          return
+        }
+
+        if (!addressConfirmed) {
+          alert('❌ Моля, потвърдете адреса за доставка.')
+          setIsLoading(false)
+          return
+        }
+
+        if (deliveryCost === null || addressZone === 'outside') {
+          alert('❌ Не може да се изчисли цената за доставка или адресът е извън зона.')
+          setIsLoading(false)
+          return
+        }
+      }
+
+      if (paymentMethodId === null) {
+        alert('❌ Моля, изберете начин на плащане.')
+        setIsLoading(false)
+        return
+      }
+
+      if (orderTime.type === 'scheduled' && orderTime.scheduledTime) {
+        const now = new Date()
+        const scheduledTime = orderTime.scheduledTime
+
+        if (scheduledTime <= now) {
+          alert('❌ Моля, изберете бъдещо време за поръчката')
+          setIsLoading(false)
+          return
+        }
+
+        const timeDiff = scheduledTime.getTime() - now.getTime()
+        const hoursDiff = timeDiff / (1000 * 60 * 60)
+
+        if (hoursDiff > 120) {
+          alert('❌ Поръчките могат да се правят максимум 5 дни напред')
+          setIsLoading(false)
+          return
+        }
+
+        const hour = scheduledTime.getHours()
+        if (hour < 11 || hour >= 23) {
+          alert('❌ Моля, изберете време между 11:00 и 23:00')
+          setIsLoading(false)
+          return
+        }
+      }
+
+      if (orderType === 'user' && user) {
+        try {
+          updateUser({
+            name: customerInfo.name,
+            phone: customerInfo.phone,
+            LocationText: customerInfo.LocationText,
+            LocationCoordinates: customerInfo.LocationCoordinates
+          })
+        } catch (error) {
+          console.error('Error updating user profile:', error)
+        }
+      }
+
+      if (!orderTime.type) {
+        alert('❌ Моля, изберете кога искате да получите поръчката')
+        setIsLoading(false)
+        return
+      }
+
+      if (orderTime.type === 'scheduled' && (!orderTime.scheduledTime || !(orderTime.scheduledTime instanceof Date))) {
+        alert('❌ Моля, изберете валидна дата и час за доставката')
+        setIsLoading(false)
+        return
+      }
+
+      // Prepare order data
+      const finalTotal = totalPrice + (selectedDeliveryType === 'pickup' ? 0 : deliveryCost)
+      const orderData = {
+        customerInfo: {
+          ...customerInfo,
+          email: orderType === 'guest' ? customerInfo.email : (user?.email || `guest_${Date.now()}@pizza-stop.bg`),
+          LocationText: isCollection ? 'Lovech Center, ul. "Angel Kanchev" 10, 5502 Lovech, Bulgaria' : customerInfo.LocationText
+        },
+        orderItems: items,
+        orderTime: {
+          type: orderTime.type as 'immediate' | 'scheduled',
+          scheduledTime: orderTime.scheduledTime ? orderTime.scheduledTime.toISOString() : undefined
+        },
+        orderType,
+        deliveryCost: selectedDeliveryType === 'pickup' ? 0 : deliveryCost,
+        totalPrice,
+        isCollection: selectedDeliveryType === 'pickup',
+        paymentMethodId,
+        loginId: user?.id || null
+      }
+
+      console.log('💳 Initiating payment for order:')
+      console.log('   Full payload:', JSON.stringify(orderData, null, 2))
+
+      // Call payment initiation API
+      const response = await fetch('/api/payment/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        console.log('✅ Payment initiated successfully:', result)
+
+        // Redirect to payment processor
+        if (result.paymentUrl) {
+          window.location.href = result.paymentUrl
+        } else {
+          throw new Error('No payment URL received')
+        }
+      } else {
+        console.error('❌ Payment initiation failed:', result)
+        alert(`❌ ${result.error || 'Грешка при иницииране на плащането'}`)
+        setIsLoading(false)
+      }
+    } catch (error) {
+      console.error('Payment initiation error:', error)
+      setIsLoading(false)
+      alert('❌ Възникна грешка при иницииране на плащането.')
+    }
+  }
+
   const confirmAddress = async () => {
     console.log('🔍 Confirming address:', customerInfo.LocationText)
     
@@ -1185,12 +1352,19 @@ export default function CheckoutPage() {
       ))
     ) && // Delivery orders need address validation
     (selectedDeliveryType === 'pickup' || (customerInfo.LocationText && customerInfo.LocationCoordinates && addressConfirmed && addressZone !== 'outside')) &&
-    (paymentMethodId !== 5 || (paymentData && paymentData.isValid)) // Online payment requires valid payment data
+    true // No additional validation needed for payment methods
 
   const handleSubmit = async (e: React.FormEvent) => {
-      // Set loading state immediately
+      e.preventDefault()
+
+      // For online payments, use the payment initiation flow
+      if (paymentMethodId === 5) {
+        await handleInitiatePayment()
+        return
+      }
+
+      // Set loading state immediately for non-online payments
       setIsLoading(true)
-    e.preventDefault()
   
     
     try{
@@ -1341,7 +1515,6 @@ export default function CheckoutPage() {
      totalPrice,
     isCollection: selectedDeliveryType === 'pickup',
      paymentMethodId,
-     paymentData: paymentMethodId === 5 ? paymentData : null, // Include payment data for online payments
      loginId: user?.id || null
    }
    
@@ -2057,107 +2230,65 @@ export default function CheckoutPage() {
              </div>
            </div>
 
-           {/* Payment Method Selection */}
-           <div className="bg-card border border-white/12 rounded-2xl p-6">
-             <h2 className="text-xl font-bold text-text mb-4">
-               <CreditCard size={20} className="inline mr-2" />
-               Начин на плащане *
-             </h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               {selectedDeliveryType === 'pickup' ? (
-                 // Pickup payment methods (1: Card at Restaurant, 2: Cash at Restaurant)
-                 <>
-                   <button
-                     type="button"
-                     onClick={() => setPaymentMethodId(1)}
-                     className={`p-4 rounded-lg border-2 transition-all ${
-                       paymentMethodId === 1
-                         ? 'border-orange bg-orange/10 text-orange'
-                         : 'border-white/20 bg-white/5 text-text hover:border-white/30'
-                     }`}
-                   >
-                     <div className="flex items-center gap-3">
-                       <div className="w-3 h-3 rounded-full bg-orange"></div>
-                       <CreditCard size={20} />
-                       <span className="font-medium">С карта в ресторант</span>
-                     </div>
-                     <p className="text-sm text-muted mt-1">Платете с карта при вземане</p>
-                   </button>
-                   
-                   <button
-                     type="button"
-                     onClick={() => setPaymentMethodId(2)}
-                     className={`p-4 rounded-lg border-2 transition-all ${
-                       paymentMethodId === 2
-                         ? 'border-orange bg-orange/10 text-orange'
-                         : 'border-white/20 bg-white/5 text-text hover:border-white/30'
-                     }`}
-                   >
-                     <div className="flex items-center gap-3">
-                       <div className="w-3 h-3 rounded-full bg-orange"></div>
-                       <Banknote size={20} />
-                       <span className="font-medium">В брой в ресторант</span>
-                     </div>
-                     <p className="text-sm text-muted mt-1">Платете в брой при вземане</p>
-                   </button>
-                 </>
-               ) : (
-                 // Delivery payment methods (3: Card at Address, 4: Cash at Address, 5: Online)
-                 <>
-                   <button
-                     type="button"
-                     onClick={() => setPaymentMethodId(3)}
-                     className={`p-4 rounded-lg border-2 transition-all ${
-                       paymentMethodId === 3
-                         ? 'border-orange bg-orange/10 text-orange'
-                         : 'border-white/20 bg-white/5 text-text hover:border-white/30'
-                     }`}
-                   >
-                     <div className="flex items-center gap-3">
-                       <div className="w-3 h-3 rounded-full bg-orange"></div>
-                       <CreditCard size={20} />
-                       <span className="font-medium">С карта на адрес</span>
-                     </div>
-                     <p className="text-sm text-muted mt-1">Платете с карта при доставка</p>
-                   </button>
-                   
-                   <button
-                     type="button"
-                     onClick={() => setPaymentMethodId(4)}
-                     className={`p-4 rounded-lg border-2 transition-all ${
-                       paymentMethodId === 4
-                         ? 'border-orange bg-orange/10 text-orange'
-                         : 'border-white/20 bg-white/5 text-text hover:border-white/30'
-                     }`}
-                   >
-                     <div className="flex items-center gap-3">
-                       <div className="w-3 h-3 rounded-full bg-orange"></div>
-                       <Banknote size={20} />
-                       <span className="font-medium">В брой на адрес</span>
-                     </div>
-                     <p className="text-sm text-muted mt-1">Платете в брой при доставка</p>
-                   </button>
-                   
-                   <button
-                     type="button"
-                     onClick={() => setPaymentMethodId(5)}
-                     className={`p-4 rounded-lg border-2 transition-all ${
-                       paymentMethodId === 5
-                         ? 'border-orange bg-orange/10 text-orange'
-                         : 'border-white/20 bg-white/5 text-text hover:border-white/30'
-                     }`}
-                   >
-                     <div className="flex items-center gap-3">
-                       <div className="w-3 h-3 rounded-full bg-orange"></div>
-                       <CreditCard size={20} />
-                       <span className="font-medium">Онлайн</span>
-                     </div>
-                     <p className="text-sm text-muted mt-1">Платете онлайн сега</p>
-                   </button>
-                 </>
-               )}
+           {/* Payment Method Selection - Only show for delivery */}
+           {selectedDeliveryType !== 'pickup' && (
+             <div className="bg-card border border-white/12 rounded-2xl p-6">
+               <h2 className="text-xl font-bold text-text mb-4">
+                 <CreditCard size={20} className="inline mr-2" />
+                 Начин на плащане *
+               </h2>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {/* Delivery payment methods (3: Card at Address, 4: Cash at Address, 5: Online) */}
+                 <button
+                   type="button"
+                   onClick={() => setPaymentMethodId(3)}
+                   className={`p-4 rounded-lg border-2 transition-all ${
+                     paymentMethodId === 3
+                       ? 'border-yellow bg-yellow/10 text-yellow'
+                       : 'border-white/20 bg-white/5 text-text hover:border-white/30'
+                   }`}
+                 >
+                   <div className="flex items-center gap-3">
+                     <div className="w-3 h-3 rounded-full bg-yellow"></div>
+                     <CreditCard size={20} />
+                     <span className="font-medium">С карта на адрес</span>
+                   </div>
+                 </button>
+
+                 <button
+                   type="button"
+                   onClick={() => setPaymentMethodId(4)}
+                   className={`p-4 rounded-lg border-2 transition-all ${
+                     paymentMethodId === 4
+                       ? 'border-yellow bg-yellow/10 text-yellow'
+                       : 'border-white/20 bg-white/5 text-text hover:border-white/30'
+                   }`}
+                 >
+                   <div className="flex items-center gap-3">
+                     <div className="w-3 h-3 rounded-full bg-yellow"></div>
+                     <Banknote size={20} />
+                     <span className="font-medium">В брой на адрес</span>
+                   </div>
+                 </button>
+
+                 <button
+                   type="button"
+                   onClick={() => setPaymentMethodId(5)}
+                   className={`p-4 rounded-lg border-2 transition-all ${
+                     paymentMethodId === 5
+                       ? 'border-yellow bg-yellow/10 text-yellow'
+                       : 'border-white/20 bg-white/5 text-text hover:border-white/30'
+                   }`}
+                 >
+                   <div className="flex items-center gap-3">
+                     <div className="w-3 h-3 rounded-full bg-yellow"></div>
+                     <Globe size={20} />
+                     <span className="font-medium">Онлайн</span>
+                   </div>
+                 </button>
+               </div>
              </div>
-           </div>
+           )}
 
            {/* Customer Information Form */}
            <form onSubmit={handleSubmit} className="bg-card border border-white/12 rounded-2xl p-6">
@@ -2411,11 +2542,45 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Payment Form - Only show when online payment is selected */}
-              <PaymentForm 
-                isVisible={paymentMethodId === 5} 
-                onPaymentDataChange={setPaymentData}
-              />
+              {/* Payment Initiation - Only show when online payment is selected */}
+              {paymentMethodId === 5 && (
+                <div className="bg-card border border-white/12 rounded-2xl p-6 mt-6">
+                  <h3 className="text-xl font-bold text-text mb-6 flex items-center">
+                    <CreditCard size={20} className="mr-2" />
+                    Онлайн плащане
+                  </h3>
+
+                  <div className="space-y-4">
+                    {/* Security Notice */}
+                    <div className="flex items-start gap-3 text-sm text-gray-300 bg-blue-400/10 border border-blue-400/20 rounded-lg p-4">
+                      <Lightbulb size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        Ще бъдете пренасочени към сигурен платежен портал за извършване на плащането.
+                      </div>
+                    </div>
+
+                    {/* Payment Initiation Button */}
+                    <button
+                      type="button"
+                      onClick={handleInitiatePayment}
+                      className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin inline mr-3"></div>
+                          Иницииране на плащане...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard size={20} className="inline mr-2" />
+                          Продължи към плащане
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Validation Messages */}
               <div className="space-y-2">
@@ -2472,13 +2637,6 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                {/* Payment validation */}
-                {paymentMethodId === 5 && (!paymentData || !paymentData.isValid) && (
-                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
-                    <div className="font-medium mb-1">Данните за плащане не са валидни</div>
-                    <div>Моля, попълнете правилно всички данни за картата.</div>
-                  </div>
-                )}
                 
                 {/* Action Buttons for Low Order */}
                 {(totalPrice < 15 || (addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < 30)) && (
