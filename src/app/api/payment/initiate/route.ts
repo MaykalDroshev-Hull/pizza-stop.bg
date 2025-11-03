@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
-        ...Object.fromEntries(rateLimit.headers.entries())
+        ...rateLimit.headers
       }
     })
 
