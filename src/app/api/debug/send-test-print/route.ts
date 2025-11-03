@@ -42,15 +42,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    console.log(`[Send Test Print] Sending test print to ${ip}:${port}...`);
     
     try {
       // Send test print using real implementation
       const result = await sendTestPrint(ip, port, 10000);
-      
-      console.log(`[Send Test Print] Result for ${ip}:${port}:`, result);
-      
+            
       if (result.success) {
         return NextResponse.json({
           success: true,

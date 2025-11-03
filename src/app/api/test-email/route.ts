@@ -7,7 +7,6 @@ export async function POST(request: NextRequest) {
     const email = 'hm.websiteprovisioning@gmail.com'
     const name = 'Pizza Stop Test User'
 
-    console.log('🚀 Sending welcome/registration email to:', email)
 
     await emailService.sendWelcomeEmail({ to: email, name })
 

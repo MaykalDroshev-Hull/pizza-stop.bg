@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    console.log(`🖨️ Attempting to print to ${printerIp}:${printerPort}`);
     
     // Send data to printer
     const result = await sendToPrinter(printerIp, printerPort, Buffer.from(data));
@@ -80,7 +79,6 @@ function sendToPrinter(
     
     // Connection successful
     client.on('connect', () => {
-      console.log(`✅ Connected to printer at ${ip}:${port}`);
       
       // Send data to printer
       client.write(data, (err) => {
@@ -90,7 +88,6 @@ function sendToPrinter(
           resolve({ success: false, error: `Write error: ${err.message}` });
         } else {
           bytesSent = data.length;
-          console.log(`📄 Sent ${bytesSent} bytes to printer`);
           
           // Wait a bit for printer to process, then close connection
           setTimeout(() => {
@@ -134,7 +131,6 @@ function sendToPrinter(
     });
     
     // Attempt connection
-    console.log(`🔌 Connecting to printer at ${ip}:${port}...`);
     client.connect(port, ip);
   });
 }

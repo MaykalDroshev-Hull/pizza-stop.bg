@@ -12,14 +12,6 @@ export async function POST(request: NextRequest) {
       deliveryPrice
     } = body
 
-    console.log('🖨️ Printer order creation request:', {
-      customerInfo,
-      orderItems: orderItems?.length,
-      totalPrice,
-      orderType,
-      deliveryPrice
-    })
-
     // Create server-side Supabase client (bypasses RLS)
     const supabase = createServerClient()
 
@@ -37,7 +29,6 @@ export async function POST(request: NextRequest) {
       addressInstructions: null
     }
 
-    console.log('👤 Creating guest user for printer order:', guestUserData)
 
     const { data: guestUser, error: guestError } = await supabase
       .from('Login')
@@ -51,7 +42,6 @@ export async function POST(request: NextRequest) {
     }
 
     const loginId = guestUser.LoginID
-    console.log('✅ Guest user created with ID:', loginId)
 
     // Calculate expected ready time (30 minutes from now)
     const now = new Date()
@@ -72,8 +62,6 @@ export async function POST(request: NextRequest) {
       TotalAmount: totalPrice
     }
 
-    console.log('📋 Creating printer order with data:', orderData)
-
     // Create the order
     const { data: order, error: orderError } = await supabase
       .from('Order')
@@ -86,11 +74,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
 
-    console.log('✅ Printer order created with ID:', order.OrderID)
-
     // Save order items to LkOrderProduct table
     if (orderItems && orderItems.length > 0) {
-      console.log('📦 Saving printer order items:', orderItems.length)
 
       const orderItemsData: any[] = []
 
@@ -105,15 +90,12 @@ export async function POST(request: NextRequest) {
 
         // Check if this is a 50/50 pizza (category: 'pizza-5050')
         if (item.category === 'pizza-5050') {
-          console.log('🍕 Processing 50/50 pizza:', item.name)
 
           // Extract pizza halves from the comment
           const commentMatch = item.comment?.match(/(.+?) \/ (.+?): (.+?)\s+\(~2000г \| 60см\)/)
           if (commentMatch) {
             const leftPizzaName = commentMatch[1].trim()
             const rightPizzaName = commentMatch[2].trim()
-
-            console.log('🔍 Looking up pizzas:', leftPizzaName, 'and', rightPizzaName)
 
             // Find the actual pizza products in the database
             const { data: leftPizza } = await supabase
@@ -178,8 +160,6 @@ export async function POST(request: NextRequest) {
                 })
                 continue
               }
-
-              console.log('✅ CompositeProduct created with ID:', compositeProduct.CompositeProductID)
 
               // Add to order items with the composite product
               orderItemsData.push({
@@ -253,9 +233,7 @@ export async function POST(request: NextRequest) {
       if (itemsError) {
         console.error('❌ Error saving printer order items:', itemsError)
         return NextResponse.json({ error: 'Failed to save order items' }, { status: 500 })
-      } else {
-        console.log('✅ Printer order items saved successfully')
-      }
+      } 
     }
 
     return NextResponse.json({ 

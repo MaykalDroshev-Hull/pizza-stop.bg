@@ -6,18 +6,14 @@ export async function POST(request: NextRequest) {
     const testEmail = 'hm.websiteprovisioning@gmail.com'
     const testName = 'Pizza Stop Test User'
 
-    console.log('🚀 Sending test emails...')
 
     // Test 1: Welcome Email
-    console.log('📧 Sending welcome email...')
     await emailService.sendWelcomeEmail({
       to: testEmail,
       name: testName
     })
-    console.log('✅ Welcome email sent')
 
     // Test 2: Password Reset Email
-    console.log('📧 Sending password reset email...')
     const resetToken = 'test-token-12345'
     const resetUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://pizza-stop.bg'}/reset-password?token=${resetToken}`
     
@@ -27,10 +23,8 @@ export async function POST(request: NextRequest) {
       resetToken: resetToken,
       resetUrl: resetUrl
     })
-    console.log('✅ Password reset email sent')
 
     // Test 3: Order Confirmation Email
-    console.log('📧 Sending order confirmation email...')
     const orderDetails = {
       items: [
         {
@@ -78,7 +72,6 @@ export async function POST(request: NextRequest) {
       orderId: '12345',
       orderDetails: orderDetails
     })
-    console.log('✅ Order confirmation email sent')
 
     return NextResponse.json({
       success: true,

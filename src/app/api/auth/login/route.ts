@@ -105,7 +105,6 @@ export async function POST(request: NextRequest) {
         if (parsedCoords && parsedCoords.Ing !== undefined) {
           parsedCoords.lng = parsedCoords.Ing
           delete parsedCoords.Ing
-          console.log('Fixed coordinate typo: Ing -> lng')
         }
         
         coordinates = parsedCoords

@@ -14,11 +14,7 @@ const options = {
   }
 };
 
-console.log('🚀 Testing email API...');
-
 const req = http.request(options, (res) => {
-  console.log(`Status: ${res.statusCode}`);
-  console.log(`Headers:`, res.headers);
 
   let data = '';
   res.on('data', (chunk) => {
@@ -26,10 +22,8 @@ const req = http.request(options, (res) => {
   });
 
   res.on('end', () => {
-    console.log('Response body:', data);
     try {
       const response = JSON.parse(data);
-      console.log('✅ Email API test completed:', response);
     } catch (e) {
       console.error('❌ Failed to parse response:', e.message);
     }

@@ -10,21 +10,15 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 async function testDatabase() {
-  console.log('🔍 Testing Supabase connection...')
   
   try {
     // Test 1: Check if we can connect
-    console.log('🧪 Test 1: Basic connection test...')
     const { data: testData, error: testError } = await supabase
       .from('Product')
       .select('count')
       .limit(1)
     
-    console.log('✅ Connection test result:', testData)
-    console.log('❌ Connection test error:', testError)
-    
     // Test 2: Get all products
-    console.log('\n🧪 Test 2: Fetching all products...')
     const { data: products, error } = await supabase
       .from('Product')
       .select('*')
@@ -32,32 +26,18 @@ async function testDatabase() {
       .order('ProductTypeID', { ascending: true })
       .order('Product', { ascending: true })
     
-    console.log('✅ Products fetched:', products?.length || 0)
-    console.log('❌ Fetch error:', error)
     
     if (products && products.length > 0) {
-      console.log('\n📊 Sample products:')
-      products.slice(0, 3).forEach((product, index) => {
-        console.log(`${index + 1}. ${product.Product} (TypeID: ${product.ProductTypeID}, Price: ${product.SmallPrice}лв)`)
-      })
-      
+      products.slice(0, 3)
+
       // Test 3: Get just pizzas
-      console.log('\n🧪 Test 3: Fetching only pizzas (ProductTypeID = 1)...')
       const { data: pizzas, error: pizzaError } = await supabase
         .from('Product')
         .select('*')
         .eq('ProductTypeID', 1)
         .eq('IsDisabled', 0)
       
-      console.log('✅ Pizzas found:', pizzas?.length || 0)
-      console.log('❌ Pizza fetch error:', pizzaError)
       
-      if (pizzas && pizzas.length > 0) {
-        console.log('\n🍕 Pizzas in database:')
-        pizzas.forEach((pizza, index) => {
-          console.log(`${index + 1}. ${pizza.Product} - Small: ${pizza.SmallPrice}лв, Large: ${pizza.LargePrice || 'N/A'}лв`)
-        })
-      }
     }
     
   } catch (error) {

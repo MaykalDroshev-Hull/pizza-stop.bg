@@ -31,7 +31,6 @@ app.use(bodyParser.json({ limit: '10mb' }));
 // Logger middleware
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.path}`);
   next();
 });
 
@@ -43,14 +42,8 @@ function findPrinter() {
     const devices = escpos.USB.findPrinter();
     
     if (devices.length === 0) {
-      console.log('⚠️  No USB printers found');
       return null;
     }
-    
-    console.log(`✅ Found ${devices.length} USB printer(s):`);
-    devices.forEach((device, index) => {
-      console.log(`   ${index + 1}. VendorID: ${device.deviceDescriptor.idVendor}, ProductID: ${device.deviceDescriptor.idProduct}`);
-    });
     
     // Return first printer (you can add logic to select specific printer)
     return new escpos.USB(
@@ -143,7 +136,6 @@ app.post('/test', (req, res) => {
         .cut()
         .close();
       
-      console.log('✅ Test print sent successfully');
       res.json({
         success: true,
         message: 'Test print sent to printer'
@@ -307,9 +299,7 @@ app.post('/print', (req, res) => {
         .feed(3)
         .cut()
         .close();
-      
-      console.log('✅ Order #' + ticketData.orderId + ' printed successfully');
-      
+            
       res.json({
         success: true,
         message: 'Order printed successfully',
@@ -359,9 +349,7 @@ app.post('/print-raw', (req, res) => {
       const buffer = Buffer.from(data);
       device.write(buffer);
       device.close();
-      
-      console.log(`✅ Sent ${data.length} bytes to printer`);
-      
+            
       res.json({
         success: true,
         message: 'Raw data sent to printer',
@@ -391,31 +379,16 @@ app.use((err, req, res, next) => {
 /**
  * Start server
  */
-app.listen(PORT, () => {
-  console.log('\n' + '='.repeat(50));
-  console.log('🍕 Pizza Stop Print Server');
-  console.log('='.repeat(50));
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`📅 Started: ${new Date().toLocaleString()}`);
-  console.log('\nEndpoints:');
-  console.log(`  GET  /health       - Health check`);
-  console.log(`  GET  /printers     - List USB printers`);
-  console.log(`  POST /test         - Print test page`);
-  console.log(`  POST /print        - Print order ticket`);
-  console.log(`  POST /print-raw    - Print raw ESC/POS bytes`);
-  console.log('='.repeat(50) + '\n');
-  
+app.listen(PORT, () => { 
   // Check for printers on startup
   const device = findPrinter();
   if (!device) {
-    console.log('⚠️  WARNING: No USB printers detected!');
-    console.log('   Please connect a USB printer and restart the server.\n');
+    console.error('⚠️  WARNING: No USB printers detected!');
   }
 });
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n\n👋 Shutting down print server...');
   process.exit(0);
 });
 

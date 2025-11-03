@@ -43,21 +43,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[Test Printer] Testing connection to ${ip}:${port}...`);
     const startTime = Date.now();
     
     try {
       // Test TCP connection
       const connectionResult = await testTCPConnection(ip, port, 5000);
-      
-      console.log(`[Test Printer] Connection result for ${ip}:${port}:`, connectionResult);
-      
+            
       if (connectionResult.status === 'online') {
         // Test if it's actually a printer
         const isPrinter = await testPrinterPort(ip, port, 3000);
-        
-        console.log(`[Test Printer] Printer test for ${ip}:${port}: ${isPrinter}`);
-        
+                
         return NextResponse.json({
           success: true,
           message: `Принтер ${ip}:${port} отговаря успешно`,
