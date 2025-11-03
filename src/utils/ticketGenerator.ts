@@ -95,6 +95,7 @@ export function convertOrderToTicketData(order: KitchenOrder): TicketData {
     phone: order.phone,
     specialInstructions: order.comments || undefined, // Use Comments field for order-specific instructions
     addressInstructions: order.specialInstructions || undefined, // Use specialInstructions field for address-specific instructions (contains user's addressInstructions)
+    comments: order.comments || undefined, // Add comments for display under address
     items: ticketItems,
     subtotal,
     serviceCharge,

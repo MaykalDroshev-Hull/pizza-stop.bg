@@ -17,7 +17,6 @@ export default function AdminDeliveryLoginPage() {
 
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     try {
-      console.log('🚚 Delivery Login Attempt:', { username, provided: '***' })
 
       const response = await fetch('/api/auth/admin-login', {
         method: 'POST',
@@ -33,8 +32,15 @@ export default function AdminDeliveryLoginPage() {
 
       const result = await response.json();
 
+      // Handle rate limiting (429 Too Many Requests)
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const retryMinutes = retryAfter ? Math.ceil(parseInt(retryAfter) / 60) : 15;
+        alert(`Твърде много опити за влизане. Моля, изчакайте ${retryMinutes} минути преди да опитате отново.`);
+        return false;
+      }
+
       if (response.ok && result.success) {
-        console.log('✅ Delivery login successful')
         // Set sessionStorage immediately for authentication check
         sessionStorage.setItem('admin_delivery', 'true')
         setIsAuthenticated(true)
@@ -46,11 +52,9 @@ export default function AdminDeliveryLoginPage() {
 
         return true
       } else {
-        console.log('❌ Delivery login failed')
         return false
       }
     } catch (error) {
-      console.error('Delivery login error:', error)
       return false
     }
   }

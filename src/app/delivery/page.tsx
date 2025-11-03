@@ -28,13 +28,13 @@ interface DeliveryOrder {
   }>;
   totalPrice: number;
   deliveryFee: number;
+  totalAmount: number;
   status: 'ready' | 'picked_up' | 'en_route' | 'delivered' | 'issue';
   orderTime: Date;
   pickupTime?: Date;
   deliveredTime?: Date;
   specialInstructions: string;
-  distance: number; // in km
-  estimatedTime: number; // in minutes
+  comments?: string;
   coordinates: { lat: number; lng: number };
   priority: 'normal' | 'rush' | 'vip';
   customerRating?: number;
@@ -70,12 +70,8 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
         coordinates = { lat: parsedCoords.lat, lng: parsedCoords.lng };
       }
     } catch (error) {
-      console.error('Error parsing OrderLocationCoordinates:', error);
     }
   }
-  
-  // Calculate distance (simplified - in real app you'd use proper distance calculation)
-  const distance = Math.random() * 5 + 1; // 1-6 km
   
   // Determine status based on OrderStatusID
   let status: DeliveryOrder['status'] = 'ready';
@@ -107,14 +103,14 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
       })() : [],
       comment: product.Comment || undefined
     })),
-    totalPrice: kitchenOrder.Products.reduce((sum, product) => sum + product.TotalPrice, 0),
-    deliveryFee: 3.00, // Fixed delivery fee
+    totalPrice: kitchenOrder.TotalOrderPrice - (kitchenOrder.DeliveryPrice || 0),
+    deliveryFee: kitchenOrder.DeliveryPrice || 3.00, // Use delivery price from order or default to 3.00
+    totalAmount: kitchenOrder.TotalOrderPrice,
     status,
     orderTime,
     deliveredTime: status === 'delivered' ? orderTime : undefined, // Set deliveredTime for delivered orders
     specialInstructions: kitchenOrder.SpecialInstructions || '',
-    distance,
-    estimatedTime: Math.round(distance * 3 + 5), // Rough estimate
+    comments: kitchenOrder.Comments || undefined,
     coordinates,
     priority: 'normal' as const
   };
@@ -265,16 +261,15 @@ const DeliveryDashboard = () => {
           OrderType,
           DeliveryPrice,
           Comments,
-          RfPaymentMethodID
+          RfPaymentMethodID,
+          TotalAmount
         `)
         .in('OrderStatusID', [ORDER_STATUS.WITH_DRIVER, ORDER_STATUS.IN_DELIVERY])
         .neq('OrderType', 1) // Exclude pickup orders (OrderType = 1)
         .order('OrderDT', { ascending: false });
 
-      console.log('🔍 Active orders query result:', { orders, ordersError, ORDER_STATUS_WITH_DRIVER: ORDER_STATUS.WITH_DRIVER, ORDER_STATUS_IN_DELIVERY: ORDER_STATUS.IN_DELIVERY });
 
       if (ordersError) {
-        console.error('Error fetching orders:', ordersError);
         return;
       }
 
@@ -326,7 +321,7 @@ const DeliveryDashboard = () => {
               CustomerEmail: customer?.email || '',
               CustomerLocation: order.OrderLocation,
               Products: (products as LkOrderProducts[]) || [],
-              TotalOrderPrice: (products as LkOrderProducts[])?.reduce((sum, product) => sum + product.TotalPrice, 0) || 0,
+              TotalOrderPrice: order.TotalAmount || 0,
               DeliveryPrice: order.DeliveryPrice || 0,
               SpecialInstructions: '',
               Comments: order.Comments || null
@@ -338,9 +333,7 @@ const DeliveryDashboard = () => {
       }
       
       setOrders(ordersWithDetails);
-      console.log(`Fetched ${ordersWithDetails.length} delivery orders`);
     } catch (error) {
-      console.error('Error fetching delivery orders:', error);
     } finally {
       setLoading(false);
     }
@@ -377,16 +370,12 @@ const DeliveryDashboard = () => {
     // Update database for picked up orders (change from WITH_DRIVER to IN_DELIVERY status)
     if (newStatus === 'en_route') {
       try {
-        console.log(`Updating order ${orderId} from WITH_DRIVER (${ORDER_STATUS.WITH_DRIVER}) to IN_DELIVERY status (${ORDER_STATUS.IN_DELIVERY})`);
         const success = await updateOrderStatusInDB(orderId, ORDER_STATUS.IN_DELIVERY);
         if (!success) {
-          console.error(`Failed to update order ${orderId} status to IN_DELIVERY in database`);
           alert('Грешка при обновяване на статуса на поръчката. Моля опитайте отново.');
           return;
         }
-        console.log(`Successfully updated order ${orderId} to IN_DELIVERY status (OrderStatusID = ${ORDER_STATUS.IN_DELIVERY})`);
       } catch (error) {
-        console.error('Error updating order status to IN_DELIVERY:', error);
         alert('Грешка при обновяване на статуса на поръчката. Моля опитайте отново.');
         return;
       }
@@ -395,16 +384,12 @@ const DeliveryDashboard = () => {
     // Update database for reverting back to WITH_DRIVER status
     if (newStatus === 'ready') {
       try {
-        console.log(`Reverting order ${orderId} from IN_DELIVERY to WITH_DRIVER status (${ORDER_STATUS.WITH_DRIVER})`);
         const success = await updateOrderStatusInDB(orderId, ORDER_STATUS.WITH_DRIVER);
         if (!success) {
-          console.error(`Failed to revert order ${orderId} status to WITH_DRIVER in database`);
           alert('Грешка при обновяване на статуса на поръчката. Моля опитайте отново.');
           return;
         }
-        console.log(`Successfully reverted order ${orderId} to WITH_DRIVER status (OrderStatusID = ${ORDER_STATUS.WITH_DRIVER})`);
       } catch (error) {
-        console.error('Error reverting order status to WITH_DRIVER:', error);
         alert('Грешка при обновяване на статуса на поръчката. Моля опитайте отново.');
         return;
       }
@@ -429,9 +414,6 @@ const DeliveryDashboard = () => {
             setTimeout(() => {
               setOrders(current => current.filter(o => o.id !== orderId));
             }, 1000);
-
-            // Show success message
-            console.log(`Order #${orderId} marked as delivered`);
 
             // Update stats
             setStats(prev => ({
@@ -458,13 +440,8 @@ const DeliveryDashboard = () => {
       try {
         const success = await updateOrderStatusInDB(orderId, ORDER_STATUS.DELIVERED);
         if (!success) {
-          console.error('Failed to update order status in database, but order moved to history');
-        } else {
-          console.log(`Successfully updated order ${orderId} to DELIVERED status in database`);
         }
       } catch (error) {
-        console.error('Error updating order status in database:', error);
-        // Order is still moved to history even if database update fails
       }
     }
 
@@ -489,13 +466,9 @@ const DeliveryDashboard = () => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          console.error('Failed to update order status to CANCELLED in database:', errorData);
           alert('Грешка при обновяване на статуса на поръчката в базата данни, но поръчката е премахната от списъка.');
-        } else {
-          console.log(`Successfully updated order ${orderId} to CANCELLED status with issue: ${issueComments}`);
         }
       } catch (error) {
-        console.error('Error updating order status to CANCELLED in database:', error);
         alert('Грешка при обновяване на статуса на поръчката в базата данни, но поръчката е премахната от списъка.');
       }
     }
@@ -516,8 +489,6 @@ const DeliveryDashboard = () => {
     setIsETALoading(true);
     
     try {
-      console.log(`🚗 Setting ETA for order ${selectedOrderForETA.id} to ${etaMinutes} minutes`);
-      console.log('🔍 Order details:', selectedOrderForETA);
       
       const requestBody = {
         orderId: selectedOrderForETA.id,
@@ -525,7 +496,6 @@ const DeliveryDashboard = () => {
         driverId: 'driver-1' // You can get this from authentication context
       };
       
-      console.log('🔍 Request body:', requestBody);
       
       const response = await fetch('/api/delivery/update-eta', {
         method: 'POST',
@@ -541,7 +511,6 @@ const DeliveryDashboard = () => {
       }
 
       const result = await response.json();
-      console.log('✅ ETA updated successfully:', result);
 
       // Update local order state
       setOrders(prevOrders => 
@@ -560,7 +529,6 @@ const DeliveryDashboard = () => {
       alert(`✅ ETA зададен успешно! Клиентът ще получи имейл с очакваното време: ${etaMinutes} минути`);
       
     } catch (error) {
-      console.error('❌ Error updating ETA:', error);
       alert(`❌ Грешка при задаване на ETA: ${error instanceof Error ? error.message : 'Неизвестна грешка'}`);
     } finally {
       setIsETALoading(false);
@@ -629,10 +597,7 @@ const DeliveryDashboard = () => {
           </div>
           <div className="text-right flex-shrink-0 ml-2">
             <div className="text-green-400 font-bold text-sm sm:text-base">
-              {(order.totalPrice + order.deliveryFee).toFixed(2)} лв
-            </div>
-            <div className="text-xs text-gray-400">
-              {order.distance.toFixed(1)}км • {order.estimatedTime}мин
+              {(order.totalAmount).toFixed(2)} лв
             </div>
           </div>
         </div>
@@ -645,17 +610,19 @@ const DeliveryDashboard = () => {
           
           <div className="flex items-start space-x-2">
             <MapPin size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
-            <span 
-              className={`text-gray-300 text-xs sm:text-sm flex-1 leading-relaxed ${
-                isMobile ? 'cursor-pointer hover:text-white transition-colors' : ''
-              }`}
-              onClick={() => isMobile && openAddressInMaps(order.address)}
-              title={isMobile ? 'Tap to open in Maps' : undefined}
+            <span
+              className="text-gray-300 text-xs sm:text-sm flex-1 leading-relaxed"
             >
               {order.address}
             </span>
           </div>
-          
+
+          {order.comments && (
+            <div className="ml-5 text-xs text-gray-400 italic">
+              {order.comments}
+            </div>
+          )}
+
           <div className="flex items-center space-x-2">
             <Phone size={14} className="text-green-400 flex-shrink-0" />
             <a href={`tel:${order.phone}`} className="text-green-400 hover:text-green-300 text-sm">
@@ -719,7 +686,6 @@ const DeliveryDashboard = () => {
             <>
               <button
                 onClick={() => {
-                  console.log(`🗺️ Google Maps button clicked for order ${order.id}: lat=${order.coordinates.lat}, lng=${order.coordinates.lng}, address="${order.address}"`);
                   if (order.coordinates.lat === 0 && order.coordinates.lng === 0) {
                     // Use address search when coordinates are 0,0
                     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`;
@@ -789,7 +755,7 @@ const DeliveryDashboard = () => {
     );
   }
 
-  const readyOrders = orders.filter(o => o.status === 'ready').sort((a, b) => a.distance - b.distance);
+  const readyOrders = orders.filter(o => o.status === 'ready');
   const activeOrders = orders.filter(o => o.status === 'en_route');
 
   return (

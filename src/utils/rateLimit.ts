@@ -52,10 +52,10 @@ try {
         prefix: 'ratelimit:password-reset',
       }),
       
-      // Admin actions - very strict
+      // Admin login - very strict to prevent brute force
       admin: new Ratelimit({
         redis,
-        limiter: Ratelimit.slidingWindow(100, '1 h'),
+        limiter: Ratelimit.slidingWindow(5, '15 m'),
         analytics: true,
         prefix: 'ratelimit:admin',
       }),

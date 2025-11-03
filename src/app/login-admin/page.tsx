@@ -77,6 +77,17 @@ const LoginPage: React.FC = (): React.JSX.Element => {
 
       const result = await response.json();
 
+      // Handle rate limiting (429 Too Many Requests)
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const retryMinutes = retryAfter ? Math.ceil(parseInt(retryAfter) / 60) : 15;
+        setError({
+          message: `Твърде много опити за влизане. Моля, изчакайте ${retryMinutes} минути преди да опитате отново.`,
+          type: "error"
+        });
+        return;
+      }
+
       if (response.ok && result.success) {
         // Store authentication state
         localStorage.setItem('admin_authenticated', 'true');
