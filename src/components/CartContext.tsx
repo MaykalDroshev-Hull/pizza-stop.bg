@@ -47,38 +47,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
               typeof item.price !== 'number' || // Invalid price type
               item.price > 1000 // Unreasonably high price
             )
-
-            if (suspiciousItems.length > 0) {
-              console.error('🚨 CLIENT-SIDE CART MANIPULATION DETECTED!')
-              console.error(`🚨 CART CLEARED - ${suspiciousItems.length} suspicious items found`)
-              console.error('Suspicious items:', suspiciousItems.map(item => ({
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                timestamp: new Date().toISOString()
-              })))
-
-              // Also log to a security endpoint if available
-              if (typeof window !== 'undefined' && window.location) {
-                // In a real implementation, you might want to send this to a security logging service
-                console.error('🚨 SECURITY EVENT: Cart manipulation detected', {
-                  url: window.location.href,
-                  timestamp: new Date().toISOString(),
-                  userAgent: navigator.userAgent,
-                  suspiciousItems: suspiciousItems.length
-                })
-              }
-
-              localStorage.removeItem('pizza-stop-cart')
-              return []
-            }
           }
 
           return parsedCart
-        } catch (error) {
-          console.error('Error parsing saved cart:', error)
-          localStorage.removeItem('pizza-stop-cart')
-        }
       }
     }
     return []
@@ -108,9 +79,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const addItem = useCallback((newItem: CartItem) => {
-    console.log('🔍 CartContext addItem called with:', newItem);
     setItems(prevItems => {
-      console.log('🔍 Previous items:', prevItems);
       const existingItemIndex = prevItems.findIndex(item => 
         item.id === newItem.id && 
         item.size === newItem.size &&
@@ -119,15 +88,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       );
 
       if (existingItemIndex > -1) {
-        console.log('🔍 Item exists, updating quantity');
         const updatedItems = [...prevItems];
         updatedItems[existingItemIndex].quantity += newItem.quantity;
-        console.log('🔍 Updated items:', updatedItems);
         return updatedItems;
       } else {
-        console.log('🔍 New item, adding to cart');
         const newItems = [...prevItems, newItem];
-        console.log('🔍 New items:', newItems);
         return newItems;
       }
     });
@@ -163,8 +128,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         try {
           const parsedCart = JSON.parse(savedCart);
           setItems(parsedCart);
-        } catch (error) {
-          console.error('Error parsing saved cart:', error);
+        } catch {
           localStorage.removeItem('pizza-stop-cart');
           setItems([]);
         }
@@ -189,24 +153,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       )
 
       if (suspiciousItems.length > 0) {
-        console.error('🚨 ATTEMPT TO SAVE MANIPULATED CART DATA - BLOCKED!')
-        console.error(`🚨 CART SAVE BLOCKED - ${suspiciousItems.length} suspicious items prevented from saving`)
-        console.error('Suspicious items:', suspiciousItems.map(item => ({
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          timestamp: new Date().toISOString()
-        })))
-
-        // Log security event
-        console.error('🚨 SECURITY EVENT: Attempted cart data manipulation', {
-          url: window.location.href,
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          manipulationType: 'attempted_save_of_manipulated_data',
-          suspiciousItems: suspiciousItems.length
-        })
-
         // Don't save manipulated data
         return
       }
@@ -224,7 +170,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const checkInterval = setInterval(() => {
         const currentCartData = localStorage.getItem('pizza-stop-cart')
         if (currentCartData !== lastCartData) {
-          console.warn('⚠️ localStorage cart data changed externally')
 
           // If the change looks suspicious, validate and potentially clear
           try {
@@ -236,30 +181,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
               )
 
               if (suspiciousItems.length > 0) {
-                console.error('🚨 EXTERNAL CART MANIPULATION DETECTED!')
-                console.error(`🚨 CART CLEARED - External manipulation with ${suspiciousItems.length} suspicious items`)
-                console.error('Suspicious items:', suspiciousItems.map(item => ({
-                  name: item.name,
-                  price: item.price,
-                  quantity: item.quantity,
-                  timestamp: new Date().toISOString()
-                })))
-
-                // Log security event
-                console.error('🚨 SECURITY EVENT: External cart manipulation', {
-                  url: window.location.href,
-                  timestamp: new Date().toISOString(),
-                  userAgent: navigator.userAgent,
-                  manipulationType: 'external_localStorage_modification',
-                  suspiciousItems: suspiciousItems.length
-                })
-
                 localStorage.removeItem('pizza-stop-cart')
                 window.location.reload() // Force reload to reset cart
               }
             }
-          } catch (error) {
-            console.error('Error parsing external cart data:', error)
+          } catch {
             localStorage.removeItem('pizza-stop-cart')
           }
 

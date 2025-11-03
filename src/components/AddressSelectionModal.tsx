@@ -122,7 +122,6 @@ export default function AddressSelectionModal({
       const userLoc = await getUserLocation()
       mapCenter = userLoc
     } catch (error) {
-      console.log('Could not get user location, using default center:', error)
     }
 
     // Create map centered on user location or default with tight zoom
@@ -285,8 +284,7 @@ export default function AddressSelectionModal({
           onAddressConfirm()
           onClose()
         }
-      } catch (error) {
-        console.error('Error during confirmation:', error)
+      } catch {
         // Just close modal on error - user can try again
         onClose()
       }

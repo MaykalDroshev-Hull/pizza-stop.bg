@@ -19,7 +19,6 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (isInitialLoad) {
-        console.log('🚀 LoadingContext: Auto-stopping initial loading')
         setIsInitialLoad(false)
         setIsLoading(false)
       }
@@ -29,9 +28,7 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   }, [isInitialLoad])
 
   const startLoading = () => {
-    console.log('🚀 LoadingContext: startLoading() called')
     setIsLoading(true)
-    console.log('✅ LoadingContext: isLoading set to true')
   }
 
   const stopLoading = () => {

@@ -100,7 +100,6 @@ export default function MenuPage() {
 
     // Validate prices are reasonable
     if (leftPrice < 0.50 || leftPrice > 1000 || rightPrice < 0.50 || rightPrice > 1000) {
-      console.error('🚨 ORDER PAGE: Invalid 50/50 pizza prices detected', { leftPrice, rightPrice })
       return 0
     }
 
@@ -120,13 +119,11 @@ export default function MenuPage() {
 
   const addFiftyFiftyToCart = () => {
     if (!fiftyFiftySelection.leftHalf || !fiftyFiftySelection.rightHalf || !fiftyFiftySelection.size) {
-      console.error('50/50 pizza incomplete selection')
       return
     }
 
     // Validate final price before adding to cart
     if (fiftyFiftySelection.finalPrice < 0.50 || fiftyFiftySelection.finalPrice > 1000) {
-      console.error('🚨 ORDER PAGE: Invalid 50/50 pizza final price detected:', fiftyFiftySelection.finalPrice)
       alert('Невалидна цена за 50/50 пицата. Моля, опреснете страницата и опитайте отново.')
       return
     }
@@ -153,8 +150,6 @@ export default function MenuPage() {
     // Reset selection and go back to step 1
     resetFiftyFiftySelection()
 
-    // Show success message
-    console.log('50/50 пица добавена в кошницата:', cartItem)
   }
 
   // Handle screen size
@@ -174,21 +169,9 @@ export default function MenuPage() {
       if (fiftyFiftySelection.step === 5 && fiftyFiftyAddons.length === 0) {
         setIsLoadingFiftyFiftyAddons(true)
         try {
-          console.log('🍕 Fetching large pizza addons for 50/50 pizza')
           const addons = await fetchAddons(1, 'голяма') // ProductTypeID = 1 for pizza, 'голяма' for large
           setFiftyFiftyAddons(addons)
-          console.log(`✅ Loaded ${addons.length} addons for 50/50 pizza`)
-          console.log(`📊 50/50 Addon breakdown:`, {
-            total: addons.length,
-            meat: addons.filter(a => a.AddonType === 'meat').length,
-            cheese: addons.filter(a => a.AddonType === 'cheese').length,
-            'pizza-addon': addons.filter(a => a.AddonType === 'pizza-addon').length,
-            meatAddons: addons.filter(a => a.AddonType === 'meat').map(a => ({ id: a.AddonID, name: a.Name, type: a.AddonType })),
-            cheeseAddons: addons.filter(a => a.AddonType === 'cheese').map(a => ({ id: a.AddonID, name: a.Name, type: a.AddonType })),
-            pizzaAddonAddons: addons.filter(a => a.AddonType === 'pizza-addon').map(a => ({ id: a.AddonID, name: a.Name, type: a.AddonType }))
-          })
-        } catch (error) {
-          console.error('Error fetching 50/50 pizza addons:', error)
+        } catch {
           setFiftyFiftyAddons([])
         } finally {
           setIsLoadingFiftyFiftyAddons(false)
@@ -206,53 +189,36 @@ export default function MenuPage() {
     
     async function loadMenuData() {
       try {
-        console.log('🔄 Order page: Starting to load menu data...')
-        console.log('🚀 Order page: About to call startLoading()')
         startLoading() // Show spinning logo
-        console.log('✅ Order page: startLoading() called successfully')
         
         const data = await fetchMenuData()
         
         // Only proceed if component is still mounted
         if (!isMounted) {
-          console.log('🚫 Order page: Component unmounted, stopping early')
           return
         }
         
-        console.log('📦 Order page: Received menu data:', data)
-        console.log('🍕 Pizza count:', data.pizza?.length || 0)
-        console.log('🍔 Burgers count:', data.burgers?.length || 0)
-        console.log('🥙 Doners count:', data.doners?.length || 0)
-        console.log('🥤 Drinks count:', data.drinks?.length || 0)
-
         // Validate menu data prices for security
         const allItems = Object.values(data).flat()
         const suspiciousItems = allItems.filter((item: any) => {
           const prices = [item.smallPrice, item.mediumPrice, item.largePrice, item.basePrice].filter(p => p != null)
-          return prices.some((price: number) => price < 0.20 || price > 1000)
+          return prices.some(price => price < 0.20 || price > 1000)
         })
 
         if (suspiciousItems.length > 0) {
-          console.error('🚨 ORDER PAGE: Suspicious prices detected in menu data:', suspiciousItems)
           alert('Открити са невалидни цени в менюто. Моля, опреснете страницата.')
           return
         }
 
         setMenuData(data)
         setIsDataLoaded(true)
-        console.log('✅ Order page: Data loaded, about to call stopLoading()')
         
-      } catch (error) {
-        console.error('❌ Order page: Failed to load menu data:', error)
-        console.log('❌ Order page: Error occurred, about to call stopLoading()')
+      } catch {
       } finally {
         // Only stop loading if component is still mounted
         if (isMounted) {
-          console.log('🏁 Order page: Finally block - calling stopLoading()')
           stopLoading() // Hide spinning logo
-          console.log('✅ Order page: stopLoading() called successfully')
         } else {
-          console.log('🚫 Order page: Component unmounted, not calling stopLoading()')
         }
       }
     }
@@ -261,7 +227,6 @@ export default function MenuPage() {
     
     // Cleanup function to prevent multiple runs
     return () => {
-      console.log('🧹 Order page: useEffect cleanup - setting isMounted to false')
       isMounted = false
     }
   }, []) // Remove startLoading and stopLoading from dependencies
@@ -287,7 +252,7 @@ export default function MenuPage() {
   }
 
   const filteredItems = activeCategory === 'pizza-5050' 
-    ? [] // 50/50 има специален UI, не показваме обикновени продукти
+    ? [] 
     : searchTerm 
       ? // If searching, search across all categories
         Object.values(menuData).flat().filter(item => 
@@ -1215,7 +1180,6 @@ export default function MenuPage() {
             {filteredItems.map(item => (
               <div key={item.id} className="bg-card border border-white/12 rounded-xl p-4 md:p-6 overflow-hidden flex flex-col h-full min-h-[400px]">                <div className="text-center py-3 md:py-4 bg-gradient-to-br from-red/10 to-orange/10 min-h-[120px] md:min-h-[160px] flex items-center justify-center relative overflow-hidden">
                   {(() => {
-                    console.log(`🖼️ Rendering image for ${item.name}: ${item.image}`)
                     return item.image.startsWith('http') ? (
                     <img 
                       src={item.image} 
@@ -1568,7 +1532,6 @@ export default function MenuPage() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  console.log('Промени размер clicked!')
                                   setSelectedSizes(prev => ({
                                     ...prev,
                                     [item.id]: null
@@ -1741,7 +1704,6 @@ export default function MenuPage() {
           item={selectedItem}
           selectedSize={selectedItem ? selectedSizes[selectedItem.id] : null}
           onSizeChange={(itemId, size) => {
-            console.log('Parent onSizeChange called:', itemId, size)
             setSelectedSizes(prev => ({
               ...prev,
               [itemId]: size

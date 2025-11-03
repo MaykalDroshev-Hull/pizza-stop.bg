@@ -54,14 +54,11 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
         const currentSize = selectedSize?.name || size
         setIsLoadingAddons(true)
         try {
-          console.log(`🍕 Fetching addons for pizza size: ${currentSize}`)
           const addons = await fetchAddons(1, currentSize) // ProductTypeID = 1 for pizza
           setCurrentAddons(addons)
           // Clear selected addons when size changes to avoid confusion
           setSelectedAddons([])
-          console.log(`✅ Loaded ${addons.length} addons for ${currentSize} pizza`)
-        } catch (error) {
-          console.error('Error fetching pizza addons:', error)
+        } catch {
           setCurrentAddons([])
         } finally {
           setIsLoadingAddons(false)
@@ -85,14 +82,6 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
 
   // Fallback for mobile if portal fails
   const isMobile = window.innerWidth <= 768
-
-  // Debug: Log when modal opens
-  console.log('CartModal opened, z-index should be 9999')
-  console.log('Screen size:', window.innerWidth, 'x', window.innerHeight)
-  console.log('Is mobile:', window.innerWidth <= 768)
-  console.log('Modal classes:', `z-cart-modal ${isMobile ? 'mobile-modal' : ''}`)
-  console.log('Mobile positioning:', isMobile ? 'pt-24 flex-col justify-start' : 'items-center justify-center')
-  console.log('Mobile height calc:', isMobile ? 'calc(100vh-10rem)' : '95vh/90vh')
 
   const isDrink = item.category === 'drinks'
 
@@ -133,7 +122,6 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
     const hasSize = size || selectedSize?.name
     
     if (requiresSize && !hasSize) {
-      console.log('❌ Size selection required for', item.name)
       return
     }
     
@@ -156,7 +144,6 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
       quantity
     }
 
-    console.log('🛒 Adding to cart:', cartItem)
     addItem(cartItem)
     onClose()
     
@@ -328,13 +315,9 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    console.log('CartModal Промени размер clicked!', item.id)
                     setSize('')
                     if (onSizeChange) {
-                      console.log('Calling onSizeChange with null')
                       onSizeChange(item.id, null)
-                    } else {
-                      console.log('onSizeChange is not defined')
                     }
                   }}
                   className="text-sm text-orange/70 hover:text-orange mt-2 underline cursor-pointer block w-full text-left"
@@ -352,7 +335,6 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                       <button
                         key={sizeOption.name}
                         onClick={() => {
-                          console.log('Drink size selected in CartModal:', sizeOption.name, sizeOption)
                           setSize(sizeOption.name)
                           if (onSizeChange) {
                             onSizeChange(item.id, sizeOption)
@@ -408,7 +390,6 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                       <button
                         key={sizeOption.name}
                         onClick={() => {
-                          console.log('Size selected in CartModal:', sizeOption.name, sizeOption)
                           setSize(sizeOption.name)
                           if (onSizeChange) {
                             onSizeChange(item.id, sizeOption)

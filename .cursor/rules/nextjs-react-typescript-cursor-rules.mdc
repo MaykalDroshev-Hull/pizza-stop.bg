@@ -11,6 +11,7 @@ alwaysApply: true
   - Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
   - Structure files: each page in a new folder, each API in its own folder.
   - Use module.css (TypeScript-style CSS modules) for styling.
+  - Never add Console Logs that reveal system information
   
   Naming Conventions
   - Follow C# conventions (PascalCase for components, camelCase for variables).
