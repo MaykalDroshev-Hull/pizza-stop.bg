@@ -47,9 +47,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
               typeof item.price !== 'number' || // Invalid price type
               item.price > 1000 // Unreasonably high price
             )
-          }
 
-          return parsedCart
+            // If suspicious items found, clear the cart for security
+            if (suspiciousItems.length > 0) {
+              localStorage.removeItem('pizza-stop-cart')
+              return []
+            }
+
+            return parsedCart
+          }
+        } catch (error) {
+          // Invalid JSON or other parsing error, clear storage
+          localStorage.removeItem('pizza-stop-cart')
+          return []
+        }
       }
     }
     return []
