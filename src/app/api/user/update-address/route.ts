@@ -16,7 +16,6 @@ export async function POST(request: NextRequest) {
   try {
     const { userId, address } = await request.json()
 
-    console.log('📍 Update address request:', { userId, address })
 
     // Validate input
     if (!userId) {
@@ -67,7 +66,6 @@ export async function POST(request: NextRequest) {
       updateData.addressInstructions = address.addressInstructions
     }
 
-    console.log('📍 Update data to be saved:', updateData)
 
     // Update user information
     const { error: updateError } = await supabase

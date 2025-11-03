@@ -9,7 +9,6 @@ export const runtime = 'nodejs';
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 [COM Port Scan] Scanning for available COM ports...');
     
     return new Promise<NextResponse>((resolve) => {
       // Use PowerShell to get real COM ports with detailed info
@@ -55,7 +54,6 @@ export async function GET(request: NextRequest) {
         if (code === 0 && output.trim()) {
           try {
             const ports = JSON.parse(output.trim());
-            console.log(`✅ [COM Port Scan] Found ${ports.length} ports:`, ports.map((p: any) => p.path));
             
             resolve(NextResponse.json({
               success: true,

@@ -52,13 +52,6 @@ export async function POST(request: NextRequest) {
     const userRole = authData.user.user_metadata?.role
     const canAccess = authData.user.user_metadata?.can_access || []
 
-    console.log('User authenticated:', {
-      email: authData.user.email,
-      role: userRole,
-      canAccess: canAccess,
-      attemptedType: type
-    })
-
     // Check if user has permission to access this role/type
     if (!canAccess.includes(type)) {
       console.error('Access denied:', {
@@ -75,13 +68,6 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
-
-    // Successful authentication
-    console.log('Login successful:', {
-      email: authData.user.email,
-      role: userRole,
-      type: type
-    })
 
     return NextResponse.json({
       success: true,

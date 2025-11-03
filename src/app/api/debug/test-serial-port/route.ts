@@ -13,8 +13,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[Test Serial Port] Testing ${comPort} at ${baudRate} baud...`);
-
     try {
       // Note: In production, you would use the 'serialport' package:
       /*

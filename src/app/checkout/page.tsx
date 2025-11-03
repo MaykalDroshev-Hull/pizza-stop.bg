@@ -380,25 +380,17 @@ export default function CheckoutPage() {
   // Check user authentication and load user data
   useEffect(() => {
     if (user && isAuthenticated) {
-      console.log('🔄 User authenticated, user data available for profile orders')
-      console.log('📊 Full user object from database:', user)
-      console.log('📍 Address field specifically:', user.LocationText || 'NOT SET')
-      console.log('📝 Delivery instructions field specifically:', user.addressInstructions || 'NOT SET')
-      console.log('🗺️ Coordinates field specifically:', user.LocationCoordinates || 'NOT SET')
-      
+  
       // Only set order type to user if we have meaningful data, but don't auto-fill
       if (user.name || user.phone || user.LocationText) {
         setOrderType('user')
-        console.log('✅ Set default order type to: user (profile available)')
         // Fill form with profile data when order type defaults to user
         fillFormWithProfileData()
       } else {
         // If user is authenticated but no profile data, fetch fresh data from database
-        console.log('🔄 User authenticated but no profile data, fetching fresh data from database')
         fetchUserProfileFromDatabase()
       }
     } else {
-      console.log('❌ User not authenticated or user data not available:', { user, isAuthenticated })
       // Default to guest for non-authenticated users
       setOrderType('guest')
     }
@@ -406,10 +398,8 @@ export default function CheckoutPage() {
 
   // Also check auth when user changes (for debugging)
   useEffect(() => {
-    console.log('🔄 user changed:', user)
     // Clear cached profile data when user changes
     if (cachedProfileData && cachedProfileData.userId !== user?.id) {
-      console.log('🔄 User changed, clearing cached profile data')
       setCachedProfileData(null)
     }
   }, [user, cachedProfileData])
@@ -417,7 +407,6 @@ export default function CheckoutPage() {
   // Handle order type changes - fetch profile data when switching to "user"
   useEffect(() => {
     if (orderType === 'user' && user && isAuthenticated) {
-      console.log('🔄 Order type changed to "user", fetching profile data')
       fetchUserProfileFromDatabase()
     }
   }, [orderType, user, isAuthenticated])
@@ -428,15 +417,7 @@ export default function CheckoutPage() {
   }, [orderTime.type])
 
   // Also check auth when customerInfo changes (for debugging)
-  useEffect(() => {
-    console.log('🔄 customerInfo state updated:', customerInfo)
-    console.log('📋 Final form values after database data load:')
-    console.log('  - Name:', customerInfo.name || 'EMPTY')
-    console.log('  - Phone:', customerInfo.phone || 'EMPTY')
-    console.log('  - Address:', customerInfo.LocationText || 'EMPTY')
-    console.log('  - Coordinates:', customerInfo.LocationCoordinates || 'EMPTY')
-    console.log('  - Delivery Instructions:', deliveryInstructions || 'EMPTY')
-  }, [customerInfo, deliveryInstructions])
+  useEffect(() => {}, [customerInfo, deliveryInstructions])
 
   // Re-check auth when returning from login (e.g., when returnUrl is present)
   useEffect(() => {
@@ -461,7 +442,6 @@ export default function CheckoutPage() {
 
   // Validate address zone when coordinates change
   useEffect(() => {
-    console.log('🔄 Coordinates changed, validating zone:', customerInfo.LocationCoordinates)
     if (customerInfo.LocationCoordinates) {
       try {
         const coords = typeof customerInfo.LocationCoordinates === 'string' 
@@ -492,7 +472,6 @@ export default function CheckoutPage() {
 
   // Validate address zone when user data is loaded and order type is 'user'
   useEffect(() => {
-    console.log('👤 User data effect triggered:', { orderType, user: !!user, hasCoordinates: !!user?.LocationCoordinates })
     
     if (orderType === 'user' && user && user.LocationCoordinates) {
       try {
@@ -500,14 +479,10 @@ export default function CheckoutPage() {
           ? JSON.parse(user.LocationCoordinates)
           : user.LocationCoordinates
         
-        console.log('📍 Parsed user coordinates:', coordinates)
         
         if (coordinates && coordinates.lat && coordinates.lng) {
-          console.log('✅ User data loaded, validating address zone:', coordinates)
           validateAddressZone(coordinates)
-        } else {
-          console.log('❌ Invalid user coordinates structure:', coordinates)
-        }
+        } 
       } catch (error) {
         console.warn('❌ Failed to parse user coordinates for validation:', user.LocationCoordinates, error)
       }
@@ -527,16 +502,13 @@ export default function CheckoutPage() {
 
     autocompleteInstance.addListener('place_changed', () => {
       const place = autocompleteInstance.getPlace()
-      console.log('🏠 Place selected from autocomplete:', place)
       
       if (place.geometry && place.geometry.location) {
         const coordinates = {
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng()
         }
-        
-        console.log('📍 Coordinates from autocomplete:', coordinates)
-        
+                
         // Update both LocationText and LocationCoordinates with the selected address
         setCustomerInfo(prev => ({
           ...prev,
@@ -546,8 +518,6 @@ export default function CheckoutPage() {
         
         // Validate the address zone
         validateAddressZone(coordinates)
-      } else {
-        console.log('❌ No geometry/location found in place:', place)
       }
     })
 
@@ -646,19 +616,14 @@ export default function CheckoutPage() {
   }
 
   const handleMapLocationSelect = async () => {
-    console.log('🗺️ handleMapLocationSelect called')
-    console.log('📍 markerRef.current:', markerRef.current)
-    
+ 
     if (!markerRef.current) {
-      console.log('❌ No marker found, returning')
       return
     }
 
     const position = markerRef.current.getPosition()
-    console.log('📌 Position:', position)
     
     if (!position) {
-      console.log('❌ No position found, returning')
       return
     }
 
@@ -666,17 +631,13 @@ export default function CheckoutPage() {
       lat: position.lat(),
       lng: position.lng()
     }
-    console.log('🌍 Coordinates:', coordinates)
 
     try {
       // Reverse geocode to get address
       const geocoder = new window.google.maps.Geocoder()
-      console.log('🔄 Starting geocoding...')
       
       const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
         geocoder.geocode({ location: coordinates }, (results, status) => {
-          console.log('📡 Geocode status:', status)
-          console.log('📡 Geocode results:', results)
           
           if (status === 'OK' && results) {
             resolve(results)

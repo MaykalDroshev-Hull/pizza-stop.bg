@@ -17,10 +17,6 @@ import { Logger } from '@/utils/logger'
 export async function POST(request: NextRequest) {
   const requestId = `CB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   
-  console.log(`\n${'='.repeat(80)}`)
-  console.log(`💳 PAYMENT CALLBACK RECEIVED [${requestId}] - ${new Date().toISOString()}`)
-  console.log('='.repeat(80))
-
   try {
     // Parse form data from BORICA
     const formData = await request.formData()
@@ -52,20 +48,10 @@ export async function POST(request: NextRequest) {
       P_SIGN: formData.get('P_SIGN') as string || ''
     }
 
-    console.log(`📥 [${requestId}] Callback data received:`)
-    console.log(`   ORDER: ${response.ORDER}`)
-    console.log(`   ACTION: ${response.ACTION}`)
-    console.log(`   RC: ${response.RC}`)
-    console.log(`   STATUS: ${response.STATUSMSG}`)
-    console.log(`   AMOUNT: ${response.AMOUNT} ${response.CURRENCY}`)
-    console.log(`   INT_REF: ${response.INT_REF}`)
-    console.log(`   CARD: ${response.CARD || 'N/A'}`)
-
     // Initialize Datecs service
     const datecsService = createDatecsService()
 
     // Verify signature
-    console.log(`🔍 [${requestId}] Verifying BORICA signature...`)
     const isSignatureValid = await datecsService.verifyResponse(response)
 
     if (!isSignatureValid) {
@@ -82,15 +68,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`✅ [${requestId}] Signature verified successfully`)
-
     // Initialize Supabase client
     const supabase = createServerClient()
 
     // Find order by ORDER number
     // Note: ORDER field from BORICA is the 6-digit order number we generated
     // We need to find the corresponding OrderID in our database
-    console.log(`🔍 [${requestId}] Finding order with ORDER number: ${response.ORDER}`)
 
     // Look up order in OrderItems table to find OrderID
     // We stored the ORDER number in AD.CUST_BOR_ORDER_ID which starts with ORDER
@@ -120,15 +103,9 @@ export async function POST(request: NextRequest) {
     }
 
     const orderId = orderData.OrderID
-    console.log(`✅ [${requestId}] Order found: OrderID=${orderId}`)
-
     // Check if payment is successful
     const isSuccess = datecsService.isPaymentSuccessful(response)
     const isDeclined = datecsService.isPaymentDeclined(response)
-
-    console.log(`💰 [${requestId}] Payment result:`)
-    console.log(`   Success: ${isSuccess ? '✅' : '❌'}`)
-    console.log(`   Declined: ${isDeclined ? '⚠️' : '✅'}`)
 
     // Determine new order status
     let newOrderStatusId: number
@@ -137,19 +114,16 @@ export async function POST(request: NextRequest) {
     if (isSuccess) {
       newOrderStatusId = 2 // Paid / Confirmed
       statusMessage = 'Payment successful'
-      console.log(`✅ [${requestId}] Payment SUCCESSFUL`)
     } else if (isDeclined) {
       newOrderStatusId = 6 // Payment failed
       statusMessage = datecsService.getErrorMessage(response)
-      console.log(`❌ [${requestId}] Payment DECLINED: ${statusMessage}`)
     } else {
       newOrderStatusId = 6 // Payment failed
       statusMessage = 'Payment processing error'
-      console.log(`⚠️ [${requestId}] Payment ERROR`)
+      console.error(`⚠️ Payment ERROR`)
     }
 
     // Update order status in database
-    console.log(`📝 [${requestId}] Updating order status to: ${newOrderStatusId}`)
     
     const { error: updateError } = await supabase
       .from('Orders')
@@ -166,12 +140,8 @@ export async function POST(request: NextRequest) {
         orderId,
         error: updateError
       })
-    } else {
-      console.log(`✅ [${requestId}] Order status updated successfully`)
-    }
-
+    } 
     // Store payment transaction record
-    console.log(`💾 [${requestId}] Storing payment transaction...`)
     
     const { error: transactionError } = await supabase
       .from('PaymentTransactions')
@@ -195,10 +165,7 @@ export async function POST(request: NextRequest) {
     if (transactionError) {
       console.warn(`⚠️ [${requestId}] Failed to store transaction record:`, transactionError)
       // Don't fail the callback for this
-    } else {
-      console.log(`✅ [${requestId}] Transaction record stored`)
-    }
-
+    } 
     // Log successful callback processing
     Logger.info('Payment callback processed successfully', {
       requestId,
@@ -208,9 +175,6 @@ export async function POST(request: NextRequest) {
       amount: response.AMOUNT,
       intRef: response.INT_REF
     })
-
-    console.log(`🎉 [${requestId}] Callback processing completed`)
-    console.log('='.repeat(80))
 
     // Redirect user to appropriate page
     if (isSuccess) {
@@ -246,7 +210,6 @@ export async function POST(request: NextRequest) {
  * BORICA should POST to this endpoint
  */
 export async function GET(request: NextRequest) {
-  console.log('⚠️ GET request to payment callback endpoint (expecting POST)')
   
   return NextResponse.json(
     {

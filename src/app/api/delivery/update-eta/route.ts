@@ -5,16 +5,12 @@ import { ORDER_STATUS } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 ETA API: Starting request processing')
-    
     const body = await request.json()
-    console.log('🚀 ETA API: Request body:', body)
     
     const { orderId, etaMinutes, driverId } = body
 
     // Validate input
     if (!orderId || !etaMinutes) {
-      console.log('❌ ETA API: Missing required fields', { orderId, etaMinutes })
       return NextResponse.json(
         { error: 'Order ID and ETA minutes are required' },
         { status: 400 }
@@ -22,7 +18,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (![15, 30, 45, 60].includes(etaMinutes)) {
-      console.log('❌ ETA API: Invalid ETA minutes', { etaMinutes })
       return NextResponse.json(
         { error: 'ETA must be 15, 30, 45, or 60 minutes' },
         { status: 400 }
@@ -32,27 +27,19 @@ export async function POST(request: NextRequest) {
     // Ensure orderId is a number
     const numericOrderId = parseInt(orderId.toString(), 10)
     if (isNaN(numericOrderId)) {
-      console.log('❌ ETA API: Invalid order ID', { orderId, numericOrderId })
       return NextResponse.json(
         { error: 'Order ID must be a valid number' },
         { status: 400 }
       )
     }
 
-    console.log(`🚗 Updating ETA for order ${numericOrderId} to ${etaMinutes} minutes`)
-
     const supabase = createServerClient()
-    console.log('🚀 ETA API: Supabase client created')
 
     // First, let's check if the order exists at all
     const { data: allOrders, error: allOrdersError } = await supabase
       .from('Order')
       .select('OrderID, OrderStatusID')
       .limit(10)
-
-    console.log('🔍 Available orders in database:', allOrders)
-    console.log('🔍 Looking for order ID:', numericOrderId)
-    console.log('🔍 Order ID type:', typeof numericOrderId)
 
     // Get order details
     const { data: order, error: orderError } = await supabase
@@ -69,8 +56,6 @@ export async function POST(request: NextRequest) {
       .eq('OrderID', numericOrderId)
       .single()
 
-    console.log('🔍 Order query result:', { order, orderError })
-
     if (orderError || !order) {
       console.error('❌ Error fetching order:', orderError)
       console.error('❌ Order data:', order)
@@ -81,7 +66,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Get customer details
-    console.log('🚀 ETA API: Fetching customer details for LoginID:', order.LoginID)
     let customer: any = null
     if (order.LoginID) {
       const { data: customerData, error: customerError } = await supabase
@@ -90,7 +74,6 @@ export async function POST(request: NextRequest) {
         .eq('LoginID', order.LoginID)
         .single()
       
-      console.log('🚀 ETA API: Customer query result:', { customerData, customerError })
       customer = customerData
     }
 
@@ -103,7 +86,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Get order items
-    console.log('🚀 ETA API: Fetching order items for OrderID:', numericOrderId)
     const { data: orderItems, error: itemsError } = await supabase
       .from('LkOrderProduct')
       .select(`
@@ -120,8 +102,6 @@ export async function POST(request: NextRequest) {
       `)
       .eq('OrderID', numericOrderId)
 
-    console.log('🚀 ETA API: Order items query result:', { orderItems, itemsError })
-
     if (itemsError) {
       console.error('❌ ETA API: Error fetching order items:', itemsError)
       return NextResponse.json(
@@ -135,7 +115,6 @@ export async function POST(request: NextRequest) {
     const newExpectedDT = new Date(now.getTime() + etaMinutes * 60 * 1000)
 
     // Update order with new expected delivery time and status
-    console.log('🚀 ETA API: Updating order status to IN_DELIVERY')
     const { error: updateError } = await supabase
       .from('Order')
       .update({
@@ -144,8 +123,6 @@ export async function POST(request: NextRequest) {
       })
       .eq('OrderID', numericOrderId)
 
-    console.log('🚀 ETA API: Order update result:', { updateError })
-
     if (updateError) {
       console.error('❌ ETA API: Error updating order:', updateError)
       return NextResponse.json(
@@ -153,8 +130,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    console.log(`✅ Order ${numericOrderId} updated to IN_DELIVERY status with ETA ${etaMinutes} minutes`)
 
     // Helper function to safely parse JSON
     const safeJsonParse = (data: any) => {
@@ -257,10 +232,8 @@ export async function POST(request: NextRequest) {
     })
 
     // Send delivery ETA email
-    console.log('🚀 ETA API: Starting email sending process')
     try {
       const emailService = new EmailService()
-      console.log('🚀 ETA API: EmailService created, sending email to:', customer.email)
       await emailService.sendDeliveryETAEmail({
         to: customer.email,
         name: customer.Name,
@@ -276,8 +249,6 @@ export async function POST(request: NextRequest) {
           location: order.OrderLocation || customer.LocationText || ''
         }
       })
-
-      console.log(`✅ Delivery ETA email sent successfully to ${customer.email}`)
     } catch (emailError) {
       console.error('❌ Error sending delivery ETA email:', emailError)
       // Don't fail the request if email fails, just log the error

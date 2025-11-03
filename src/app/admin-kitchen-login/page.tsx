@@ -17,7 +17,6 @@ export default function AdminKitchenLoginPage() {
 
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     try {
-      console.log('👨‍🍳 Kitchen Login Attempt:', { username, provided: '***' })
 
       const response = await fetch('/api/auth/admin-login', {
         method: 'POST',
@@ -34,7 +33,6 @@ export default function AdminKitchenLoginPage() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        console.log('✅ Kitchen login successful')
         // Set sessionStorage immediately for authentication check
         sessionStorage.setItem('admin_kitchen', 'true')
         setIsAuthenticated(true)
@@ -46,7 +44,6 @@ export default function AdminKitchenLoginPage() {
 
         return true
       } else {
-        console.log('❌ Kitchen login failed')
         return false
       }
     } catch (error) {

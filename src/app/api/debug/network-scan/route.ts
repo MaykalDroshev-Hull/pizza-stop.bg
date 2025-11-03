@@ -25,8 +25,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    console.log(`[Network Scan] Starting scan for ${networkRange}x with ports:`, ports);
     
     try {
       // Use real network scanner
@@ -34,8 +32,6 @@ export async function POST(request: NextRequest) {
       
       const scanTime = Date.now() - startTime;
       
-      console.log(`[Network Scan] Scan completed in ${scanTime}ms. Found ${foundDevices.length} devices.`);
-
       return NextResponse.json({
         success: true,
         networkRange,

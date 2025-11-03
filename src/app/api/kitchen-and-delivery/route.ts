@@ -19,8 +19,6 @@ export async function POST(request: NextRequest) {
 
     // Handle ready time update
     if (readyTime) {
-      console.log(`API: Updating order ${orderId} ready time to ${readyTime}`);
-
       // First check if order exists
       const { data: existingOrder, error: fetchError } = await supabaseAdmin
         .from('Order')
@@ -51,7 +49,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.log('API: Successfully updated order ready time:', data);
       return NextResponse.json({ success: true, data });
     }
 
@@ -62,8 +59,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    console.log(`API: Updating order ${orderId} to status ${statusId}${comments ? ` with comments: ${comments}` : ''}`);
 
     // First check if order exists
     const { data: existingOrder, error: fetchError } = await supabaseAdmin
@@ -101,7 +96,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('API: Successfully updated order status:', data);
     return NextResponse.json({ success: true, data });
 
   } catch (error) {

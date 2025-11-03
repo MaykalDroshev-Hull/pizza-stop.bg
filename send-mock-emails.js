@@ -6,8 +6,6 @@ const http = require('http');
 const TEST_EMAIL = 'hm.websiteprovisioning@gmail.com';
 const TEST_NAME = 'Pizza Stop Test User';
 
-console.log(`🚀 Sending mock emails to ${TEST_EMAIL}...`);
-
 // Test data for emails
 const orderDetails = {
   items: [
@@ -63,7 +61,6 @@ async function sendEmail(endpoint, data, description) {
       }
     };
 
-    console.log(`📧 Sending ${description}...`);
 
     const req = http.request(options, (res) => {
       let data = '';
@@ -72,21 +69,17 @@ async function sendEmail(endpoint, data, description) {
         try {
           const response = JSON.parse(data);
           if (res.statusCode === 200 || res.statusCode === 201) {
-            console.log(`✅ ${description} sent successfully`);
             resolve(response);
           } else {
-            console.log(`❌ ${description} failed:`, response);
             reject(new Error(`${description} failed: ${response.error}`));
           }
         } catch (e) {
-          console.log(`❌ ${description} error:`, data);
           reject(e);
         }
       });
     });
 
     req.on('error', (e) => {
-      console.log(`❌ ${description} request error:`, e.message);
       reject(e);
     });
 
@@ -97,8 +90,6 @@ async function sendEmail(endpoint, data, description) {
 
 async function sendAllEmails() {
   try {
-    console.log('🍕 Starting Pizza Stop Email Test Suite...\n');
-
     // 1. Test Registration/Welcome Email
     await sendEmail('test-email', {}, 'Registration/Welcome Email');
 
@@ -133,7 +124,6 @@ async function sendAllEmails() {
     }, 'Order Ready Email (Kitchen Update)');
 
     // 5. Test Delivery ETA Email (Driver Update) - Note: This requires an actual order in database
-    console.log('📧 Skipping Delivery ETA Email (requires actual order in database)');
     // Uncomment below if you have a real order to test with:
     // await sendEmail('delivery/update-eta', {
     //   orderId: YOUR_REAL_ORDER_ID,
@@ -141,9 +131,6 @@ async function sendAllEmails() {
     //   driverId: 'test-driver'
     // }, 'Delivery ETA Email (Driver Update)');
 
-    console.log('\n🎉 All mock emails sent successfully!');
-    console.log(`📧 Check your inbox at ${TEST_EMAIL}`);
-    console.log('📝 Note: Delivery ETA email requires an actual order in the database to work properly.');
 
   } catch (error) {
     console.error('\n❌ Error sending emails:', error.message);

@@ -16,9 +16,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
-    console.log(`🔍 Testing printer connection to ${printerIp}:${printerPort}`);
-    
+        
     // Test connection
     const result = await testConnection(printerIp, printerPort);
     
@@ -63,7 +61,6 @@ function testConnection(
     // Connection successful
     client.on('connect', () => {
       const latency = Date.now() - startTime;
-      console.log(`✅ Printer connection test successful (${latency}ms)`);
       
       client.destroy();
       resolve({ success: true, latency });

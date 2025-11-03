@@ -17,7 +17,6 @@ export default function AdminDeliveryLoginPage() {
 
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     try {
-      console.log('🚚 Delivery Login Attempt:', { username, provided: '***' })
 
       const response = await fetch('/api/auth/admin-login', {
         method: 'POST',
@@ -34,7 +33,6 @@ export default function AdminDeliveryLoginPage() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        console.log('✅ Delivery login successful')
         // Set sessionStorage immediately for authentication check
         sessionStorage.setItem('admin_delivery', 'true')
         setIsAuthenticated(true)
@@ -46,7 +44,6 @@ export default function AdminDeliveryLoginPage() {
 
         return true
       } else {
-        console.log('❌ Delivery login failed')
         return false
       }
     } catch (error) {

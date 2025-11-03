@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs'; // Use Node.js runtime for serial port access
 
 export async function GET(request: NextRequest) {
-  console.log('[Serial Port Scan] Starting scan...');
   const startTime = Date.now();
   
   try {
@@ -11,9 +10,7 @@ export async function GET(request: NextRequest) {
     /*
     const { SerialPort } = require('serialport');
     const ports = await SerialPort.list();
-    
-    console.log(`[Serial Port Scan] Found ${ports.length} ports:`, ports);
-    
+        
     const serialPrinters = ports.map(port => ({
       comPort: port.path,
       status: 'connected' as const,
@@ -63,7 +60,6 @@ export async function GET(request: NextRequest) {
     ];
 
     const scanTime = Date.now() - startTime;
-    console.log(`[Serial Port Scan] Completed in ${scanTime}ms. Found ${simulatedSerialPorts.length} ports.`);
 
     return NextResponse.json({
       success: true,

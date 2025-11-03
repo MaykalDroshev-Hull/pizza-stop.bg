@@ -18,8 +18,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`API: Sending ready time email for order ${orderId} to ${to}`)
-
     await emailService.sendOrderReadyTimeEmail({
       to,
       name,
@@ -28,7 +26,6 @@ export async function POST(request: NextRequest) {
       orderDetails
     })
 
-    console.log(`API: Ready time email sent successfully for order ${orderId}`)
     return NextResponse.json({ success: true })
 
   } catch (error) {

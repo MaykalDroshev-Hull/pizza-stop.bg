@@ -19,9 +19,7 @@ const ORDER_STATUS = {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    console.log('🔄 API: Auto-accepting PAID orders...')
-    
+  try {  
     // Find all orders with PAID status (1)
     const { data: paidOrders, error: fetchError } = await supabaseAdmin
       .from('Order')
@@ -38,15 +36,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (!paidOrders || paidOrders.length === 0) {
-      console.log('✅ No PAID orders found to auto-accept')
       return NextResponse.json({ 
         success: true, 
         count: 0, 
         message: 'No PAID orders found to auto-accept' 
       })
     }
-
-    console.log(`📦 Found ${paidOrders.length} PAID orders to auto-accept`)
 
     // Update all PAID orders to ACCEPTED status
     const { error: updateError } = await supabaseAdmin
@@ -61,8 +56,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    console.log(`✅ Successfully auto-accepted ${paidOrders.length} orders`)
     
     return NextResponse.json({
       success: true,
@@ -86,7 +79,6 @@ export async function POST(request: NextRequest) {
 // GET endpoint to check for PAID orders without updating them
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 API: Checking for PAID orders...')
     
     const { data: paidOrders, error } = await supabaseAdmin
       .from('Order')

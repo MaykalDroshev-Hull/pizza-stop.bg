@@ -20,24 +20,18 @@ function getPaymentMethodName(paymentMethodId: number): string {
 
 export async function POST(request: NextRequest) {
   const requestId = `PAY-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  console.log(`\n${'='.repeat(80)}`)
-  console.log(`💳 PAYMENT INITIATION REQUEST [${requestId}] - ${new Date().toISOString()}`)
-  console.log('='.repeat(80))
-
+ 
   try {
     // Rate limiting
     const rateLimit = await withRateLimit(request, 'order')
     if (!rateLimit.allowed) {
-      console.log(`⛔ [${requestId}] Rate limit exceeded`)
       return createRateLimitResponse(rateLimit.headers)
     }
 
     // Parse and validate request body
-    console.log(`📥 [${requestId}] Parsing request body...`)
     const body = await request.json()
 
     // Validate with Zod
-    console.log(`✓ [${requestId}] Validating with Zod schema...`)
     const validationResult = orderConfirmationSchema.safeParse(body)
     if (!validationResult.success) {
       console.error(`❌ [${requestId}] Order validation failed:`, validationResult.error.flatten())
@@ -65,21 +59,13 @@ export async function POST(request: NextRequest) {
       loginId
     } = validationResult.data
 
-    console.log(`✅ [${requestId}] Validation passed`)
-    console.log(`👤 [${requestId}] Customer: ${customerInfo.name} (${customerInfo.email})`)
-    console.log(`🛒 [${requestId}] Items: ${orderItems.length}, Total: ${totalPrice} лв`)
-    console.log(`💰 [${requestId}] Payment method: ${getPaymentMethodName(paymentMethodId)}`)
-
     // Create Supabase client
-    console.log(`🔌 [${requestId}] Connecting to database...`)
     const supabase = createServerClient()
 
     // Calculate server-side prices
-    console.log(`🧮 [${requestId}] Calculating server-side prices...`)
     const serverSideCalculation = await calculateServerSidePrice(orderItems, isCollection)
 
     // Validate price match
-    console.log(`🔍 [${requestId}] Validating price match...`)
     const priceValidation = validatePriceMatch(serverSideCalculation.totalPrice, totalPrice)
     if (!priceValidation.isValid) {
       console.error(`❌ [${requestId}] Price validation failed:`, priceValidation)
@@ -94,11 +80,6 @@ export async function POST(request: NextRequest) {
         }
       )
     }
-
-    console.log(`✅ [${requestId}] Price validation passed`)
-
-    // Start transaction
-    console.log(`🚀 [${requestId}] Starting order creation transaction...`)
 
     // 1. Create order record
     const orderInsertData = {
@@ -118,7 +99,6 @@ export async function POST(request: NextRequest) {
       addressInstructions: null
     }
 
-    console.log(`📝 [${requestId}] Inserting order record...`)
     const { data: orderData, error: orderError } = await supabase
       .from('Orders')
       .insert([orderInsertData])
@@ -131,10 +111,8 @@ export async function POST(request: NextRequest) {
     }
 
     const orderId = orderData.OrderID
-    console.log(`✅ [${requestId}] Order created with ID: ${orderId}`)
 
     // 2. Create order items
-    console.log(`📦 [${requestId}] Creating order items...`)
     const orderItemsInsert = orderItems.map(item => ({
       OrderID: orderId,
       ProductID: item.id,
@@ -156,11 +134,9 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to create order items')
     }
 
-    console.log(`✅ [${requestId}] Order items created`)
 
     // 3. Update user profile if logged in
     if (loginId && orderType === 'user') {
-      console.log(`👤 [${requestId}] Updating user profile...`)
       const { error: userUpdateError } = await supabase
         .from('Login')
         .update({
@@ -177,9 +153,6 @@ export async function POST(request: NextRequest) {
         // Don't fail the order for this
       }
     }
-
-    // 4. Generate Datecs/BORICA payment form
-    console.log(`💳 [${requestId}] Generating Datecs payment request...`)
     
     // Store ORDER number in Comments for lookup in callback
     await supabase
@@ -215,14 +188,8 @@ export async function POST(request: NextRequest) {
     // Generate HTML form for auto-submission to BORICA
     const paymentFormHtml = datecsService.generatePaymentForm(paymentRequest)
 
-    console.log(`✅ [${requestId}] Datecs payment form generated`)
-    console.log(`   ORDER: ${paymentRequest.ORDER}`)
-    console.log(`   NONCE: ${paymentRequest.NONCE}`)
-    console.log(`   AMOUNT: ${paymentRequest.AMOUNT} ${paymentRequest.CURRENCY}`)
-
     // 5. Send confirmation email
     try {
-      console.log(`📧 [${requestId}] Sending confirmation email...`)
       await emailService.sendOrderConfirmationEmail({
         to: customerInfo.email,
         name: customerInfo.name,
@@ -247,14 +214,10 @@ export async function POST(request: NextRequest) {
           estimatedTime: orderTime.scheduledTime ? new Date(orderTime.scheduledTime).toLocaleString('bg-BG') : undefined
         }
       })
-      console.log(`✅ [${requestId}] Confirmation email sent`)
     } catch (emailError) {
       console.warn(`⚠️ [${requestId}] Email sending failed:`, emailError)
       // Don't fail the order for email issues
     }
-
-    console.log(`🎉 [${requestId}] Payment initiation completed successfully`)
-    console.log('='.repeat(80))
 
     // Return HTML form for auto-submission to BORICA
     return new NextResponse(paymentFormHtml, {

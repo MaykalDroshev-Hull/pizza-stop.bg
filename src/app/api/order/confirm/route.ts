@@ -54,9 +54,6 @@ function getPaymentMethodName(paymentMethodId: number): string {
 
 export async function POST(request: NextRequest) {
   const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  console.log(`\n${'='.repeat(80)}`)
-  console.log(`🆕 NEW ORDER REQUEST [${requestId}] - ${new Date().toISOString()}`)
-  console.log('='.repeat(80))
   
   try {
     // Get client identifier for rate limiting
@@ -65,16 +62,13 @@ export async function POST(request: NextRequest) {
     // Rate limiting - prevent order spam
     const rateLimit = await withRateLimit(request, 'order')
     if (!rateLimit.allowed) {
-      console.log(`⛔ [${requestId}] Rate limit exceeded`)
       return createRateLimitResponse(rateLimit.headers)
     }
 
     // Parse and validate request body
-    console.log(`📥 [${requestId}] Parsing request body...`)
     const body = await request.json()
     
     // Validate with Zod
-    console.log(`✓ [${requestId}] Validating with Zod schema...`)
     const validationResult = orderConfirmationSchema.safeParse(body)
     if (!validationResult.success) {
       console.error(`❌ [${requestId}] Order validation failed:`, validationResult.error.flatten())
@@ -102,31 +96,10 @@ export async function POST(request: NextRequest) {
       loginId = null // For logged-in users
     } = validationResult.data
 
-    console.log(`✅ [${requestId}] Validation passed`)
-    console.log(`📦 [${requestId}] Order details:`)
-    console.log(`   - Customer: ${customerInfo.name} (${customerInfo.email})`)
-    console.log(`   - Items: ${orderItems?.length || 0} items`)
-    console.log(`   - Total: ${totalPrice} лв + ${deliveryCost} лв delivery = ${totalPrice + deliveryCost} лв`)
-    console.log(`   - Type: ${isCollection ? 'Collection' : 'Delivery'}`)
-    console.log(`   - Payment: Method ${paymentMethodId}`)
-    console.log(`   - Login ID: ${loginId || 'Guest'}`)
-    
-    // Log each item for debugging
-    if (orderItems && orderItems.length > 0) {
-      console.log(`📋 [${requestId}] Order items breakdown:`)
-      orderItems.forEach((item: any, index: number) => {
-        console.log(`   ${index + 1}. ${item.name} x${item.quantity} - ${item.price} лв (${item.category || 'unknown'})`)
-        if (item.addons && item.addons.length > 0) {
-          console.log(`      Addons: ${item.addons.map((a: any) => a.Name || a.name).join(', ')}`)
-        }
-      })
-    }
-
     // Create server-side Supabase client (bypasses RLS)
     const supabase = createServerClient()
 
     // ===== CRITICAL SECURITY: Server-Side Price Validation =====
-    console.log('💰 Calculating and validating prices on server...')
     const priceCalculation = await calculateServerSidePrice(
       orderItems,
       isCollection,
@@ -224,11 +197,6 @@ export async function POST(request: NextRequest) {
     const validatedDeliveryCost = priceCalculation.deliveryCost
     const validatedItemsTotal = priceCalculation.itemsTotal
 
-    console.log('✅ Server-side price validation complete:')
-    console.log(`   Items total: ${validatedItemsTotal.toFixed(2)} лв`)
-    console.log(`   Delivery: ${validatedDeliveryCost.toFixed(2)} лв`)
-    console.log(`   Final total: ${validatedTotalPrice.toFixed(2)} лв`)
-
     // Helper function to safely convert coordinates (used multiple times below)
     const safeConvertCoordinates = (coords: any): string | null => {
       if (!coords) return null
@@ -247,7 +215,6 @@ export async function POST(request: NextRequest) {
 
     // Handle guest orders - create guest user in Login table only if no loginId provided
     if (!loginId) {
-      console.log('👤 Creating guest user...')
 
       const guestUserData = {
         email: customerInfo.email || `guest_${Date.now()}@pizza-stop.bg`,
@@ -274,9 +241,7 @@ export async function POST(request: NextRequest) {
       }
 
       finalLoginId = guestUser.LoginID
-      console.log('✅ Guest user created with ID:', finalLoginId)
     } else {
-      console.log('👤 Using existing user profile with LoginID:', loginId)
       
       // Update user profile with latest information from checkout form
       // For collection orders, don't update user's address with restaurant address
@@ -301,8 +266,6 @@ export async function POST(request: NextRequest) {
       if (updateError) {
         console.error('❌ Error updating user profile:', updateError)
         // Don't fail the order if profile update fails, just log the error
-      } else {
-        console.log('✅ User profile updated successfully')
       }
     }
 
@@ -348,8 +311,6 @@ export async function POST(request: NextRequest) {
       TotalAmount: validatedTotalPrice // Use server-validated total (SECURITY: Never trust client)
     }
 
-    console.log('📋 Creating order with data:', orderData)
-
     // Create the order
     const { data: order, error: orderError } = await supabase
       .from('Order')
@@ -362,8 +323,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
 
-    console.log('✅ Order created with ID:', order.OrderID)
-
     // CRITICAL: Save order items to LkOrderProduct table
     // This is a critical step - if it fails, the order is invalid and must be deleted
     if (!orderItems || orderItems.length === 0) {
@@ -375,9 +334,7 @@ export async function POST(request: NextRequest) {
         { status: 400, headers: rateLimit.headers }
       )
     }
-    
-    console.log('📦 Saving order items:', orderItems.length, 'items for order', order.OrderID)
-    
+        
     const orderItemsData: any[] = []
     
     try {
@@ -416,7 +373,6 @@ export async function POST(request: NextRequest) {
         
         // Check if this is a 50/50 pizza (category: 'pizza-5050')
         if (item.category === 'pizza-5050') {
-          console.log('🍕 Processing 50/50 pizza:', item.name)
           
           // Extract pizza halves from the comment
           const commentMatch = item.comment?.match(/50\/50 пица: (.+?) \/ (.+?):/)
@@ -486,7 +442,6 @@ export async function POST(request: NextRequest) {
                   CompositeProductID: null
                 })
               } else {
-                console.log('✅ CompositeProduct created with ID:', compositeProduct.CompositeProductID)
                 // Add to order items with CompositeProductID and addon calculation
                 const itemTotal = (item.price + addonTotal) * item.quantity
                 orderItemsData.push({
@@ -564,9 +519,7 @@ export async function POST(request: NextRequest) {
               productId = null
             }
           }
-          
-          console.log(`   Item "${item.name}": id=${item.id}, productId=${item.productId}, extracted=${productId}`)
-          
+                    
           orderItemsData.push({
             OrderID: order.OrderID,
             ProductID: productId,
@@ -586,9 +539,7 @@ export async function POST(request: NextRequest) {
       if (orderItemsData.length === 0) {
         throw new Error('No valid order items to save')
       }
-      
-      console.log(`💾 Inserting ${orderItemsData.length} items into LkOrderProduct for order ${order.OrderID}`)
-      
+            
       const { data: insertedItems, error: itemsError } = await supabase
         .from('LkOrderProduct')
         .insert(orderItemsData)
@@ -601,7 +552,6 @@ export async function POST(request: NextRequest) {
         throw new Error(`Failed to save order items: ${itemsError.message}`)
       }
       
-      console.log('✅ Order items saved successfully:', insertedItems?.length || orderItemsData.length, 'items')
       
     } catch (itemsProcessingError: any) {
       console.error('🚨 FATAL ERROR processing order items for order', order.OrderID)
@@ -609,7 +559,6 @@ export async function POST(request: NextRequest) {
       console.error('   Stack:', itemsProcessingError.stack)
       
       // CRITICAL: Delete the order since items couldn't be saved
-      console.log('🗑️ Rolling back - deleting order', order.OrderID)
       const { error: deleteError } = await supabase
         .from('Order')
         .delete()
@@ -619,9 +568,7 @@ export async function POST(request: NextRequest) {
         console.error('❌ FAILED to delete order during rollback:', deleteError)
         // Log this for manual cleanup
         console.error(`⚠️ MANUAL CLEANUP REQUIRED: Order ${order.OrderID} exists without items!`)
-      } else {
-        console.log('✅ Order', order.OrderID, 'successfully deleted (rollback)')
-      }
+      } 
       
       return NextResponse.json(
         { 
@@ -634,8 +581,6 @@ export async function POST(request: NextRequest) {
 
     // Send order confirmation email
     try {
-      console.log('📧 Sending order confirmation email...')
-      
       // Prepare email data
       const emailData = {
         to: customerInfo.email,
@@ -688,12 +633,7 @@ export async function POST(request: NextRequest) {
           // Calculate total from email items (more reliable than server validation)
           const emailItemsTotal = emailItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
           const emailTotal = emailItemsTotal + validatedDeliveryCost
-          
-          console.log('📧 Email price calculation:')
-          console.log(`   Items total: ${emailItemsTotal.toFixed(2)} лв`)
-          console.log(`   Delivery: ${validatedDeliveryCost.toFixed(2)} лв`)
-          console.log(`   Email total: ${emailTotal.toFixed(2)} лв`)
-          
+                 
           return {
             items: emailItems,
             totalAmount: emailTotal,  // Use email-calculated total instead of server validation
@@ -715,12 +655,10 @@ export async function POST(request: NextRequest) {
       }
 
       await emailService.sendOrderConfirmationEmail(emailData)
-      console.log('✅ Order confirmation email sent successfully')
       
       // For pickup orders, also send ready time email
       if (isCollection) {
         try {
-          console.log('📧 Sending pickup ready time email...')
           
           // Calculate ready time (e.g., 30 minutes for pickup)
           const readyTimeMinutes = 30
@@ -733,7 +671,6 @@ export async function POST(request: NextRequest) {
             orderDetails: emailData.orderDetails
           })
           
-          console.log('✅ Pickup ready time email sent successfully')
         } catch (readyTimeEmailError) {
           console.error('❌ Error sending pickup ready time email:', readyTimeEmailError)
           // Don't fail the order if email can't be sent, just log the error
@@ -743,15 +680,6 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error sending order confirmation email:', emailError)
       // Don't fail the order if email can't be sent, just log the error
     }
-
-    console.log(`\n${'='.repeat(80)}`)
-    console.log(`✅ [${requestId}] ORDER SUCCESSFULLY CREATED`)
-    console.log(`   - Order ID: ${order.OrderID}`)
-    console.log(`   - Customer: ${customerInfo.name}`)
-    console.log(`   - Items saved: ${orderItemsData.length}`)
-    console.log(`   - Total amount: ${validatedTotalPrice.toFixed(2)} лв`)
-    console.log(`   - Timestamp: ${new Date().toISOString()}`)
-    console.log('='.repeat(80) + '\n')
 
     return NextResponse.json({ 
       success: true, 

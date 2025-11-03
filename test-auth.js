@@ -7,26 +7,21 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 async function testAuth() {
-  try {
-    console.log('🧪 Testing authentication...')
-    
+  try {    
     // Test 1: Check if we can access auth endpoints
     const { data: authData, error: authError } = await supabase.auth.getSession()
-    console.log('🔐 Auth test:', authError ? 'Failed' : 'Success')
-    if (authError) console.log('  Error:', authError.message)
+
+    if (authError) console.error('  Error:', authError.message)
     
     // Test 2: Try to list tables (this might work even if Product table doesn't)
-    console.log('📋 Testing table access...')
     const { data: tableData, error: tableError } = await supabase
       .from('ProductType')
       .select('*')
       .limit(1)
     
     if (tableError) {
-      console.log('❌ ProductType table error:', tableError.message)
-    } else {
-      console.log('✅ ProductType table accessible:', tableData?.length || 0, 'rows')
-    }
+      console.error('❌ ProductType table error:', tableError.message)
+    } 
     
   } catch (err) {
     console.error('❌ Exception:', err)

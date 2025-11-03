@@ -21,9 +21,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
-    console.log(`🖨️ [COM Port Print] Printing to ${comPort} at ${baudRate} baud...`);
-    
+        
     // Convert data to buffer
     let buffer: Buffer;
     if (Array.isArray(data)) {
@@ -112,7 +110,6 @@ export async function POST(request: NextRequest) {
         }
         
         if (code === 0 && output.includes('SUCCESS')) {
-          console.log(`✅ [COM Port Print] Successfully sent ${buffer.length} bytes to ${comPort}`);
           resolve(NextResponse.json({
             success: true,
             message: `Print job sent successfully to ${comPort}`,
