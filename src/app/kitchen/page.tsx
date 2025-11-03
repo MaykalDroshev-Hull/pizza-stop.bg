@@ -86,10 +86,8 @@ const KitchenCommandCenter = () => {
       if (stored) {
         const ids = JSON.parse(stored);
         setPrintedOrderIds(new Set(ids));
-        console.log('📋 Loaded printed order IDs from localStorage:', ids.length);
       }
     } catch (error) {
-      console.error('Failed to load printed order IDs:', error);
     }
   }, []);
 
@@ -301,10 +299,6 @@ const KitchenCommandCenter = () => {
         const newKitchenOrders = kitchenOrders.filter(ko => !existingOrderIds.has(ko.OrderID));
         const newOrders = newKitchenOrders.map(convertKitchenOrderToOrder);
         
-        console.log('Refresh - Previous orders:', prevOrders.length);
-        console.log('Refresh - Remaining orders:', remainingOrders.length);
-        console.log('Refresh - New orders from DB:', newOrders.length);
-        console.log('Refresh - Total orders after update:', updatedOrders.length + newOrders.length);
         
         // Auto-print new orders (only if not already printed)
         for (const newOrder of newOrders) {
@@ -323,9 +317,6 @@ const KitchenCommandCenter = () => {
         const currentOrderIds = new Set([...updatedOrders, ...newOrders].map(o => o.id));
         setPrintedOrderIds(prev => {
           const cleaned = new Set([...prev].filter(id => currentOrderIds.has(id)));
-          if (cleaned.size !== prev.size) {
-            console.log(`🧹 Cleaned up ${prev.size - cleaned.size} old printed order IDs`);
-          }
           return cleaned;
         });
         
@@ -869,7 +860,6 @@ const KitchenCommandCenter = () => {
     
     // Prevent rapid duplicate actions (within 2 seconds)
     if (lastActionTime[actionKey] && now - lastActionTime[actionKey] < 2000) {
-      console.log(`Preventing duplicate action: ${actionKey}`);
       return;
     }
     
@@ -891,9 +881,7 @@ const KitchenCommandCenter = () => {
       const statusId = getStatusIdFromStatus(newStatus);
       const success = await updateOrderStatusInDB(orderId, statusId);
       
-      if (success) {
-        console.log(`Successfully updated order ${orderId} in database`);
-        
+      if (success) {        
         // Update local state immediately
         setOrders(prevOrders => 
           prevOrders.map(order => {
@@ -1029,7 +1017,6 @@ const KitchenCommandCenter = () => {
         if (response.ok) {
           const data = await response.json();
           dailyOrderNumber = data.dailyOrderNumber;
-          console.log(`📊 Order ${order.id} is daily order #${dailyOrderNumber}`);
         }
       } catch (error) {
         console.warn('⚠️ Failed to fetch daily order number, using database ID:', error);
@@ -1076,12 +1063,10 @@ const KitchenCommandCenter = () => {
       if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
         await printOrder(orderData);
         addNotification(`Поръчка #${order.id} отпечатана на Web Serial принтер`, 'info');
-        console.log(`✅ Manual print: Order #${order.id} sent to Web Serial printer`);
       } else if (comPortPrinter.isConfigured()) {
         await comPortPrinter.printOrder(orderData);
         const config = comPortPrinter.getConfig();
         addNotification(`Поръчка #${order.id} отпечатана на COM порт принтер (${config?.comPort})`, 'info');
-        console.log(`✅ Manual print: Order #${order.id} sent to COM port printer (${config?.comPort})`);
       } else {
         addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
         return;
@@ -1095,7 +1080,6 @@ const KitchenCommandCenter = () => {
   // Handle cut command using proper Datecs fiscal protocol
   const handleCutPaper = async () => {
     try {
-      console.log('✂️ Sending Datecs cut sequence (0x2C → 0x2D)...');
       
       if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
         const port = webSerialDefaultPrinter;
@@ -1107,11 +1091,6 @@ const KitchenCommandCenter = () => {
         
         const advanceFrame = buildDatecsFrame(DatecsCommands.ADVANCE_PAPER, [0x33, 0x2C, 0x31]); // "3,1" = 3 lines, receipt paper
         const cutFrame = buildDatecsFrame(DatecsCommands.CUT); // NO parameters for cut
-        
-        console.log('📤 TX (Advance 3 lines):', toHex(advanceFrame));
-        console.log('📤 TX (Cut):', toHex(cutFrame));
-        console.log('Advance bytes:', Array.from(advanceFrame));
-        console.log('Cut bytes:', Array.from(cutFrame));
         
         const writer = port.writable?.getWriter();
         if (!writer) {
@@ -1142,7 +1121,6 @@ const KitchenCommandCenter = () => {
             })();
             
             const advanceResponse = await Promise.race([advanceRead, advanceTimeout]);
-            console.log('📥 RX (Advance response):', toHex(advanceResponse));
             
             // Wait a bit before reading cut response
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -1159,8 +1137,6 @@ const KitchenCommandCenter = () => {
             })();
             
             const cutResponse = await Promise.race([cutRead, cutTimeout]);
-            console.log('📥 RX (Cut response):', toHex(cutResponse));
-            console.log('RX bytes:', Array.from(cutResponse));
             
             reader.releaseLock();
             
@@ -1168,7 +1144,6 @@ const KitchenCommandCenter = () => {
             const parsed = parseDatecsResponse(cutResponse);
             if (parsed.valid && parsed.payload && parsed.payload.length > 0) {
               const result = String.fromCharCode(parsed.payload[0]);
-              console.log('Cut result:', result);
               if (result === 'P') {
                 addNotification('✅ Хартията е изрязана успешно!', 'info');
               } else if (result === 'F') {
@@ -1185,7 +1160,6 @@ const KitchenCommandCenter = () => {
         }
       } else if (comPortPrinter.isConfigured()) {
         addNotification('⚠️ COM порт не поддържа Datecs fiscal протокол. Използвайте Web Serial.', 'warning');
-        console.log('⚠️ COM port cut requires special protocol implementation');
       } else {
         addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
         return;
@@ -1374,7 +1348,6 @@ const KitchenCommandCenter = () => {
         if (response.ok) {
           const data = await response.json();
           dailyOrderNumber = data.dailyOrderNumber;
-          console.log(`📊 Auto-print: Order ${order.id} is daily order #${dailyOrderNumber}`);
         }
       } catch (error) {
         console.warn('⚠️ Failed to fetch daily order number for auto-print, using database ID:', error);
@@ -1420,17 +1393,12 @@ const KitchenCommandCenter = () => {
       // Prioritize Web Serial if configured, otherwise use COM port
       if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
         await printOrder(orderData);
-        console.log(`✅ Auto-printed order #${order.id} to Web Serial printer`);
       } else if (comPortPrinter.isConfigured()) {
         await comPortPrinter.printOrder(orderData);
-        const config = comPortPrinter.getConfig();
-        console.log(`✅ Auto-printed order #${order.id} to COM port printer (${config?.comPort})`);
+        const config = comPortPrinter.getConfig();  
       } else {
-        console.log(`⚠️ No printer configured for auto-print of order #${order.id}`);
       }
     } catch (error) {
-      console.log(`⚠️ Auto-print failed for order #${order.id}:`, error);
-      // Don't show error to user, just log it
     }
   };
 
@@ -1509,12 +1477,10 @@ const KitchenCommandCenter = () => {
             });
 
             if (emailResponse.ok) {
-              console.log(`Ready time email sent successfully for order ${orderId}`);
             } else {
               throw new Error('Email API returned error');
             }
           } catch (emailError) {
-            console.error('Error sending ready time email:', emailError);
             addNotification(`Email failed for order #${orderId} (order processed successfully)`, 'warning');
           }
         } else {
@@ -1536,7 +1502,6 @@ const KitchenCommandCenter = () => {
           addNotification(`Failed to start order #${orderId}`, 'urgent');
         }
       } catch (error) {
-        console.error('Error setting order ready time:', error);
         // Revert optimistic update on error
         setOrders(prevOrders => 
           prevOrders.map(order => {
@@ -1580,7 +1545,6 @@ const KitchenCommandCenter = () => {
           updateOrderStatus(touchStart.orderId, 'working');
         } else {
           // Swipe left - disabled to prevent duplicate completion
-          console.log('Swipe left disabled to prevent duplicate completion');
         }
       } else {
         // Vertical swipe
@@ -1638,7 +1602,6 @@ const KitchenCommandCenter = () => {
         addNotification('Грешка при изпращане на поръчките', 'warning');
       }
     } catch (error) {
-      console.error('Bulk send to driver error:', error);
       addNotification('Грешка при изпращане на поръчките', 'urgent');
     }
   };
@@ -1649,60 +1612,46 @@ const KitchenCommandCenter = () => {
     if (!order || !action) return;
     
     if (action === 'return_new') {
-      try {
-        // Update database first
-        const statusId = getStatusIdFromStatus('new');
-        const success = await updateOrderStatusInDB(order.id, statusId);
-        
-        if (success) {
-          // Update local state
-      setOrders(prevOrders => 
-        prevOrders.map(o => {
-          if (o.id === order.id) {
-                return { 
-                  ...o, 
-                  status: 'new',
-                  workingStartTime: null,
-                  completedTime: null
-                };
-          }
-          return o;
-        })
-      );
-          console.log(`Successfully reverted order ${order.id} to new status in database`);
-        } else {
-          console.error(`Failed to revert order ${order.id} to new status in database`);
+      // Update database first
+      const statusId = getStatusIdFromStatus('new');
+      const success = await updateOrderStatusInDB(order.id, statusId);
+
+      if (success) {
+        // Update local state
+    setOrders(prevOrders =>
+      prevOrders.map(o => {
+        if (o.id === order.id) {
+              return {
+                ...o,
+                status: 'new',
+                workingStartTime: null,
+                completedTime: null
+              };
         }
-      } catch (error) {
-        console.error('Error reverting order to new status:', error);
+        return o;
+      })
+    );
       }
     } else if (action === 'working') {
-      try {
-        // Update database first
-        const statusId = getStatusIdFromStatus('working');
-        const success = await updateOrderStatusInDB(order.id, statusId);
-        
-        if (success) {
-          // Update local state
-          setOrders(prevOrders => 
-            prevOrders.map(o => {
-              if (o.id === order.id) {
-                return { 
-                  ...o, 
-                  status: 'working',
-                  workingStartTime: new Date(),
-                  completedTime: null
-                };
-              }
-              return o;
-            })
-          );
-          console.log(`Successfully reverted order ${order.id} to working status in database`);
-        } else {
-          console.error(`Failed to revert order ${order.id} to working status in database`);
-        }
-      } catch (error) {
-        console.error('Error reverting order to working status:', error);
+      // Update database first
+      const statusId = getStatusIdFromStatus('working');
+      const success = await updateOrderStatusInDB(order.id, statusId);
+
+      if (success) {
+        // Update local state
+        setOrders(prevOrders =>
+          prevOrders.map(o => {
+            if (o.id === order.id) {
+              return {
+                ...o,
+                status: 'working',
+                workingStartTime: new Date(),
+                completedTime: null
+              };
+            }
+            return o;
+          })
+        );
       }
     } else if (action === 'send_to_driver') {
       try {
@@ -1711,18 +1660,15 @@ const KitchenCommandCenter = () => {
         
         if (success) {
           // Remove order from local state immediately (it will appear on delivery page)
-          setOrders(prevOrders => 
+          setOrders(prevOrders =>
             prevOrders.filter(o => o.id !== order.id)
           );
-          console.log(`Successfully sent order ${order.id} to driver with OrderStatusID = ${ORDER_STATUS.WITH_DRIVER}`);
           addNotification(`Поръчка #${order.id} препратена към шофьора`, 'info');
           playNotificationSound('complete');
         } else {
-          console.error(`Failed to send order ${order.id} to driver in database`);
           addNotification(`Failed to send order #${order.id} to delivery page`, 'warning');
         }
       } catch (error) {
-        console.error('Error sending order to driver:', error);
         addNotification(`Error sending order #${order.id} to delivery page`, 'urgent');
       }
     } else if (action === 'mark_pickup_taken') {
@@ -1732,18 +1678,15 @@ const KitchenCommandCenter = () => {
         
         if (success) {
           // Remove order from local state immediately (it will appear in history)
-          setOrders(prevOrders => 
+          setOrders(prevOrders =>
             prevOrders.filter(o => o.id !== order.id)
           );
-          console.log(`Successfully marked pickup order ${order.id} as taken with OrderStatusID = ${ORDER_STATUS.DELIVERED}`);
           addNotification(`Поръчка #${order.id} маркирана като взета`, 'info');
           playNotificationSound('complete');
         } else {
-          console.error(`Failed to mark pickup order ${order.id} as taken in database`);
           addNotification(`Failed to mark order #${order.id} as taken`, 'warning');
         }
       } catch (error) {
-        console.error('Error marking pickup order as taken:', error);
         addNotification(`Error marking order #${order.id} as taken`, 'urgent');
       }
     } else if (action === 'completed') {
@@ -1754,11 +1697,11 @@ const KitchenCommandCenter = () => {
         
         if (success) {
           // Update local state
-          setOrders(prevOrders => 
+          setOrders(prevOrders =>
             prevOrders.map(o => {
               if (o.id === order.id) {
-                return { 
-                  ...o, 
+                return {
+                  ...o,
                   status: 'completed',
                   completedTime: new Date()
                 };
@@ -1766,15 +1709,12 @@ const KitchenCommandCenter = () => {
               return o;
             })
           );
-          console.log(`Successfully marked order ${order.id} as completed in database`);
           addNotification(`Поръчка #${order.id} завършена!`, 'info');
           playNotificationSound('complete');
         } else {
-          console.error(`Failed to mark order ${order.id} as completed in database`);
           addNotification(`Failed to complete order #${order.id}`, 'warning');
         }
       } catch (error) {
-        console.error('Error marking order as completed:', error);
         addNotification(`Error completing order #${order.id}`, 'urgent');
       }
     } else {

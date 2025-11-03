@@ -35,8 +35,6 @@ interface DeliveryOrder {
   deliveredTime?: Date;
   specialInstructions: string;
   comments?: string;
-  distance: number; // in km
-  estimatedTime: number; // in minutes
   coordinates: { lat: number; lng: number };
   priority: 'normal' | 'rush' | 'vip';
   customerRating?: number;
@@ -76,9 +74,6 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
     }
   }
   
-  // Calculate distance (simplified - in real app you'd use proper distance calculation)
-  const distance = Math.random() * 5 + 1; // 1-6 km
-  
   // Determine status based on OrderStatusID
   let status: DeliveryOrder['status'] = 'ready';
   if (kitchenOrder.OrderStatusID === ORDER_STATUS.WITH_DRIVER) { // OrderStatusID = 4, Със Шофьора
@@ -117,8 +112,6 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
     deliveredTime: status === 'delivered' ? orderTime : undefined, // Set deliveredTime for delivered orders
     specialInstructions: kitchenOrder.SpecialInstructions || '',
     comments: kitchenOrder.Comments || undefined,
-    distance,
-    estimatedTime: Math.round(distance * 3 + 5), // Rough estimate
     coordinates,
     priority: 'normal' as const
   };
@@ -636,9 +629,6 @@ const DeliveryDashboard = () => {
             <div className="text-green-400 font-bold text-sm sm:text-base">
               {(order.totalAmount).toFixed(2)} лв
             </div>
-            <div className="text-xs text-gray-400">
-              {order.distance.toFixed(1)}км • {order.estimatedTime}мин
-            </div>
           </div>
         </div>
 
@@ -650,12 +640,8 @@ const DeliveryDashboard = () => {
           
           <div className="flex items-start space-x-2">
             <MapPin size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
-            <span 
-              className={`text-gray-300 text-xs sm:text-sm flex-1 leading-relaxed ${
-                isMobile ? 'cursor-pointer hover:text-white transition-colors' : ''
-              }`}
-              onClick={() => isMobile && openAddressInMaps(order.address)}
-              title={isMobile ? 'Tap to open in Maps' : undefined}
+            <span
+              className="text-gray-300 text-xs sm:text-sm flex-1 leading-relaxed"
             >
               {order.address}
             </span>
@@ -800,7 +786,7 @@ const DeliveryDashboard = () => {
     );
   }
 
-  const readyOrders = orders.filter(o => o.status === 'ready').sort((a, b) => a.distance - b.distance);
+  const readyOrders = orders.filter(o => o.status === 'ready');
   const activeOrders = orders.filter(o => o.status === 'en_route');
 
   return (
