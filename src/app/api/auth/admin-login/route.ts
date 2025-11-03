@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { withRateLimit, createRateLimitResponse } from '@/utils/rateLimit'
 
 // Create Supabase client for server-side auth
 const supabaseAuth = createClient(
@@ -15,6 +16,12 @@ const supabaseAuth = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - prevent brute force attacks on admin login
+    const rateLimit = await withRateLimit(request, 'admin')
+    if (!rateLimit.allowed) {
+      return createRateLimitResponse(rateLimit.headers)
+    }
+
     const { username, password, type } = await request.json()
 
     // Validate input

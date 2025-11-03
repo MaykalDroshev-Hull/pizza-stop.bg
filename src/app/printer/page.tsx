@@ -174,6 +174,14 @@ export default function PrinterPage() {
 
       const result = await response.json();
 
+      // Handle rate limiting (429 Too Many Requests)
+      if (response.status === 429) {
+        const retryAfter = response.headers.get('Retry-After');
+        const retryMinutes = retryAfter ? Math.ceil(parseInt(retryAfter) / 60) : 15;
+        setError(`Твърде много опити за влизане. Моля, изчакайте ${retryMinutes} минути преди да опитате отново.`);
+        return;
+      }
+
       if (response.ok && result.success) {
         setIsAuthenticated(true);
         setCurrentView("main");
