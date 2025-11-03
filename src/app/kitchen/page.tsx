@@ -1312,6 +1312,7 @@ const KitchenCommandCenter = () => {
   <div>Име: ${order.customerName}</div>
   <div>Тел: ${order.phone}</div>
   <div class="address">Адрес: ${order.address}</div>
+  ${order.comments ? `<div>Коментар: ${order.comments}</div>` : ''}
   
   <div class="separator-solid"></div>
   
@@ -1802,7 +1803,7 @@ const KitchenCommandCenter = () => {
     
     return (
       <div
-        className={`bg-gray-800 border-2 ${isUrgent ? 'border-red-500' : 'border-blue-500'} rounded-lg transition-all duration-300 hover:bg-gray-700 ${!debugMode ? 'animate-pulse' : ''} touch-manipulation select-none ${cardSizeClasses[cardSize]} min-h-[88px] cursor-pointer`}
+        className={`bg-gray-800 border-2 ${isUrgent ? 'border-red-500' : 'border-blue-500'} rounded-lg transition-all duration-300 hover:bg-gray-700 touch-manipulation select-none ${cardSizeClasses[cardSize]} min-h-[88px] cursor-pointer`}
         onTouchStart={(e) => handleTouchStart(e, order.id)}
         onTouchEnd={handleTouchEnd}
         onClick={() => setOrderDetailsModal({ show: true, order })}
@@ -1828,6 +1829,11 @@ const KitchenCommandCenter = () => {
           <div className="text-blue-400 font-semibold text-xs truncate">👤 {order.customerName}</div>
           <div className="text-gray-400 text-xs sm:text-sm">📞 {order.phone}</div>
           <div className="text-gray-400 text-xs sm:text-sm truncate">📍 {order.address}</div>
+          {order.comments && (
+            <div className="ml-5 text-xs text-gray-400 italic">
+              {order.comments}
+            </div>
+          )}
           {order.expectedTime && (
             <div className="text-green-400 text-xs sm:text-sm font-medium">
               📅 Поръчана за: {formatScheduledTime(order.expectedTime)}
@@ -1951,6 +1957,11 @@ const KitchenCommandCenter = () => {
             <div className="text-orange-200 font-semibold text-sm">{order.customerName}</div>
             <div className="text-orange-300 text-xs">📞 {order.phone}</div>
             <div className="text-orange-300 text-xs">📍 {order.address}</div>
+            {order.comments && (
+              <div className="ml-5 text-xs text-gray-400 italic">
+                {order.comments}
+              </div>
+            )}
           </div>
           <button
             onClick={(e) => {
@@ -2149,6 +2160,11 @@ const KitchenCommandCenter = () => {
             <div className="text-gray-300">{order.customerName}</div>
             <div className="text-gray-400 text-xs">📞 {order.phone}</div>
             <div className="text-gray-400 text-xs">📍 {order.address}</div>
+            {order.comments && (
+              <div className="ml-5 text-xs text-gray-400 italic">
+                {order.comments}
+              </div>
+            )}
           </div>
         </div>
         
