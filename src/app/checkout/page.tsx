@@ -36,7 +36,7 @@ type PaymentMethod = 'online' | 'card' | 'cash'
 type OrderType = 'guest' | 'user'
 
 export default function CheckoutPage() {
-  const { items, totalPrice, getItemTotalPrice, refreshFromStorage } = useCart()
+  const { items, totalPrice, getItemTotalPrice, refreshFromStorage, cartValidationMessage } = useCart()
   const { user, isAuthenticated, updateUser } = useLoginID()
   
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
@@ -105,43 +105,59 @@ export default function CheckoutPage() {
     return dayNames[date.getDay()]
   }
 
-  // Load Google Maps script
+  // Load Google Maps script and initialize autocomplete when delivery is selected
   useEffect(() => {
-    if (mapLoaded) return
-
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-    
-    if (!apiKey) {
+    // Only load Google Maps when delivery is selected
+    if (selectedDeliveryType === 'pickup') {
       return
     }
 
-    const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-    script.async = true
-    script.defer = true
-    
-    script.onload = () => {
-      setMapLoaded(true)
-    }
-
-    script.onerror = () => {
-    }
-
-    document.head.appendChild(script)
-
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script)
+    const loadGoogleMaps = async () => {
+      // Check if Google Maps is already loaded
+      if (window.google && window.google.maps && window.google.maps.places) {
+        if (!autocomplete) {
+          initializeAutocomplete();
+        }
+        return;
       }
-    }
-  }, [mapLoaded])
 
-  // Initialize autocomplete when map is loaded
-  useEffect(() => {
-    if (mapLoaded) {
-      initializeAutocomplete()
-    }
-  }, [mapLoaded])
+      // Check if script already exists to prevent duplicate loading
+      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+      if (existingScript) {
+        // Wait for existing script to load
+        existingScript.addEventListener('load', () => {
+          if (!autocomplete) {
+            initializeAutocomplete();
+          }
+        });
+        return;
+      }
+
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+      if (!apiKey) {
+        return
+      }
+
+      // Load Google Maps script
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+
+      script.addEventListener('load', () => {
+        setMapLoaded(true);
+        initializeAutocomplete();
+      });
+
+      script.addEventListener('error', () => {
+      });
+
+      document.head.appendChild(script);
+    };
+
+    loadGoogleMaps();
+  }, [selectedDeliveryType])
 
   // Initialize map modal when opened
   useEffect(() => {
@@ -486,36 +502,48 @@ export default function CheckoutPage() {
 
 
   const initializeAutocomplete = () => {
-    if (!addressInputRef.current || !window.google?.maps?.places) return
+    if (!addressInputRef.current || !window.google?.maps?.places) return;
+
+    // Clean up existing autocomplete instance if it exists
+    if (autocomplete) {
+      window.google.maps.event.clearInstanceListeners(autocomplete);
+    }
 
     const autocompleteInstance = new window.google.maps.places.Autocomplete(addressInputRef.current, {
       types: ['address'],
       componentRestrictions: { country: 'bg' }, // Restrict to Bulgaria
       fields: ['formatted_address', 'geometry', 'place_id']
-    })
+    });
 
     autocompleteInstance.addListener('place_changed', () => {
-      const place = autocompleteInstance.getPlace()
-      
-      if (place.geometry && place.geometry.location) {
-        const coordinates = {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng()
-        }
-                
-        // Update both LocationText and LocationCoordinates with the selected address
+      const place = autocompleteInstance.getPlace();
+
+      if (place.formatted_address) {
+        // Update the address with the selected place
         setCustomerInfo(prev => ({
           ...prev,
-          LocationText: place.formatted_address || '',
-          LocationCoordinates: JSON.stringify(coordinates)
-        }))
-        
-        // Validate the address zone
-        validateAddressZone(coordinates)
-      }
-    })
+          LocationText: place.formatted_address || ''
+        }));
 
-    setAutocomplete(autocompleteInstance as any)
+        if (place.geometry && place.geometry.location) {
+          const coordinates = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng()
+          };
+
+          // Update coordinates and validate address zone
+          setCustomerInfo(prev => ({
+            ...prev,
+            LocationCoordinates: JSON.stringify(coordinates)
+          }));
+
+          // Validate the address zone
+          validateAddressZone(coordinates);
+        }
+      }
+    });
+
+    setAutocomplete(autocompleteInstance as any);
   }
 
 
@@ -1573,9 +1601,9 @@ export default function CheckoutPage() {
                                   {item.addons
                                     .filter(addon => addon.AddonType === 'meat')
                                     .map((addon, addonIndex) => (
-                                      <span 
+                                      <span
                                         key={addonIndex}
-                                        className="text-xs bg-red/20 text-red px-2 py-1 rounded-md"
+                                        className="text-xs bg-orange/20 text-orange px-2 py-1 rounded-md"
                                       >
                                         {addon.Name}
                                         {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
@@ -2271,6 +2299,18 @@ export default function CheckoutPage() {
              </div>
              )}
  
+
+            {/* Cart Validation Message */}
+            {cartValidationMessage && (
+              <div className="bg-orange/10 border border-orange/20 rounded-xl p-4 mb-4">
+                <h3 className="text-orange font-medium mb-2">
+                  ⚠️ Продукти премахнати от количката
+                </h3>
+                <p className="text-sm text-muted">
+                  {cartValidationMessage}
+                </p>
+              </div>
+            )}
 
             {/* Unavailable Items Alert */}
             {unavailableItems.length > 0 && (

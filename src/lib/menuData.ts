@@ -406,6 +406,7 @@ function getFallbackMenuData() {
     pizza: [],
     burgers: [],
     doners: [],
-    drinks: []
+    drinks: [],
+    sauces: []
   }
 }

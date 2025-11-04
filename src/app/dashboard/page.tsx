@@ -1065,8 +1065,9 @@ export default function DashboardPage() {
         ...menuData.pizza,
         ...menuData.burgers,
         ...menuData.doners,
-        ...menuData.drinks
-      ]
+        ...menuData.drinks,
+        ...(menuData.sauces || [])
+      ] as any[]
       
       // Map order products to cart items, checking availability
       const cartItems: any[] = []
@@ -1078,38 +1079,55 @@ export default function DashboardPage() {
                             (orderProduct.Comment && orderProduct.Comment.includes('50/50'))
         
         if (isFiftyFifty) {
-          // Handle 50/50 pizza - it doesn't exist in menu as a single product
-          // Parse addons from JSON string if needed
-          let parsedAddons: Array<{ Name: string; Price: number; AddonType: string }> = []
-          if (orderProduct.Addons) {
-            if (typeof orderProduct.Addons === 'string') {
-              try {
-                parsedAddons = JSON.parse(orderProduct.Addons)
-              } catch (e) {
-                // If parsing fails, use empty array
-                console.warn('Failed to parse addons for 50/50 pizza:', e)
-                parsedAddons = []
-              }
-            } else {
-              parsedAddons = Array.isArray(orderProduct.Addons) 
-                ? (orderProduct.Addons as Array<{ Name: string; Price: number; AddonType: string }>)
-                : []
+          // Handle 50/50 pizza - validate individual pizza components
+          const pizzaNames = orderProduct.ProductName.split(' / ').map(name => name.trim())
+          let allPizzasAvailable = true
+
+          // Check if all individual pizzas are still available
+          for (const pizzaName of pizzaNames) {
+            const availablePizza = availableProducts.find((p: any) => p.name === pizzaName)
+            if (!availablePizza) {
+              allPizzasAvailable = false
+              break
             }
           }
-          
-          // Create cart item for 50/50 pizza
-          const cartItem = {
-            id: Date.now() + Math.random(), // Unique ID for 50/50 pizza
-            name: orderProduct.ProductName,
-            price: orderProduct.UnitPrice,
-            image: '🍕',
-            category: 'pizza-5050', // Special category for 50/50 pizzas
-            size: orderProduct.ProductSize || 'Голяма',
-            addons: parsedAddons,
-            comment: orderProduct.Comment || '',
-            quantity: orderProduct.Quantity
+
+          if (allPizzasAvailable) {
+            // Parse addons from JSON string if needed
+            let parsedAddons: Array<{ Name: string; Price: number; AddonType: string }> = []
+            if (orderProduct.Addons) {
+              if (typeof orderProduct.Addons === 'string') {
+                try {
+                  parsedAddons = JSON.parse(orderProduct.Addons)
+                } catch (e) {
+                  // If parsing fails, use empty array
+                  console.warn('Failed to parse addons for 50/50 pizza:', e)
+                  parsedAddons = []
+                }
+              } else {
+                parsedAddons = Array.isArray(orderProduct.Addons)
+                  ? (orderProduct.Addons as Array<{ Name: string; Price: number; AddonType: string }>)
+                  : []
+              }
+            }
+
+            // Create cart item for 50/50 pizza
+            const cartItem = {
+              id: Date.now() + Math.random(), // Unique ID for 50/50 pizza
+              name: orderProduct.ProductName,
+              price: orderProduct.UnitPrice,
+              image: '🍕',
+              category: 'pizza-5050', // Special category for 50/50 pizzas
+              size: orderProduct.ProductSize || 'Голяма',
+              addons: parsedAddons,
+              comment: orderProduct.Comment || '',
+              quantity: orderProduct.Quantity
+            }
+            cartItems.push(cartItem)
+          } else {
+            // 50/50 pizza contains disabled pizzas
+            unavailableItems.push(orderProduct.ProductName)
           }
-          cartItems.push(cartItem)
         } else {
           // Regular product - find matching product in current menu
           const availableProduct = availableProducts.find((p: any) => 

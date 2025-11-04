@@ -51,6 +51,11 @@ function OrderSuccessContent() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Clear cart immediately when component mounts
+  useEffect(() => {
+    clearCart()
+  }, [clearCart])
+
   useEffect(() => {
     async function fetchOrder() {
       if (!encryptedOrderId) {
@@ -67,8 +72,6 @@ function OrderSuccessContent() {
       }
 
       try {
-        // Clear the cart after successful order
-        clearCart()
         const res = await fetch(`/api/order/details?orderId=${decryptedOrderId}`, { cache: 'no-store' })
         if (!res.ok) {
           const err = await res.json().catch(() => ({}))
