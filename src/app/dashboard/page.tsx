@@ -1083,28 +1083,82 @@ export default function DashboardPage() {
       const unavailableItems: string[] = []
       
       for (const orderProduct of order.Products) {
-        // Find matching product in current menu
-        const availableProduct = availableProducts.find((p: any) => 
-          p.name === orderProduct.ProductName
-        )
+        // Check if this is a 50/50 pizza (name contains "/" separator)
+        const isFiftyFifty = orderProduct.ProductName.includes(' / ') || 
+                            (orderProduct.Comment && orderProduct.Comment.includes('50/50'))
         
-        if (availableProduct) {
-          // Product is available - add to cart
+        if (isFiftyFifty) {
+          // Handle 50/50 pizza - it doesn't exist in menu as a single product
+          // Parse addons from JSON string if needed
+          let parsedAddons: Array<{ Name: string; Price: number; AddonType: string }> = []
+          if (orderProduct.Addons) {
+            if (typeof orderProduct.Addons === 'string') {
+              try {
+                parsedAddons = JSON.parse(orderProduct.Addons)
+              } catch (e) {
+                // If parsing fails, use empty array
+                console.warn('Failed to parse addons for 50/50 pizza:', e)
+                parsedAddons = []
+              }
+            } else {
+              parsedAddons = Array.isArray(orderProduct.Addons) 
+                ? (orderProduct.Addons as Array<{ Name: string; Price: number; AddonType: string }>)
+                : []
+            }
+          }
+          
+          // Create cart item for 50/50 pizza
           const cartItem = {
-            id: availableProduct.id,
+            id: Date.now() + Math.random(), // Unique ID for 50/50 pizza
             name: orderProduct.ProductName,
             price: orderProduct.UnitPrice,
-            image: availableProduct.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNjY2NjY2MiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5GVPzwvdGV4dD4KPC9zdmc+',
-            category: availableProduct.category || 'pizza',
-            size: orderProduct.ProductSize || 'Medium',
-            addons: orderProduct.Addons || [],
+            image: '🍕',
+            category: 'pizza-5050', // Special category for 50/50 pizzas
+            size: orderProduct.ProductSize || 'Голяма',
+            addons: parsedAddons,
             comment: orderProduct.Comment || '',
             quantity: orderProduct.Quantity
           }
           cartItems.push(cartItem)
         } else {
-          // Product is unavailable
-          unavailableItems.push(orderProduct.ProductName)
+          // Regular product - find matching product in current menu
+          const availableProduct = availableProducts.find((p: any) => 
+            p.name === orderProduct.ProductName
+          )
+          
+          if (availableProduct) {
+            // Parse addons from JSON string if needed
+            let parsedAddons: Array<{ Name: string; Price: number; AddonType: string }> = []
+            if (orderProduct.Addons) {
+              if (typeof orderProduct.Addons === 'string') {
+                try {
+                  parsedAddons = JSON.parse(orderProduct.Addons)
+                } catch (e) {
+                  console.warn('Failed to parse addons:', e)
+                  parsedAddons = []
+                }
+              } else {
+                parsedAddons = Array.isArray(orderProduct.Addons) ? orderProduct.Addons : []
+              }
+            }
+            
+            // Product is available - add to cart
+            const cartItem = {
+              id: availableProduct.id,
+              name: orderProduct.ProductName,
+              price: orderProduct.UnitPrice,
+              image: availableProduct.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNjY2NjY2MiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5GVPzwvdGV4dD4KPC9zdmc+',
+              category: availableProduct.category || 'pizza',
+              size: orderProduct.ProductSize || 'Medium',
+              addons: parsedAddons,
+              comment: orderProduct.Comment || '',
+              quantity: orderProduct.Quantity
+            }
+            cartItems.push(cartItem)
+          } else {
+            // Product is unavailable
+            unavailableItems.push(orderProduct.ProductName)
+          }
         }
       }
       
