@@ -1090,18 +1090,20 @@ export default function DashboardPage() {
         if (isFiftyFifty) {
           // Handle 50/50 pizza - it doesn't exist in menu as a single product
           // Parse addons from JSON string if needed
-          let parsedAddons = []
+          let parsedAddons: Array<{ Name: string; Price: number; AddonType: string }> = []
           if (orderProduct.Addons) {
             if (typeof orderProduct.Addons === 'string') {
               try {
                 parsedAddons = JSON.parse(orderProduct.Addons)
               } catch (e) {
-                // If parsing fails, try to convert array-like string
+                // If parsing fails, use empty array
                 console.warn('Failed to parse addons for 50/50 pizza:', e)
-                parsedAddons = Array.isArray(orderProduct.Addons) ? orderProduct.Addons : []
+                parsedAddons = []
               }
             } else {
-              parsedAddons = Array.isArray(orderProduct.Addons) ? orderProduct.Addons : []
+              parsedAddons = Array.isArray(orderProduct.Addons) 
+                ? (orderProduct.Addons as Array<{ Name: string; Price: number; AddonType: string }>)
+                : []
             }
           }
           
@@ -1126,14 +1128,14 @@ export default function DashboardPage() {
           
           if (availableProduct) {
             // Parse addons from JSON string if needed
-            let parsedAddons = []
+            let parsedAddons: Array<{ Name: string; Price: number; AddonType: string }> = []
             if (orderProduct.Addons) {
               if (typeof orderProduct.Addons === 'string') {
                 try {
                   parsedAddons = JSON.parse(orderProduct.Addons)
                 } catch (e) {
                   console.warn('Failed to parse addons:', e)
-                  parsedAddons = Array.isArray(orderProduct.Addons) ? orderProduct.Addons : []
+                  parsedAddons = []
                 }
               } else {
                 parsedAddons = Array.isArray(orderProduct.Addons) ? orderProduct.Addons : []
