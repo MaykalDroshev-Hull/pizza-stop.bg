@@ -47,7 +47,6 @@ export async function getDailyOrderNumber(orderId: number): Promise<number> {
     }
     
     const dailyNumber = count || 1;
-    console.log(`📊 Order ${orderId} is daily order #${dailyNumber} (${orderDate.toLocaleDateString('bg-BG')})`);
     
     return dailyNumber;
   } catch (error) {

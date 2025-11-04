@@ -40,8 +40,7 @@ export default function DrinksSuggestionBox({ onClose }: DrinksSuggestionBoxProp
       // Randomize the drinks array before slicing
       const shuffledDrinks = [...validDrinks].sort(() => Math.random() - 0.5)
       setDrinks(shuffledDrinks.slice(0, maxDrinks))
-    } catch (error) {
-      console.error('Error loading drinks:', error)
+    } catch {
       setDrinks([])
     } finally {
       setLoading(false)

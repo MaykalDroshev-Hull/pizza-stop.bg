@@ -122,7 +122,6 @@ export default function DashboardPage() {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     
     if (!apiKey) {
-      console.error('Google Maps API Key is missing! Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local')
       return
     }
 
@@ -136,7 +135,6 @@ export default function DashboardPage() {
     }
 
     script.onerror = () => {
-      console.error('Failed to load Google Maps script')
     }
 
     document.head.appendChild(script)
@@ -207,8 +205,7 @@ export default function DashboardPage() {
 
             // Validate zone for user location
             validateAddressZone(userLocation)
-          } catch (error) {
-            console.error('Error getting user location:', error)
+          } catch {
             // Continue with default map view if location fails
           }
           
@@ -345,7 +342,6 @@ export default function DashboardPage() {
       // Re-bind autocomplete to ensure it works when tab is switched
       setTimeout(() => {
         if (addressInputRef.current && autocompleteRef.current) {
-          console.log('🔄 Re-binding autocomplete for address tab')
           // Set bounds using the setBounds method instead of bindTo
           autocompleteRef.current.setBounds(new google.maps.LatLngBounds())
         }
@@ -454,12 +450,10 @@ export default function DashboardPage() {
               if (parsedCoords && parsedCoords.Ing !== undefined) {
                 parsedCoords.lng = parsedCoords.Ing
                 delete parsedCoords.Ing
-                console.log('Fixed coordinate typo: Ing -> lng')
               }
               
               coordinates = parsedCoords
-            } catch (error) {
-              console.warn('Failed to parse coordinates:', profileData.user.LocationCoordinates)
+            } catch {
             }
           }
           
@@ -477,8 +471,7 @@ export default function DashboardPage() {
         }
       }
       
-    } catch (error) {
-      console.error('Failed to fetch user data:', error)
+    } catch {
       setError('Грешка при зареждане на данните')
     } finally {
       stopLoading()
@@ -728,8 +721,7 @@ export default function DashboardPage() {
             validateAddressZone(coordinates)
           }
         })
-      } catch (error) {
-        console.error('Error initializing autocomplete:', error)
+      } catch {
       }
     }
   }
@@ -972,8 +964,7 @@ export default function DashboardPage() {
             }))
             handleMapModalClose()
           }
-        } catch (error) {
-          console.error('Reverse geocoding failed:', error)
+        } catch {
         }
       }
     }
@@ -1004,8 +995,7 @@ export default function DashboardPage() {
           setAddressData(prev => ({ ...prev, coordinates }))
           validateAddressZone(coordinates)
         }
-      } catch (error) {
-        console.error('Manual geocoding failed:', error)
+      } catch {
         setError('Не можахме да намерим координатите на адреса. Моля, опитайте отново.')
         return
       }
@@ -1177,8 +1167,7 @@ export default function DashboardPage() {
       // Navigate to checkout
       router.push('/checkout')
       
-    } catch (error) {
-      console.error('Error setting up order again:', error)
+    } catch {
       setError('Грешка при зареждане на поръчката. Моля, опитайте отново.')
     } finally {
       stopLoading()

@@ -78,15 +78,6 @@ export default function TeamCarousel() {
     return styles.cardHidden
   }
 
-  // Debug: Log current state (removed for performance)
-  // useEffect(() => {
-  //   console.log('Current index:', currentIndex)
-  //   teamMembers.forEach((member, index) => {
-  //     const className = getCardClass(index)
-  //     console.log(`Card ${index} (${member.name}): ${className}`)
-  //   })
-  // }, [currentIndex])
-
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft') {
       updateCarousel(currentIndex - 1)

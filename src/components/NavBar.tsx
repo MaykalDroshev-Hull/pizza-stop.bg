@@ -61,8 +61,7 @@ export default function NavBar() {
     if (userData) {
       try {
         setUser(JSON.parse(userData))
-      } catch (error) {
-        console.error('Error parsing user data:', error)
+      } catch {
         localStorage.removeItem('user')
       }
     }

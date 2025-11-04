@@ -145,11 +145,6 @@ export class DatecsPaymentService {
       // Build signing string
       const signingString = this.buildSigningString(request, signatureFields)
 
-      console.log('🔐 Signing request:')
-      console.log('   Transaction type:', transactionType)
-      console.log('   Signing fields:', signatureFields)
-      console.log('   Signing string:', signingString)
-
       // Load private key
       const privateKey = await this.loadPrivateKey()
 
@@ -160,8 +155,6 @@ export class DatecsPaymentService {
 
       const signature = sign.sign(privateKey)
       const pSign = signature.toString('hex').toUpperCase()
-
-      console.log('   Signature (P_SIGN):', pSign.substring(0, 64) + '...')
 
       return pSign
     } catch (error) {
@@ -184,11 +177,6 @@ export class DatecsPaymentService {
       // Build signing string
       const signingString = this.buildSigningString(response, signatureFields)
 
-      console.log('🔍 Verifying response signature:')
-      console.log('   Transaction type:', transactionType)
-      console.log('   Signing fields:', signatureFields)
-      console.log('   Signing string:', signingString)
-
       // Load BORICA public key
       const publicKey = await this.loadBoricaPublicKey()
 
@@ -202,7 +190,6 @@ export class DatecsPaymentService {
 
       const isValid = verify.verify(publicKey, signature)
 
-      console.log('   Signature valid:', isValid ? '✅' : '❌')
 
       return isValid
     } catch (error) {

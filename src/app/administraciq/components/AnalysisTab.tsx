@@ -336,8 +336,7 @@ const AnalysisTab = (): React.JSX.Element => {
             orderStatus: completedStatus.id
           }));
         }
-      } catch (err) {
-        console.error('Error loading filter options:', err);
+      } catch {
       }
     };
 
@@ -371,8 +370,7 @@ const AnalysisTab = (): React.JSX.Element => {
         setLeastOrderedProducts(leastOrdered);
         setPaymentBreakdown(paymentData);
         setChartData(chart);
-      } catch (err) {
-        console.error('Error loading analytics data:', err);
+      } catch {
         setError('Грешка при зареждане на данните');
       } finally {
         setLoading(false);

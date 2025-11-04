@@ -112,7 +112,6 @@ export default function CheckoutPage() {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     
     if (!apiKey) {
-      console.error('Google Maps API Key is missing! Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local')
       return
     }
 
@@ -126,7 +125,6 @@ export default function CheckoutPage() {
     }
 
     script.onerror = () => {
-      console.error('Failed to load Google Maps script')
     }
 
     document.head.appendChild(script)
@@ -190,8 +188,7 @@ export default function CheckoutPage() {
 
             // Validate zone for user location
             validateAddressZone(userLocation)
-          } catch (error) {
-            console.error('Error getting user location:', error)
+          } catch {
           }
           
           // Add delivery zone overlays
@@ -337,8 +334,7 @@ export default function CheckoutPage() {
           
           // Clear the data after using it
           localStorage.removeItem('pizza-stop-order-again')
-        } catch (error) {
-          console.error('Error parsing order again data:', error)
+        } catch {
         }
       }
     }
@@ -448,8 +444,7 @@ export default function CheckoutPage() {
           ? JSON.parse(customerInfo.LocationCoordinates)
           : customerInfo.LocationCoordinates
         validateAddressZone(coords)
-      } catch (error) {
-        console.warn('Failed to parse coordinates for validation:', error)
+      } catch {
       }
     }
   }, [customerInfo.LocationCoordinates])
@@ -483,8 +478,7 @@ export default function CheckoutPage() {
         if (coordinates && coordinates.lat && coordinates.lng) {
           validateAddressZone(coordinates)
         } 
-      } catch (error) {
-        console.warn('❌ Failed to parse user coordinates for validation:', user.LocationCoordinates, error)
+      } catch {
       }
     }
   }, [user, orderType])
@@ -649,7 +643,6 @@ export default function CheckoutPage() {
 
       if (result && result[0]) {
         const address = result[0].formatted_address
-        console.log('✅ Address found:', address)
         
         setCustomerInfo(prev => ({
           ...prev,
@@ -657,21 +650,15 @@ export default function CheckoutPage() {
           LocationCoordinates: JSON.stringify(coordinates)
         }))
         
-        console.log('✅ Customer info updated')
         
         // Validate zone
         validateAddressZone(coordinates)
         setAddressConfirmed(true)
         
-        console.log('✅ Address validated and confirmed')
-      } else {
-        console.log('❌ No results from geocoding')
-      }
-    } catch (error) {
-      console.error('❌ Error reverse geocoding:', error)
+      } 
+    } catch{
     }
 
-    console.log('🚪 Closing modal...')
     handleMapModalClose()
   }
 
@@ -721,10 +708,8 @@ export default function CheckoutPage() {
   }
 
   const validateAddressZone = (coordinates: { lat: number; lng: number } | null): 'blue' | 'yellow' | 'outside' | null => {
-    console.log('🔍 validateAddressZone called with coordinates:', coordinates)
     
     if (!coordinates) {
-      console.log('❌ No coordinates provided, setting zone to null')
       setAddressZone(null)
       setDeliveryCost(0)
       setAddressConfirmed(false)
@@ -732,7 +717,6 @@ export default function CheckoutPage() {
     }
 
     if (!coordinates.lat || !coordinates.lng) {
-      console.log('❌ Invalid coordinates (missing lat/lng):', coordinates)
       setAddressZone(null)
       setDeliveryCost(0)
       setAddressConfirmed(false)
@@ -805,49 +789,37 @@ export default function CheckoutPage() {
       { lat: 43.19788, lng: 24.64881 }
     ]
     
-    console.log('📍 User coordinates:', coordinates)
-    console.log('📍 Lovech area polygon:', lovechArea)
-    console.log('📍 Extended area polygon:', extendedArea)
-    
     let zone: 'yellow' | 'blue' | 'outside' | null = null
     
     // Check if point is in Lovech city area (yellow zone - 3 BGN)
     if (isPointInPolygon(coordinates, lovechArea)) {
       zone = 'yellow'
-      console.log('🟡 Zone: YELLOW (Lovech city area - 3 BGN)')
     }
     // Check if point is in extended area (blue zone - 7 BGN)
     else if (isPointInPolygon(coordinates, extendedArea)) {
       zone = 'blue'
-      console.log('🔵 Zone: BLUE (Extended area - 7 BGN)')
     }
     // Point is outside both areas
     else {
       zone = 'outside'
-      console.log('🔴 Zone: OUTSIDE (No delivery available)')
     }
     
-    console.log(`🎯 Determined zone: ${zone}`)
     setAddressZone(zone)
     
     // Only confirm address if it's within delivery zone (for delivery orders)
     if (selectedDeliveryType !== 'pickup') {
       if (zone === 'outside') {
         setAddressConfirmed(false)
-        console.log('❌ Address not confirmed - outside delivery zone')
       } else {
         setAddressConfirmed(true)
-        console.log('✅ Address confirmed - within delivery zone')
       }
     } else {
       // For pickup orders, no address validation needed
       setAddressConfirmed(true)
-      console.log('✅ Pickup order - no address validation needed')
     }
     
     // Calculate delivery cost automatically based on zone
     const cost = calculateDeliveryCost(totalPrice, zone, selectedDeliveryType)
-    console.log('💰 Delivery cost calculated:', cost)
     setDeliveryCost(cost || 0)
     
     return zone
@@ -866,7 +838,6 @@ export default function CheckoutPage() {
 
       const invalidItems = items.filter(item => !item.name || !item.price || item.quantity <= 0)
       if (invalidItems.length > 0) {
-        console.error('❌ Invalid items in cart:', invalidItems)
         alert('❌ Някои продукти в количката са невалидни. Моля, опреснете страницата.')
         setIsLoading(false)
         return
@@ -939,8 +910,7 @@ export default function CheckoutPage() {
             LocationText: customerInfo.LocationText,
             LocationCoordinates: customerInfo.LocationCoordinates
           })
-        } catch (error) {
-          console.error('Error updating user profile:', error)
+        } catch {
         }
       }
 
@@ -977,8 +947,6 @@ export default function CheckoutPage() {
         loginId: user?.id || null
       }
 
-      console.log('💳 Initiating payment for order:')
-      console.log('   Full payload:', JSON.stringify(orderData, null, 2))
 
       // Call payment initiation API
       const response = await fetch('/api/payment/initiate', {
@@ -992,8 +960,6 @@ export default function CheckoutPage() {
       const result = await response.json()
 
       if (response.ok) {
-        console.log('✅ Payment initiated successfully:', result)
-
         // Redirect to payment processor
         if (result.paymentUrl) {
           window.location.href = result.paymentUrl
@@ -1001,19 +967,16 @@ export default function CheckoutPage() {
           throw new Error('No payment URL received')
         }
       } else {
-        console.error('❌ Payment initiation failed:', result)
         alert(`❌ ${result.error || 'Грешка при иницииране на плащането'}`)
         setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Payment initiation error:', error)
+    } catch {
       setIsLoading(false)
       alert('❌ Възникна грешка при иницииране на плащането.')
     }
   }
 
   const confirmAddress = async () => {
-    console.log('🔍 Confirming address:', customerInfo.LocationText)
     
     if (!customerInfo.LocationText) {
       alert('❌ Моля, въведете адрес преди да го потвърдите')
@@ -1022,15 +985,13 @@ export default function CheckoutPage() {
         
     // If we already have coordinates, validate them
     if (customerInfo.LocationCoordinates) {
-      console.log('✅ Address already has coordinates, validating zone')
       try {
         const coords = typeof customerInfo.LocationCoordinates === 'string' 
           ? JSON.parse(customerInfo.LocationCoordinates)
           : customerInfo.LocationCoordinates
         validateAddressZone(coords)
         setAddressConfirmed(true)
-      } catch (error) {
-        console.warn('Failed to parse coordinates:', error)
+      } catch {
       }
       return
     }
@@ -1047,7 +1008,6 @@ export default function CheckoutPage() {
             lng: location.lng()
           }
           
-          console.log('✅ Address geocoded successfully:', coordinates)
           
           // Update customer info with coordinates
           setCustomerInfo(prev => ({
@@ -1064,13 +1024,11 @@ export default function CheckoutPage() {
           }
           // Success case - no alert needed, user can see the confirmation in the UI
         } else {
-          console.log('❌ Failed to geocode address:', status)
           setAddressConfirmed(false)
           alert('❌ Не може да се намери адресът. Моля, проверете адреса или използвайте "Избери точна локация"')
         }
       })
     } else {
-      console.log('❌ Google Maps not loaded')
       setAddressConfirmed(false)
       alert('❌ Google Maps не е зареден. Моля, опитайте отново.')
     }
@@ -1083,8 +1041,7 @@ export default function CheckoutPage() {
       // Redirect to user page with return URL to checkout
       const currentUrl = encodeURIComponent(window.location.href)
       window.location.href = `/user?returnUrl=${currentUrl}`
-    } catch (error) {
-      console.error('Error redirecting to user page:', error)
+    } catch {
       setIsLoading(false)
     }
   }
@@ -1102,24 +1059,20 @@ export default function CheckoutPage() {
 
   const fetchUserProfileFromDatabase = async () => {
     if (!user?.id) {
-      console.log('❌ No user ID available for fetching profile')
       return
     }
 
     // Check if we already have cached data for this user
     if (cachedProfileData && cachedProfileData.userId === user.id) {
-      console.log('📋 Using cached profile data for user:', user.id)
       fillFormWithProfileDataFromData(cachedProfileData.user)
       return
     }
 
     try {
-      console.log('🔄 Fetching fresh user profile from database for ID:', user.id)
       const response = await fetch(`/api/user/profile?userId=${user.id}`)
       
       if (response.ok) {
         const profileData = await response.json()
-        console.log('📋 Fresh profile data from database:', profileData)
         
         if (profileData.user) {
           // Cache the profile data with user ID
@@ -1135,41 +1088,26 @@ export default function CheckoutPage() {
           fillFormWithProfileDataFromData(profileData.user)
         }
       } else {
-        console.error('❌ Failed to fetch profile data:', response.status)
       }
-    } catch (error) {
-      console.error('❌ Error fetching profile data:', error)
+    } catch {
     }
   }
 
   const fillFormWithProfileDataFromData = (userData: any) => {
-    console.log('🔄 fillFormWithProfileDataFromData called with userData:', userData)
     
     const updates: Partial<CustomerInfo> = {}
     
-    console.log('📝 User data breakdown:')
-    console.log('  - Name:', userData.name || 'NOT SET')
-    console.log('  - Phone:', userData.phone || 'NOT SET')
-    console.log('  - Email:', userData.email || 'NOT SET')
-    console.log('  - LocationText:', userData.LocationText || 'NOT SET')
-    console.log('  - LocationCoordinates:', userData.LocationCoordinates || 'NOT SET')
-    console.log('  - addressInstructions:', userData.addressInstructions || 'NOT SET')
-    
     if (userData.name) {
       updates.name = userData.name
-      console.log('✅ Setting name:', userData.name)
     }
     if (userData.phone) {
       updates.phone = userData.phone
-      console.log('✅ Setting phone:', userData.phone)
     }
     if (userData.email) {
       updates.email = userData.email
-      console.log('✅ Setting email:', userData.email)
     }
     if (userData.LocationText) {
       updates.LocationText = userData.LocationText
-      console.log('✅ Setting address:', userData.LocationText)
     }
     
     if (userData.LocationCoordinates) {
@@ -1182,67 +1120,47 @@ export default function CheckoutPage() {
         if (coordinates && coordinates.Ing !== undefined) {
           coordinates.lng = coordinates.Ing
           delete coordinates.Ing
-          console.log('Fixed coordinate typo: Ing -> lng')
         }
         
         updates.LocationCoordinates = JSON.stringify(coordinates)
-        console.log('✅ Setting coordinates:', coordinates)
         
         // Validate address zone immediately when coordinates are loaded
         if (coordinates && coordinates.lat && coordinates.lng) {
-          console.log('Validating address zone for user profile coordinates:', coordinates)
           validateAddressZone(coordinates)
         }
-      } catch (error) {
-        console.warn('Failed to parse coordinates:', userData.LocationCoordinates)
+      } catch {
       }
     }
     
-    console.log('📋 Updates to apply:', updates)
     
     setCustomerInfo(prev => {
       const newState = {
         ...prev,
         ...updates
       }
-      console.log('🔄 CustomerInfo state updated:', newState)
       return newState
     })
     
     if (userData.addressInstructions) {
-      console.log('✅ Setting delivery instructions:', userData.addressInstructions)
       setDeliveryInstructions(userData.addressInstructions)
     }
   }
 
   const fillFormWithProfileData = () => {
-    console.log('🔄 fillFormWithProfileData called with user:', user)
     if (user) {
       const updates: Partial<CustomerInfo> = {}
       
-      console.log('📝 User data breakdown:')
-      console.log('  - Name:', user.name || 'NOT SET')
-      console.log('  - Phone:', user.phone || 'NOT SET')
-      console.log('  - Email:', user.email || 'NOT SET')
-      console.log('  - LocationText:', user.LocationText || 'NOT SET')
-      console.log('  - LocationCoordinates:', user.LocationCoordinates || 'NOT SET')
-      console.log('  - addressInstructions:', user.addressInstructions || 'NOT SET')
-      
       if (user.name) {
         updates.name = user.name
-        console.log('✅ Setting name:', user.name)
       }
       if (user.phone) {
         updates.phone = user.phone
-        console.log('✅ Setting phone:', user.phone)
       }
       if (user.email) {
         updates.email = user.email
-        console.log('✅ Setting email:', user.email)
       }
       if (user.LocationText) {
         updates.LocationText = user.LocationText
-        console.log('✅ Setting address:', user.LocationText)
       }
       if (user.LocationCoordinates) {
         try {
@@ -1254,34 +1172,27 @@ export default function CheckoutPage() {
           if (coordinates && coordinates.Ing !== undefined) {
             coordinates.lng = coordinates.Ing
             delete coordinates.Ing
-            console.log('Fixed coordinate typo: Ing -> lng')
           }
           
           updates.LocationCoordinates = JSON.stringify(coordinates)
           
           // Validate address zone immediately when coordinates are loaded
           if (coordinates && coordinates.lat && coordinates.lng) {
-            console.log('Validating address zone for user profile coordinates:', coordinates)
             validateAddressZone(coordinates)
           }
-        } catch (error) {
-          console.warn('Failed to parse coordinates:', user.LocationCoordinates)
+        } catch {
         }
       }
-      
-      console.log('📋 Updates to apply:', updates)
-      
+            
       setCustomerInfo(prev => {
         const newState = {
           ...prev,
           ...updates
         }
-        console.log('🔄 CustomerInfo state updated:', newState)
         return newState
       })
       
       if (user.addressInstructions) {
-        console.log('✅ Setting delivery instructions:', user.addressInstructions)
         setDeliveryInstructions(user.addressInstructions)
       }
     }
@@ -1340,13 +1251,10 @@ export default function CheckoutPage() {
     // Validate all items have required data
     const invalidItems = items.filter(item => !item.name || !item.price || item.quantity <= 0)
     if (invalidItems.length > 0) {
-      console.error('❌ Invalid items in cart:', invalidItems)
       alert('❌ Някои продукти в количката са невалидни. Моля, опреснете страницата.')
       setIsLoading(false)
       return
     }
-    
-    console.log('✅ Cart validation passed:', items.length, 'items')
     
     // Validate minimum order amount
     if (totalPrice < 15) {
@@ -1424,24 +1332,13 @@ export default function CheckoutPage() {
            LocationText: customerInfo.LocationText,
            LocationCoordinates: customerInfo.LocationCoordinates
          })
-       } catch (error) {
-         console.error('Error updating user profile:', error)
+       } catch {
          // Don't block the order if profile update fails
        }
      }
      
      // Handle order submission
     const finalTotal = totalPrice + (selectedDeliveryType === 'pickup' ? 0 : deliveryCost)
-     
-    console.log('📦 Order details being sent to API:')
-    console.log('   - Customer:', customerInfo.name, customerInfo.email)
-    console.log('   - Items count:', items.length)
-    console.log('   - Items:', items.map(item => `${item.name} x${item.quantity}`).join(', '))
-    console.log('   - Total:', totalPrice, 'лв')
-    console.log('   - Delivery:', selectedDeliveryType === 'pickup' ? 0 : deliveryCost, 'лв')
-    console.log('   - Final total:', finalTotal, 'лв')
-    console.log('   - Type:', selectedDeliveryType)
-    console.log('   - Payment method:', paymentMethodId)
      
     // Validate orderTime before sending (critical for API validation)
     if (!orderTime.type) {
@@ -1479,15 +1376,6 @@ export default function CheckoutPage() {
      loginId: user?.id || null
    }
    
-     console.log('🚀 Sending order data to API:')
-     console.log('   Full payload:', JSON.stringify(orderData, null, 2))
-     console.log('   CustomerInfo validation:')
-     console.log('     - name:', customerInfo.name, '(length:', customerInfo.name?.length, ')')
-     console.log('     - email:', customerInfo.email, '(valid:', /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email || ''), ')')
-     console.log('     - phone:', customerInfo.phone, '(length:', customerInfo.phone?.length, ')')
-     console.log('     - LocationText:', customerInfo.LocationText, '(length:', customerInfo.LocationText?.length, ')')
-     console.log('     - LocationCoordinates:', customerInfo.LocationCoordinates)
-     
      // Call order confirmation API
      const response = await fetch('/api/order/confirm', {
        method: 'POST',
@@ -1500,22 +1388,15 @@ export default function CheckoutPage() {
      const result = await response.json()
      
     if (response.ok) {
-      console.log('✅ Order confirmed successfully:', result.orderId)
       // Redirect to order success page with encrypted order ID
       const encryptedOrderId = encryptOrderId(result.orderId.toString())
       // Don't stop loading, keep it running during redirect
       window.location.href = `/order-success?orderId=${encryptedOrderId}`
     } else {
-      console.error('❌ Order API returned error:', result)
-      console.error('   Status:', response.status)
-      console.error('   Error:', result.error)
-      console.error('   Details:', result.details)
       setIsLoading(false)
       
       // Show user-friendly error message
       if (result.details) {
-        console.error('📋 Full validation details:', result.details)
-        
         // Parse the validation errors
         let errorMessage = '❌ Моля, коригирайте следните грешки:\n\n'
         
@@ -1558,8 +1439,7 @@ export default function CheckoutPage() {
       }
       throw new Error(result.error || 'Failed to confirm order')
     }
-   } catch (error) {
-     console.error('Order submission error:', error)
+   } catch {
      setIsLoading(false)
      alert('❌ Възникна грешка при потвърждаване на поръчката.')
    }

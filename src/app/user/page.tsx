@@ -245,31 +245,24 @@ export default function UserPage() {
         throw new Error(data.error || 'Login failed')
       }
 
-      console.log('Login successful:', data.user)
       
       // Fetch complete profile data including coordinates
       try {
-        console.log('🔄 Fetching profile data for user ID:', data.user.id)
         const profileResponse = await fetch(`/api/user/profile?userId=${data.user.id}`)
         if (profileResponse.ok) {
           const profileData = await profileResponse.json()
-          console.log('📋 Profile data received:', profileData)
           if (profileData.user) {
-            console.log('✅ Using complete profile data for login:', profileData.user)
             // Use the complete profile data for login
             login(profileData.user)
           } else {
-            console.log('⚠️ No user data in profile response, using basic login data')
             // Fallback to basic login data
             login(data.user)
           }
         } else {
-          console.log('❌ Profile response not ok, using basic login data')
           // Fallback to basic login data
           login(data.user)
         }
-      } catch (profileError) {
-        console.error('❌ Error fetching profile data:', profileError)
+      } catch {
         // Fallback to basic login data
         login(data.user)
       }
@@ -380,7 +373,6 @@ export default function UserPage() {
       }
 
       setSuccess('Успешна регистрация!')
-      console.log('Registration successful:', data.user)
       
       // Auto-fill login form with registration data
       setLoginData({

@@ -225,8 +225,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         const deletedProductsCount = productsWithType.filter(p => p.isDeleted).length;
         
         setProducts(productsWithType);
-      } catch (error) {
-        console.error(`Error fetching ${tabName}:`, error);
+      } catch {
         addFlashMessage('error', `Грешка при зареждане на ${tabName}.`);
       }
     };
@@ -320,8 +319,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       );
       
       addFlashMessage('success', 'Всички промени бяха запазени успешно!');
-    } catch (error) {
-      console.error('Error saving all changes:', error);
+    } catch {
       addFlashMessage('error', 'Грешка при запазване на промените.');
     }
   };
@@ -454,8 +452,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       setIsEditModalOpen(false);
       setEditingProduct(null);
       addFlashMessage('success', 'Продуктът беше обновен успешно!');
-    } catch (error) {
-      console.error('Error saving product:', error);
+    } catch {
       addFlashMessage('error', 'Грешка при запазване на продукта.');
     }
   };
@@ -543,8 +540,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
           ? { ...p, isDisabled: newDisabledStatus }
           : p
       ));
-    } catch (error) {
-      console.error('Error toggling product status:', error);
+    } catch {
     }
   };
 
@@ -617,8 +613,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       });
       setIsModalOpen(false);
       addFlashMessage('success', 'Продуктът беше добавен успешно!');
-    } catch (error) {
-      console.error('Error adding product:', error);
+    } catch {
       addFlashMessage('error', 'Грешка при добавяне на продукта.');
     } finally {
       setIsAddingProduct(false);

@@ -6,8 +6,8 @@ import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_ST
 import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerator';
 import PrinterConfigModal from '../../components/PrinterConfigModal';
 import { useSerialPrinter } from '../../contexts/SerialPrinterContext';
-import { comPortPrinter, OrderData } from '../../utils/comPortPrinter';
 import { buildDatecsFrame, DatecsCommands, toHex, parseDatecsResponse, parseStatusBytes } from '../../utils/datecsFiscalProtocol';
+import { OrderData } from '../../utils/escposCommands';
 // AdminLogin moved to separate page at /admin-kitchen-login
 
 interface Order {
@@ -1055,14 +1055,10 @@ const KitchenCommandCenter = () => {
         restaurantPhone: '068 670 070'
       };
 
-      // Prioritize Web Serial if configured, otherwise use COM port
+      // Use Web Serial printer if configured
       if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
         await printOrder(orderData);
         addNotification(`Поръчка #${order.id} отпечатана на Web Serial принтер`, 'info');
-      } else if (comPortPrinter.isConfigured()) {
-        await comPortPrinter.printOrder(orderData);
-        const config = comPortPrinter.getConfig();
-        addNotification(`Поръчка #${order.id} отпечатана на COM порт принтер (${config?.comPort})`, 'info');
       } else {
         addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
         return;
@@ -1152,8 +1148,6 @@ const KitchenCommandCenter = () => {
             addNotification('✅ Команди изпратени (принтерът може да не върне пълен отговор)', 'info');
           }
         }
-      } else if (comPortPrinter.isConfigured()) {
-        addNotification('⚠️ COM порт не поддържа Datecs fiscal протокол. Използвайте Web Serial.', 'warning');
       } else {
         addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
         return;
@@ -1382,12 +1376,9 @@ const KitchenCommandCenter = () => {
         restaurantPhone: '068 670 070'
       };
 
-      // Prioritize Web Serial if configured, otherwise use COM port
+      // Use Web Serial printer if configured
       if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
         await printOrder(orderData);
-      } else if (comPortPrinter.isConfigured()) {
-        await comPortPrinter.printOrder(orderData);
-        const config = comPortPrinter.getConfig();  
       } else {
       }
     } catch (error) {
@@ -2296,10 +2287,6 @@ const KitchenCommandCenter = () => {
               {/* Printer Status Indicator */}
               {webSerialDefaultPrinter && connectedPrinters.length > 0 ? (
                 <div className="flex items-center justify-center bg-blue-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]">
-                  <Printer className="w-3 h-3" />
-                </div>
-              ) : comPortPrinter.isConfigured() ? (
-                <div className="flex items-center justify-center bg-green-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]">
                   <Printer className="w-3 h-3" />
                 </div>
               ) : (

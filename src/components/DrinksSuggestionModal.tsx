@@ -36,8 +36,7 @@ export default function DrinksSuggestionModal({ isOpen, onClose }: DrinksSuggest
         drink.smallPrice > 0
       )
       setDrinks(validDrinks)
-    } catch (error) {
-      console.error('Error loading drinks:', error)
+    } catch {
       setDrinks([])
     } finally {
       setLoading(false)

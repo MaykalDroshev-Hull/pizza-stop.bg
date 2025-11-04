@@ -348,8 +348,7 @@ export default function PrinterPage() {
       }
       
       setProducts(categoryProducts);
-    } catch (error) {
-      console.error("Error fetching products:", error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -408,7 +407,7 @@ export default function PrinterPage() {
         availableAddons: addons,
         isLoadingAddons: false
       } : null);
-    } catch (error) {
+    } catch {
       setProductModalData(prev => prev ? {
         ...prev,
         availableAddons: [],
@@ -557,7 +556,7 @@ export default function PrinterPage() {
       } else {
         throw new Error('Failed to create order');
       }
-    } catch (error) {
+    } catch {
       alert('Грешка при създаване на поръчката');
     } finally {
       setIsPrinting(false);
@@ -1467,7 +1466,6 @@ export default function PrinterPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    console.log('Clear button clicked');
                     setShowClearModal(true);
                   }}
                   className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-xs py-1.5 transition-colors duration-200"
@@ -1956,7 +1954,6 @@ export default function PrinterPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    console.log('Clear button clicked');
                     setShowClearModal(true);
                   }}
                   className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold text-xs py-1.5 transition-colors duration-200"

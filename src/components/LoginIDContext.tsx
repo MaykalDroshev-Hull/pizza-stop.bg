@@ -40,8 +40,7 @@ export function LoginIDProvider({ children }: { children: ReactNode }) {
           setUser(parsedUser)
           setIsAuthenticated(true)
         }
-      } catch (error) {
-        console.error('Error loading user from localStorage:', error)
+      } catch {
         localStorage.removeItem('user')
       } finally {
         setIsLoading(false)
@@ -58,8 +57,7 @@ export function LoginIDProvider({ children }: { children: ReactNode }) {
             const parsedUser = JSON.parse(e.newValue)
             setUser(parsedUser)
             setIsAuthenticated(true)
-          } catch (error) {
-            console.error('Error parsing user data from storage event:', error)
+          } catch {
           }
         } else {
           setUser(null)
@@ -102,8 +100,7 @@ export function LoginIDProvider({ children }: { children: ReactNode }) {
         const parsedUser = JSON.parse(userData)
         setUser(parsedUser)
         setIsAuthenticated(true)
-      } catch (error) {
-        console.error('Error refreshing user:', error)
+      } catch {
         logout()
       }
     } else {

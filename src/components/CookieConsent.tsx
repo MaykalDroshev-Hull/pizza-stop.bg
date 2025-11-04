@@ -19,9 +19,7 @@ export default function CookieConsent() {
         const timer = setTimeout(() => setShowBanner(true), 1000)
         return () => clearTimeout(timer)
       }
-    } catch (error) {
-      // If localStorage fails, just don't show the banner
-      console.error('Failed to check cookie consent:', error)
+    } catch {
     }
   }, [])
 
@@ -32,8 +30,7 @@ export default function CookieConsent() {
       
       // Enable analytics/tracking here if needed
       // Example: window.gtag('consent', 'update', { analytics_storage: 'granted' })
-    } catch (error) {
-      console.error('Failed to save cookie consent:', error)
+    } catch {
       // Still close the banner even if we can't save
       setShowBanner(false)
     }
@@ -46,8 +43,7 @@ export default function CookieConsent() {
       
       // Disable analytics/tracking here
       // Example: window.gtag('consent', 'update', { analytics_storage: 'denied' })
-    } catch (error) {
-      console.error('Failed to save cookie consent:', error)
+    } catch {
       // Still close the banner even if we can't save
       setShowBanner(false)
     }

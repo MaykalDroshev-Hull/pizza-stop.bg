@@ -44,10 +44,8 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
       await webSerialPrinter.reconnectSavedPorts();
       await refreshPrinters();
       
-      console.log('✅ [Serial Context] Initialization completed');
-    } catch (error) {
-      console.error('❌ [Serial Context] Initialization failed:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error during initialization');
+    } catch {
+      setError('Unknown error during initialization');
     } finally {
       setIsConnecting(false);
     }
@@ -61,11 +59,9 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
       // Set default printer if not set and we have printers
       if (!defaultPrinter && printers.length > 0) {
         setDefaultPrinterState(printers[0].port);
-        console.log('🖨️ [Serial Context] Default printer set to:', printers[0].name);
       }
-    } catch (error) {
-      console.error('❌ [Serial Context] Failed to refresh printers:', error);
-      setError(error instanceof Error ? error.message : 'Failed to refresh printers');
+    } catch {
+      setError('Failed to refresh printers');
     }
   };
 
@@ -76,14 +72,12 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
 
       const port = await webSerialPrinter.requestPort();
       if (!port) {
-        console.log('ℹ️ [Serial Context] User cancelled port selection');
         return;
       }
 
       // Get printer name from user
       const name = prompt('Име на принтера:', 'Kitchen Printer');
       if (!name) {
-        console.log('ℹ️ [Serial Context] User cancelled naming');
         return;
       }
 
@@ -106,10 +100,8 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
         setDefaultPrinterState(port);
       }
 
-      console.log('✅ [Serial Context] Printer connected successfully:', name);
-    } catch (error) {
-      console.error('❌ [Serial Context] Failed to connect printer:', error);
-      setError(error instanceof Error ? error.message : 'Failed to connect printer');
+    } catch {
+      setError('Failed to connect printer');
     } finally {
       setIsConnecting(false);
     }
@@ -126,10 +118,8 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
         setDefaultPrinterState(remainingPrinters.length > 0 ? remainingPrinters[0].port : null);
       }
 
-      console.log('🔌 [Serial Context] Printer disconnected');
-    } catch (error) {
-      console.error('❌ [Serial Context] Failed to disconnect printer:', error);
-      setError(error instanceof Error ? error.message : 'Failed to disconnect printer');
+    } catch {
+      setError('Failed to disconnect printer');
     }
   };
 
@@ -142,16 +132,12 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
         throw new Error('Няма свързан принтер. Моля свържете принтер от Debug панела.');
       }
 
-      console.log(`🖨️ [Serial Context] Printing order #${order.orderId}...`);
       const ticketData = ESCPOSCommands.generateOrderTicket(order);
       await webSerialPrinter.print(targetPort, ticketData);
       
-      console.log(`✅ [Serial Context] Order #${order.orderId} printed successfully`);
-    } catch (error) {
-      console.error('❌ [Serial Context] Print failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Print failed';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+    } catch {
+      setError('Print failed');
+      throw new Error('Print failed');
     }
   };
 
@@ -164,22 +150,17 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
         throw new Error('Няма свързан принтер. Моля свържете принтер от Debug панела.');
       }
 
-      console.log('🧪 [Serial Context] Printing test page...');
       const testData = ESCPOSCommands.generateTestTicket();
       await webSerialPrinter.print(targetPort, testData);
       
-      console.log('✅ [Serial Context] Test page printed successfully');
-    } catch (error) {
-      console.error('❌ [Serial Context] Test print failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Test print failed';
-      setError(errorMessage);
-      throw new Error(errorMessage);
+    } catch {
+      setError('Test print failed');
+      throw new Error('Test print failed');
     }
   };
 
   const setDefaultPrinter = (port: SerialPort | null) => {
     setDefaultPrinterState(port);
-    console.log('🖨️ [Serial Context] Default printer changed');
   };
 
   const clearError = () => {

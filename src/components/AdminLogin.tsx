@@ -35,13 +35,11 @@ export default function AdminLogin({ title, subtitle, onLogin, redirectPath }: A
           storageKey = 'admin_delivery'
         }
         
-        console.log('🔑 Setting sessionStorage key:', storageKey)
         sessionStorage.setItem(storageKey, 'true')
         
         // Small delay to ensure sessionStorage is set before redirect
         setTimeout(() => {
           if (redirectPath) {
-            console.log('🔄 Redirecting to:', redirectPath)
             window.location.href = redirectPath
           } else {
             window.location.reload()
