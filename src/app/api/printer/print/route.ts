@@ -127,7 +127,6 @@ function sendToPrinter(
     
     // Close event
     client.on('close', () => {
-      console.log('🔌 Printer connection closed');
     });
     
     // Attempt connection

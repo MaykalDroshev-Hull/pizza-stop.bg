@@ -429,7 +429,6 @@ export class ESCPOSCommands {
 
     // Cut paper using GS V command (Datecs EP-2000 manual section 87)
     const cutCmd = this.cut();
-    console.log('🔪 [Cut Command] Sending GS V cut:', Array.from(cutCmd).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(' '));
     commands.push(cutCmd);
 
     return this.combine(...commands);

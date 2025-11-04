@@ -48,11 +48,9 @@ export class WebSerialPrinter {
       }
 
       const port = await navigator.serial.requestPort();
-      console.log('🖨️ [Web Serial] Port selected:', await this.getPortInfo(port));
       return port;
     } catch (error) {
       if (error instanceof Error && error.name === 'NotFoundError') {
-        console.log('ℹ️ [Web Serial] User cancelled port selection');
         return null;
       }
       console.error('❌ [Web Serial] Error requesting port:', error);
@@ -84,7 +82,6 @@ export class WebSerialPrinter {
         lastUsed: new Date()
       });
 
-      console.log(`✅ [Web Serial] Connected to ${name}`, config);
     } catch (error) {
       console.error(`❌ [Web Serial] Failed to connect to ${name}:`, error);
       throw error;
@@ -98,7 +95,6 @@ export class WebSerialPrinter {
     try {
       await port.close();
       this.connectedPorts.delete(port);
-      console.log('🔌 [Web Serial] Port disconnected');
     } catch (error) {
       console.error('❌ [Web Serial] Error disconnecting:', error);
       throw error;
@@ -131,8 +127,6 @@ export class WebSerialPrinter {
         
         // Wait a bit for the printer to process
         await new Promise(resolve => setTimeout(resolve, 100));
-        
-        console.log(`📄 [Web Serial] Sent ${data.length} bytes to printer in ${Math.ceil(data.length / chunkSize)} chunks`);
         
         // Update last used
         const printer = this.connectedPorts.get(port);
@@ -206,7 +200,6 @@ export class WebSerialPrinter {
       }
 
       const savedPorts = await this.getPorts();
-      console.log(`🔄 [Web Serial] Found ${savedPorts.length} previously authorized ports`);
 
       for (const port of savedPorts) {
         try {
@@ -235,9 +228,7 @@ export class WebSerialPrinter {
             });
           }
 
-          console.log('✅ [Web Serial] Auto-reconnected to saved printer');
         } catch (error) {
-          console.log('⚠️ [Web Serial] Could not reconnect to saved port:', error);
         }
       }
     } catch (error) {

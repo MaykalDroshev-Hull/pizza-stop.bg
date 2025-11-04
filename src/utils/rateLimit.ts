@@ -76,10 +76,6 @@ try {
         prefix: 'ratelimit:api',
       }),
     }
-
-    console.log('✅ Rate limiting initialized with Upstash Redis')
-  } else {
-    console.warn('⚠️ Rate limiting disabled - UPSTASH_REDIS environment variables not set')
   }
 } catch (error) {
   console.error('❌ Failed to initialize rate limiting:', error)

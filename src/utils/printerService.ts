@@ -280,7 +280,6 @@ function generateTicketBytes(data: TicketData): number[] {
  */
 export async function printToNetworkPrinter(data: TicketData): Promise<boolean> {
   try {
-    console.log('🖨️ Preparing to print to network printer:', PRINTER_CONFIG.ip);
     
     // Generate ESC/POS bytes
     const bytes = generateTicketBytes(data);
@@ -304,7 +303,6 @@ export async function printToNetworkPrinter(data: TicketData): Promise<boolean> 
     }
     
     const result = await response.json();
-    console.log('✅ Print job sent successfully:', result);
     
     return true;
   } catch (error) {

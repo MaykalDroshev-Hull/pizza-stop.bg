@@ -101,7 +101,6 @@ export class EmailService {
   async sendWelcomeEmail({ to, name }: EmailOptions): Promise<void> {
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
-      console.log(`Skipping welcome email for printer guest account: ${to}`);
       return;
     }
     
@@ -226,7 +225,6 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions)
-      console.log(`Welcome email sent successfully to ${to}`)
     } catch (error) {
       console.error('Error sending welcome email:', error)
       throw new Error('Failed to send welcome email')
@@ -236,7 +234,6 @@ export class EmailService {
   async sendPasswordResetEmail({ to, name, resetToken, resetUrl }: PasswordResetEmailOptions): Promise<void> {
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
-      console.log(`Skipping password reset email for printer guest account: ${to}`);
       return;
     }
     
@@ -375,7 +372,6 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions)
-      console.log(`Password reset email sent successfully to ${to}`)
     } catch (error) {
       console.error('Error sending password reset email:', error)
       throw new Error('Failed to send password reset email')
@@ -385,7 +381,6 @@ export class EmailService {
   async sendOrderConfirmationEmail({ to, name, orderId, orderDetails }: OrderConfirmationEmailOptions): Promise<void> {
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
-      console.log(`Skipping order confirmation email for printer guest account: ${to}`);
       return;
     }
     
@@ -707,7 +702,6 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions)
-      console.log(`Order confirmation email sent successfully to ${to}`)
     } catch (error) {
       console.error('Error sending order confirmation email:', error)
       throw new Error('Failed to send order confirmation email')
@@ -717,7 +711,6 @@ export class EmailService {
   async sendDeliveryETAEmail({ to, name, orderId, etaMinutes, estimatedArrivalTime, orderDetails }: DeliveryETAEmailOptions): Promise<void> {
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
-      console.log(`Skipping delivery ETA email for printer guest account: ${to}`);
       return;
     }
     
@@ -988,7 +981,6 @@ export class EmailService {
         html: htmlContent,
       })
       
-      console.log(`✅ Delivery ETA email sent successfully to ${to} for order ${orderId}`)
     } catch (error) {
       console.error('Error sending delivery ETA email:', error)
       throw new Error('Failed to send delivery ETA email')
@@ -998,7 +990,6 @@ export class EmailService {
   async sendOrderReadyTimeEmail({ to, name, orderId, readyTimeMinutes, orderDetails }: OrderReadyTimeEmailOptions): Promise<void> {
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
-      console.log(`Skipping order ready time email for printer guest account: ${to}`);
       return;
     }
     
@@ -1231,7 +1222,6 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions)
-      console.log(`Order ready time email sent successfully to ${to}`)
     } catch (error) {
       console.error('Error sending order ready time email:', error)
       throw new Error('Failed to send order ready time email')

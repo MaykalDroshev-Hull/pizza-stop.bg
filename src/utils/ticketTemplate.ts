@@ -392,11 +392,9 @@ export async function sendToThermalPrinter(data: TicketData): Promise<boolean> {
     // Try network printer first (if IP is configured)
     if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_PRINTER_IP) {
       try {
-        console.log('🖨️ Attempting network printer...');
         const { printToNetworkPrinter } = await import('./printerService');
         const success = await printToNetworkPrinter(data);
         if (success) {
-          console.log('✅ Printed via network printer');
           return true;
         }
       } catch (error) {
@@ -407,7 +405,6 @@ export async function sendToThermalPrinter(data: TicketData): Promise<boolean> {
     // Try USB print server (localhost:3001)
     if (typeof window !== 'undefined') {
       try {
-        console.log('🖨️ Attempting USB print server...');
         const response = await fetch('http://localhost:3001/print', {
           method: 'POST',
           headers: {
@@ -417,7 +414,6 @@ export async function sendToThermalPrinter(data: TicketData): Promise<boolean> {
         });
         
         if (response.ok) {
-          console.log('✅ Printed via USB print server');
           return true;
         }
       } catch (error) {
@@ -426,11 +422,9 @@ export async function sendToThermalPrinter(data: TicketData): Promise<boolean> {
     }
     
     // Fallback to browser print dialog
-    console.log('🖨️ Using browser print dialog (fallback)');
     downloadTicket(data, 'print');
     return true;
   } catch (error) {
-    console.error('❌ Error sending to thermal printer:', error);
     // Still try browser print as last resort
     downloadTicket(data, 'print');
     return false;

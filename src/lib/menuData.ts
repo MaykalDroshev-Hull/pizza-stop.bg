@@ -82,7 +82,6 @@ const ratingMap: { [key: number]: number } = {
 // Function to fetch addons for a specific product type and size
 export async function fetchAddons(productTypeID: number, size?: string) {
   try {
-    console.log(`🔍 Fetching addons for product type: ${productTypeID}, size: ${size}`)
     
     // Special handling for pizza size-based addons
     if (productTypeID === 1 && size) {
@@ -105,7 +104,6 @@ export async function fetchAddons(productTypeID: number, size?: string) {
         addonRange = { min: 600, max: 699 }
       }
       
-      console.log(`🍕 Fetching pizza addons for ${size} pizza (Meat: ${meatRange.min}-${meatRange.max}, Cheese: ${cheeseRange.min}-${cheeseRange.max}, Addons: ${addonRange.min}-${addonRange.max})`)
       
       // Fetch meat, cheese, and addon addons
       const { data: pizzaAddons, error: pizzaError } = await supabase
@@ -120,7 +118,6 @@ export async function fetchAddons(productTypeID: number, size?: string) {
       
       if (!pizzaAddons) return []
       
-      console.log(`🔍 Raw pizza addons from DB for ${size}:`, pizzaAddons.map(a => ({ id: a.AddonID, name: a.Name, price: a.Price })))
       
       // Transform to our interface format
       const transformedPizzaAddons: any[] = pizzaAddons.map(addon => {
@@ -156,16 +153,6 @@ export async function fetchAddons(productTypeID: number, size?: string) {
         }
       })
       
-      console.log(`✅ Transformed pizza addons for ${size}:`, transformedPizzaAddons)
-      console.log(`📊 Addon breakdown:`, {
-        total: transformedPizzaAddons.length,
-        meat: transformedPizzaAddons.filter(a => a.AddonType === 'meat').length,
-        cheese: transformedPizzaAddons.filter(a => a.AddonType === 'cheese').length,
-        'pizza-addon': transformedPizzaAddons.filter(a => a.AddonType === 'pizza-addon').length,
-        meatAddons: transformedPizzaAddons.filter(a => a.AddonType === 'meat').map(a => ({ id: a.AddonID, name: a.Name })),
-        cheeseAddons: transformedPizzaAddons.filter(a => a.AddonType === 'cheese').map(a => ({ id: a.AddonID, name: a.Name })),
-        pizzaAddonAddons: transformedPizzaAddons.filter(a => a.AddonType === 'pizza-addon').map(a => ({ id: a.AddonID, name: a.Name }))
-      })
       return transformedPizzaAddons
     }
     
@@ -182,7 +169,6 @@ export async function fetchAddons(productTypeID: number, size?: string) {
     }
     
     if (!linkedAddons || linkedAddons.length === 0) {
-      console.log(`No linked addons found for product type ${productTypeID}, using fallback addons`)
       // Fallback: get all available addons (sauces and vegetables) for all product types
       const { data: fallbackAddons, error: fallbackError } = await supabase
         .from('Addon')
@@ -206,12 +192,10 @@ export async function fetchAddons(productTypeID: number, size?: string) {
         AddonTypeBG: addon.ProductTypeID === 5 ? 'сосове' : 'салати'
       }))
       
-      console.log(`✅ Using fallback addons for product type ${productTypeID}:`, transformedFallbackAddons)
       return transformedFallbackAddons
     }
     
     const addonIDs = linkedAddons.map(item => item.AddonID)
-    console.log(`Found linked AddonIDs for product type ${productTypeID}:`, addonIDs)
     
     // Now fetch the actual addon details from Addons
     const { data: addons, error: addonError } = await supabase
@@ -237,7 +221,6 @@ export async function fetchAddons(productTypeID: number, size?: string) {
       AddonTypeBG: addon.ProductTypeID === 5 ? 'сосове' : 'салати'
     }))
     
-    console.log(`✅ Transformed addons for product type ${productTypeID}:`, transformedAddons)
     return transformedAddons
     
   } catch (error) {
@@ -248,19 +231,12 @@ export async function fetchAddons(productTypeID: number, size?: string) {
 
 export async function fetchMenuData() {
   try {
-    console.log('🔍 Fetching menu data from Supabase...')
-    console.log('🔑 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-    console.log('🔑 Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
     
     // Test connection first
-    console.log('🧪 Testing Supabase connection...')
     const { data: testData, error: testError } = await supabase
       .from('Product')
       .select('count')
       .limit(1)
-    
-    console.log('🧪 Test query result:', testData)
-    console.log('🧪 Test query error:', testError)
     
     // Fetch all products from the Product table
     const { data: products, error } = await supabase
@@ -271,29 +247,18 @@ export async function fetchMenuData() {
       .order('ProductTypeID', { ascending: true })
       .order('Product', { ascending: true })
 
-    console.log('📊 Raw products from database:', products)
-    console.log('❌ Any errors:', error)
-    console.log('🔢 Products array length:', products?.length || 0)
-
     if (error) {
       console.error('Error fetching products:', error)
-      console.log('🔄 Using fallback data due to error')
       return getFallbackMenuData()
     }
 
     if (!products) {
-      console.log('⚠️ No products returned from database')
-      console.log('🔄 Using fallback data due to no products')
       return getFallbackMenuData()
     }
 
     if (products.length === 0) {
-      console.log('⚠️ Products array is empty')
-      console.log('🔄 Using fallback data due to empty products')
       return getFallbackMenuData()
     }
-
-    console.log(`✅ Found ${products.length} products in database`)
 
     // Transform database data to menu format
     const menuData: { [key: string]: MenuItem[] } = {
@@ -306,10 +271,8 @@ export async function fetchMenuData() {
 
     products.forEach((product: any, index: number) => {
       const category = categoryMap[product.ProductTypeID]
-      console.log(`🍽️ Processing product: ${product.Product} (TypeID: ${product.ProductTypeID} → Category: ${category})`)
       
       if (!category) {
-        console.log(`⚠️ Skipping product ${product.Product} - unknown ProductTypeID: ${product.ProductTypeID}`)
         return
       }
 
@@ -319,10 +282,8 @@ export async function fetchMenuData() {
       if (product.ImageURL && product.ImageURL.trim() !== '') {
         // Use the actual image URL from the database
         selectedImage = product.ImageURL
-        console.log(`🖼️ Product ${product.Product}: Using database image URL: ${product.ImageURL}`)
       } else {
         // Fallback to emoji if no image URL in database
-        console.log(`🖼️ Product ${product.Product}: No image URL in database, using emoji: ${selectedImage}`)
       }
 
       // Determine base price - for burgers and drinks, use the first available price
@@ -357,23 +318,6 @@ export async function fetchMenuData() {
         mediumWeight: product.MediumWeight || null,
         largeWeight: product.LargeWeight || null,
         addons: [] // Initialize addons array
-      }
-
-      // Debug drinks specifically
-      if (category === 'drinks') {
-        console.log('🥤 Drink product data:', {
-          name: product.Product,
-          ProductTypeID: product.ProductTypeID,
-          SmallPrice: product.SmallPrice,
-          MediumPrice: product.MediumPrice,
-          LargePrice: product.LargePrice,
-          menuItem: {
-            basePrice: menuItem.basePrice,
-            smallPrice: menuItem.smallPrice,
-            mediumPrice: menuItem.mediumPrice,
-            largePrice: menuItem.largePrice
-          }
-        })
       }
 
       // Create sizes dynamically based on available prices in database
@@ -420,16 +364,13 @@ export async function fetchMenuData() {
       menuItem.sizes = availableSizes
 
       menuData[category].push(menuItem)
-      console.log(`✅ Added ${product.Product} to ${category} category`)
     })
 
     // Now fetch addons for each product type individually
-    console.log('🎯 Fetching addons for each product type...')
     
     // Pizza addons will be fetched dynamically based on size selection
     // So we initialize with empty addons for pizzas
     if (menuData.pizza.length > 0) {
-      console.log('🍕 Pizza addons will be fetched dynamically based on size')
       menuData.pizza.forEach(item => {
         item.addons = [] // Empty initially, will be populated when size is selected
       })
@@ -438,7 +379,6 @@ export async function fetchMenuData() {
     // Fetch addons for burgers (ProductTypeID = 2)
     if (menuData.burgers.length > 0) {
       const burgerAddons = await fetchAddons(2)
-      console.log('🍔 Burger addons:', burgerAddons)
       menuData.burgers.forEach(item => {
         item.addons = burgerAddons
       })
@@ -447,14 +387,10 @@ export async function fetchMenuData() {
     // Fetch addons for doners (ProductTypeID = 3)
     if (menuData.doners.length > 0) {
       const donerAddons = await fetchAddons(3)
-      console.log('🥙 Doner addons:', donerAddons)
       menuData.doners.forEach(item => {
         item.addons = donerAddons
       })
     }
-
-    console.log('🎯 Final menu data structure:', menuData)
-    console.log(`📊 Category counts: Pizza: ${menuData.pizza.length}, Burgers: ${menuData.burgers.length}, Doners: ${menuData.doners.length}, Drinks: ${menuData.drinks.length}`)
 
     return menuData
   } catch (error) {
