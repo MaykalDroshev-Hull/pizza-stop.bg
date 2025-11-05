@@ -26,45 +26,16 @@ interface CartContextType {
   totalItems: number
   totalPrice: number
   getItemTotalPrice: (item: CartItem) => number
+  cartValidationMessage: string
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
   // Initialize cart from localStorage if available
-  const [items, setItems] = useState<CartItem[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedCart = localStorage.getItem('pizza-stop-cart')
-      if (savedCart) {
-        try {
-          const parsedCart = JSON.parse(savedCart)
-
-          // Validate cart data integrity - prevent price manipulation
-          if (Array.isArray(parsedCart)) {
-            const suspiciousItems = parsedCart.filter((item: any) =>
-              item.price < 0.50 || // Suspiciously low price
-              item.price === 0 && !item.name?.toLowerCase().includes('free') || // Zero price on non-free items
-              typeof item.price !== 'number' || // Invalid price type
-              item.price > 1000 // Unreasonably high price
-            )
-
-            // If suspicious items found, clear the cart for security
-            if (suspiciousItems.length > 0) {
-              localStorage.removeItem('pizza-stop-cart')
-              return []
-            }
-
-            return parsedCart
-          }
-        } catch (error) {
-          // Invalid JSON or other parsing error, clear storage
-          localStorage.removeItem('pizza-stop-cart')
-          return []
-        }
-      }
-    }
-    return []
-  })
+  const [items, setItems] = useState<CartItem[]>([])
+  const [cartValidationMessage, setCartValidationMessage] = useState<string>('')
+  const [cartCleared, setCartCleared] = useState(false)
 
   // Calculate addon cost for an item
   const calculateAddonCost = (addons: ProductAddon[], category?: string) => {
@@ -90,9 +61,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const addItem = useCallback((newItem: CartItem) => {
+    setCartCleared(false); // Reset cleared flag when adding items
     setItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(item => 
-        item.id === newItem.id && 
+      const existingItemIndex = prevItems.findIndex(item =>
+        item.id === newItem.id &&
         item.size === newItem.size &&
         JSON.stringify(item.addons.map(a => a.AddonID).sort()) === JSON.stringify(newItem.addons.map(a => a.AddonID).sort()) &&
         item.comment === newItem.comment
@@ -127,6 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => {
     setItems([]);
+    setCartCleared(true);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('pizza-stop-cart');
     }
@@ -148,6 +121,125 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     }
   }, []); // Empty dependency array since this function doesn't depend on any props or state
+
+  // Validate cart against current menu data
+  const validateCart = useCallback(async (cartItems: CartItem[]) => {
+    if (cartItems.length === 0) return cartItems
+
+    try {
+      const { fetchMenuData } = await import('../lib/menuData')
+      const menuData = await fetchMenuData()
+
+      // Flatten all available products
+      const availableProducts = [
+        ...menuData.pizza,
+        ...menuData.burgers,
+        ...menuData.doners,
+        ...menuData.drinks,
+        ...(menuData.sauces || [])
+      ] as any[]
+
+      const validatedItems: CartItem[] = []
+      const removedItems: string[] = []
+
+      for (const item of cartItems) {
+        // Special handling for 50/50 pizzas - check individual pizza components
+        if (item.category === 'pizza-5050' || item.name.includes(' / ')) {
+          // Parse individual pizza names from the 50/50 name
+          const pizzaNames = item.name.split(' / ').map(name => name.trim())
+          let allPizzasAvailable = true
+
+          // Check if all individual pizzas are still available
+          for (const pizzaName of pizzaNames) {
+            const availablePizza = availableProducts.find((p: any) => p.name === pizzaName)
+            if (!availablePizza) {
+              allPizzasAvailable = false
+              break
+            }
+          }
+
+          if (allPizzasAvailable) {
+            validatedItems.push(item)
+          } else {
+            removedItems.push(item.name)
+          }
+          continue
+        }
+
+        // Check if regular product is still available (not disabled/deleted)
+        const availableProduct = availableProducts.find((p: any) => {
+          // For products with productId (from database), check by ID
+          if (item.productId && p.id === item.productId) {
+            return true
+          }
+          // For other products, check by name
+          return p.name === item.name
+        })
+
+        if (availableProduct) {
+          validatedItems.push(item)
+        } else {
+          removedItems.push(item.name)
+        }
+      }
+
+      // Show message if items were removed
+      if (removedItems.length > 0) {
+        setCartValidationMessage(`${removedItems.join(', ')} ${removedItems.length === 1 ? 'е' : 'са'} премахнати от количката, тъй като вече не ${removedItems.length === 1 ? 'е' : 'са'} налични.`)
+        // Clear message after 10 seconds
+        setTimeout(() => setCartValidationMessage(''), 10000)
+      }
+
+      return validatedItems
+    } catch (error) {
+      console.error('Error validating cart:', error)
+      return cartItems
+    }
+  }, [])
+
+  // Load and validate cart on mount
+  useEffect(() => {
+    const loadAndValidateCart = async () => {
+      // Don't load cart if it has been explicitly cleared
+      if (cartCleared) return
+
+      if (typeof window !== 'undefined') {
+        const savedCart = localStorage.getItem('pizza-stop-cart')
+        if (savedCart) {
+          try {
+            const parsedCart = JSON.parse(savedCart)
+
+            // Validate cart data integrity - prevent price manipulation
+            if (Array.isArray(parsedCart)) {
+              const suspiciousItems = parsedCart.filter((item: any) =>
+                item.price < 0.50 || // Suspiciously low price
+                item.price === 0 && !item.name?.toLowerCase().includes('free') || // Zero price on non-free items
+                typeof item.price !== 'number' || // Invalid price type
+                item.price > 1000 // Unreasonably high price
+              )
+
+              // If suspicious items found, clear the cart for security
+              if (suspiciousItems.length > 0) {
+                localStorage.removeItem('pizza-stop-cart')
+                setItems([])
+                return
+              }
+
+              // Validate against current menu data
+              const validatedCart = await validateCart(parsedCart)
+              setItems(validatedCart)
+            }
+          } catch (error) {
+            // Invalid JSON or other parsing error, clear storage
+            localStorage.removeItem('pizza-stop-cart')
+            setItems([])
+          }
+        }
+      }
+    }
+
+    loadAndValidateCart()
+  }, [validateCart, cartCleared])
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + getItemTotalPrice(item), 0);
@@ -218,7 +310,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       refreshFromStorage,
       totalItems,
       totalPrice,
-      getItemTotalPrice
+      getItemTotalPrice,
+      cartValidationMessage
     }}>
       {children}
     </CartContext.Provider>

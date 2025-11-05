@@ -20,8 +20,8 @@ export class EnvironmentValidator {
   ];
 
   private static optionalVars = [
-    'NEXT_PUBLIC_EMAIL',
-    'NEXT_PUBLIC_EMAIL_PASS',
+    'EMAIL_USER',
+    'EMAIL_PASS',
     'NODE_ENV',
     'DATECS_MERCHANT_NAME',
     'DATECS_MERCHANT_URL',

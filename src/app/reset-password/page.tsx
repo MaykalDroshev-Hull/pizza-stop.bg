@@ -182,7 +182,7 @@ function ResetPasswordContent() {
         {/* Info Text */}
         <div className={styles.infoText}>
           <h2>
-            ВЪЗСТАНОВЯВАНЕ НА ПАРОЛА
+            Смяна на парола
           </h2>
           <p>
             Въведете нова парола за вашия акаунт
