@@ -406,7 +406,7 @@ export default function MenuPage() {
       <div className="bg-card border-b border-white/8 sticky top-16 sm:top-20 z-30">
         <div className="container py-2 sm:py-4 px-4">
           <div 
-            className="grid gap-2 sm:flex sm:justify-center sm:gap-4 sm:flex-wrap sm:overflow-x-auto sm:scrollbar-hide"
+            className="grid gap-2 sm:flex sm:justify-center sm:gap-4 sm:flex-wrap sm:overflow-visible sm:scrollbar-hide"
             style={{ 
               gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
             }}
