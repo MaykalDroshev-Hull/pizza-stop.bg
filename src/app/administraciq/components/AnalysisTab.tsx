@@ -442,7 +442,7 @@ const AnalysisTab = (): React.JSX.Element => {
     }
 
     return (
-      <div className="rounded-2xl bg-gray-800/80 border border-gray-700 p-3 min-h-[90px] flex flex-col justify-center shadow-sm hover:border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10">
+      <div key={metric.id} className="rounded-2xl bg-gray-800/80 border border-gray-700 p-3 min-h-[90px] flex flex-col justify-center shadow-sm hover:border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/10">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className={`p-2 ${metric.bgColor} rounded-lg flex-shrink-0`}>
