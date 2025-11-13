@@ -36,7 +36,7 @@ type PaymentMethod = 'online' | 'card' | 'cash'
 type OrderType = 'guest' | 'user'
 
 export default function CheckoutPage() {
-  const { items, totalPrice, getItemTotalPrice, refreshFromStorage, cartValidationMessage } = useCart()
+  const { items, totalPrice, getItemTotalPrice, refreshFromStorage, cartValidationMessage, clearCart } = useCart()
   const { user, isAuthenticated, updateUser } = useLoginID()
   
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
@@ -990,6 +990,7 @@ export default function CheckoutPage() {
       if (response.ok) {
         // Redirect to payment processor
         if (result.paymentUrl) {
+          clearCart()
           window.location.href = result.paymentUrl
         } else {
           throw new Error('No payment URL received')
@@ -1417,6 +1418,7 @@ export default function CheckoutPage() {
      
     if (response.ok) {
       // Redirect to order success page with encrypted order ID
+      clearCart()
       const encryptedOrderId = encryptOrderId(result.orderId.toString())
       // Don't stop loading, keep it running during redirect
       window.location.href = `/order-success?orderId=${encryptedOrderId}`
