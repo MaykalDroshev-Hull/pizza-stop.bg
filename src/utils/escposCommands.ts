@@ -151,11 +151,11 @@ export class ESCPOSCommands {
         'А': '\xC0', 'Б': '\xC1', 'В': '\xC2', 'Г': '\xC3', 'Д': '\xC4', 'Е': '\xC5', 'Ж': '\xC6', 'З': '\xC7',
         'И': '\xC8', 'Й': '\xC9', 'К': '\xCA', 'Л': '\xCB', 'М': '\xCC', 'Н': '\xCD', 'О': '\xCE', 'П': '\xCF',
         'Р': '\xD0', 'С': '\xD1', 'Т': '\xD2', 'У': '\xD3', 'Ф': '\xD4', 'Х': '\xD5', 'Ц': '\xD6', 'Ч': '\xD7',
-        'Ш': '\xD8', 'Щ': '\xD9', 'Ъ': '\xDA', 'Ь': '\xDB', 'Ю': '\xDC', 'Я': '\xDD',
+        'Ш': '\xD8', 'Щ': '\xD9', 'Ъ': '\xDA', 'Ь': '\xDB', 'Ю': '\xDE', 'Я': '\xDF',
         'а': '\xE0', 'б': '\xE1', 'в': '\xE2', 'г': '\xE3', 'д': '\xE4', 'е': '\xE5', 'ж': '\xE6', 'з': '\xE7',
         'и': '\xE8', 'й': '\xE9', 'к': '\xEA', 'л': '\xEB', 'м': '\xEC', 'н': '\xED', 'о': '\xEE', 'п': '\xEF',
         'р': '\xF0', 'с': '\xF1', 'т': '\xF2', 'у': '\xF3', 'ф': '\xF4', 'х': '\xF5', 'ц': '\xF6', 'ч': '\xF7',
-        'ш': '\xF8', 'щ': '\xF9', 'ъ': '\xFA', 'ь': '\xFB', 'ю': '\xFC', 'я': '\xFD'
+        'ш': '\xF8', 'щ': '\xF9', 'ъ': '\xFA', 'ь': '\xFC', 'ю': '\xFE', 'я': '\xFF'
       };
 
       let result = '';
@@ -308,6 +308,25 @@ export class ESCPOSCommands {
       this.lineFeed()
     );
 
+    // Payment method
+    if (order.paymentMethodId !== undefined) {
+      let paymentMethodText = '';
+      if (order.paymentMethodId === 3) {
+        paymentMethodText = 'С карта на адрес';
+      } else if (order.paymentMethodId === 4) {
+        paymentMethodText = 'В брой на адрес';
+      } else if (order.paymentMethodId === 5) {
+        paymentMethodText = 'Онлайн - Платено';
+      }
+      
+      if (paymentMethodText) {
+        commands.push(
+          this.text(`Начин на плащане: ${paymentMethodText}`),
+          this.lineFeed()
+        );
+      }
+    }
+
     if (order.address) {
       // Switch to Font B for address (compact font)
       commands.push(
@@ -352,12 +371,18 @@ export class ESCPOSCommands {
     );
 
     for (const item of order.items) {
-      // Include size if available (e.g., "30cm", "60cm")
-      const sizeText = item.size ? ` (${item.size})` : '';
-      const itemLine = `${item.quantity}x ${item.name}${sizeText}`;
-      
+      // Print quantity with larger size and bold
       commands.push(
-        this.text(itemLine),
+        this.setSize(2, 2), // 2x2 size (2 times bigger)
+        this.setBold(true),
+        this.text(`${item.quantity}x `)
+      );
+      
+      // Reset to normal size and weight, then print product name
+      commands.push(
+        this.setSize(1, 1), // Normal size
+        this.setBold(false),
+        this.text(item.name),
         this.lineFeed()
       );
 
@@ -373,7 +398,7 @@ export class ESCPOSCommands {
         }
       }
 
-      if (item.comment) {
+      if (item.comment && item.comment.length > 0 && !(item.comment as string).includes('(~2000г | 60см)')) {
         const commentText = `  Забележка: ${item.comment}`;
         const commentLines = this.wrapText(commentText, 46);
         
@@ -467,6 +492,111 @@ export class ESCPOSCommands {
       this.lineFeed(),
       this.lineFeed(),
       this.lineFeed(),
+      this.cut()
+    );
+
+    return this.combine(...commands);
+  }
+
+  /**
+   * Generate Cyrillic character test page with codes
+   * Prints all Cyrillic letters with their hex codes for debugging
+   */
+  static generateCyrillicTestPage(): Uint8Array {
+    const commands: Uint8Array[] = [];
+
+    // All Cyrillic uppercase letters
+    const uppercase = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З', 'И', 'Й', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ь', 'Ю', 'Я'];
+    // All Cyrillic lowercase letters
+    const lowercase = ['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ь', 'ю', 'я'];
+
+    commands.push(
+      this.init(),
+      this.setAlign('center'),
+      this.setSize(2, 2),
+      this.setBold(true),
+      this.text('CYRILLIC TEST'),
+      this.lineFeed(),
+      this.setSize(1, 1),
+      this.setBold(false),
+      this.feedLines(1)
+    );
+
+    // Header
+    commands.push(
+      this.setAlign('left'),
+      this.setBold(true),
+      this.text('Uppercase Letters:'),
+      this.lineFeed(),
+      this.setBold(false),
+      this.separator('-', 48),
+      this.lineFeed()
+    );
+
+    // Print uppercase letters with codes
+    for (let i = 0; i < uppercase.length; i++) {
+      const char = uppercase[i];
+      const cp1251Code = ESCPOSCommands.utf8ToCp1251(char);
+      const hexCode = '0x' + cp1251Code.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+      const line = `${char} = ${hexCode}`;
+      commands.push(
+        this.text(line),
+        this.lineFeed()
+      );
+    }
+
+    commands.push(
+      this.feedLines(1),
+      this.setBold(true),
+      this.text('Lowercase Letters:'),
+      this.lineFeed(),
+      this.setBold(false),
+      this.separator('-', 48),
+      this.lineFeed()
+    );
+
+    // Print lowercase letters with codes
+    for (let i = 0; i < lowercase.length; i++) {
+      const char = lowercase[i];
+      const cp1251Code = ESCPOSCommands.utf8ToCp1251(char);
+      const hexCode = '0x' + cp1251Code.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+      const line = `${char} = ${hexCode}`;
+      commands.push(
+        this.text(line),
+        this.lineFeed()
+      );
+    }
+
+    // Highlight Ю and Я
+    commands.push(
+      this.feedLines(1),
+      this.separator('=', 48),
+      this.lineFeed(),
+      this.setBold(true),
+      this.setAlign('center'),
+      this.text('KEY LETTERS:'),
+      this.lineFeed(),
+      this.setBold(false),
+      this.setAlign('left')
+    );
+
+    const keyLetters = ['Ю', 'Я', 'ю', 'я'];
+    for (const char of keyLetters) {
+      const cp1251Code = ESCPOSCommands.utf8ToCp1251(char);
+      const hexCode = '0x' + cp1251Code.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+      const line = `${char} = ${hexCode}`;
+      commands.push(
+        this.text(line),
+        this.lineFeed()
+      );
+    }
+
+    commands.push(
+      this.feedLines(2),
+      this.setAlign('center'),
+      this.text('--- END TEST ---'),
+      this.lineFeed(),
+      this.feedLines(2),
       this.cut()
     );
 
