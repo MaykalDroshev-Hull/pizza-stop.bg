@@ -237,7 +237,7 @@ export class ESCPOSCommands {
     const commands: Uint8Array[] = [];
 
     // Initialize
-    commands.push(this.init());
+    //commands.push(this.init());
 
     // Header - Order Type (ДОСТАВКА/ВЗИМАНЕ)
     commands.push(
@@ -424,7 +424,6 @@ export class ESCPOSCommands {
       this.setAlign('center'),
       this.text('Благодарим Ви!'),
       this.lineFeed(),
-      this.text('Приятен апетит!')
     );
 
     // Cut paper using GS V command (Datecs EP-2000 manual section 87)
