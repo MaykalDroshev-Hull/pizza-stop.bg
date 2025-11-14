@@ -15,6 +15,7 @@ interface Product {
   largePrice?: number | null;
   productTypeId?: number | null;
   productType?: string;
+  isNoAddOns?: boolean;
 }
 
 interface EditProductForm {
@@ -26,6 +27,7 @@ interface EditProductForm {
   productTypeId: string;
   imageUrl: string;
   isDisabled: boolean;
+  isNoAddOns: boolean;
 }
 
 interface EditProductModalProps {
@@ -51,7 +53,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     largePrice: "",
     productTypeId: "",
     imageUrl: "",
-    isDisabled: false
+    isDisabled: false,
+    isNoAddOns: false
   });
 
   const [hasChanges, setHasChanges] = useState<boolean>(false);
@@ -69,7 +72,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
         largePrice: product.largePrice ? product.largePrice.toString() : "",
         productTypeId: product.productTypeId ? product.productTypeId.toString() : "",
         imageUrl: product.imageUrl || "",
-        isDisabled: product.isDisabled || false
+        isDisabled: product.isDisabled || false,
+        isNoAddOns: product.isNoAddOns || false
       };
 
       setFormData(initialData);
@@ -114,6 +118,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
       description: formData.description || null,
       imageUrl: formData.imageUrl || null,
       isDisabled: formData.isDisabled,
+      isNoAddOns: formData.isNoAddOns,
       smallPrice: formData.smallPrice ? parseFloat(formData.smallPrice) : null,
       mediumPrice: formData.mediumPrice ? parseFloat(formData.mediumPrice) : null,
       largePrice: formData.largePrice ? parseFloat(formData.largePrice) : null,
@@ -318,19 +323,34 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
               <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">
                 Статус на продукта
               </h3>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isDisabled}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    handleInputChange("isDisabled", e.target.checked)
-                  }
-                  className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 bg-gray-800 border-gray-600 rounded focus:ring-red-500 focus:ring-2"
-                />
-                <span className="text-sm sm:text-base text-gray-300">
-                  {"Скрий продукта"}
-                </span>
-              </label>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isDisabled}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleInputChange("isDisabled", e.target.checked)
+                    }
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 bg-gray-800 border-gray-600 rounded focus:ring-red-500 focus:ring-2"
+                  />
+                  <span className="text-sm sm:text-base text-gray-300">
+                    {"Скрий продукта"}
+                  </span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isNoAddOns}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleInputChange("isNoAddOns", e.target.checked)
+                    }
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 bg-gray-800 border-gray-600 rounded focus:ring-orange-500 focus:ring-2"
+                  />
+                  <span className="text-sm sm:text-base text-gray-300">
+                    {"Без добавки (скрий добавките за този продукт)"}
+                  </span>
+                </label>
+              </div>
             </div>
           </form>
         </div>

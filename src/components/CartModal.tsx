@@ -19,6 +19,7 @@ interface CartModalProps {
     category: string
     sizes?: any[]
     addons?: any[]
+    isNoAddOns?: boolean
   }
   selectedSize?: any
   onSizeChange?: (itemId: number, size: any) => void
@@ -49,6 +50,12 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
     const fetchAddonsForCurrentState = async () => {
       if (!isOpen) return
 
+      // If product has isNoAddOns flag, don't fetch or show addons
+      if (item.isNoAddOns) {
+        setCurrentAddons([])
+        return
+      }
+
       // For pizzas, fetch addons based on selected size
       if (item.category === 'pizza' && (size || selectedSize?.name)) {
         const currentSize = selectedSize?.name || size
@@ -73,7 +80,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
     }
 
     fetchAddonsForCurrentState()
-  }, [isOpen, item.category, size, selectedSize?.name, item.addons])
+  }, [isOpen, item.category, size, selectedSize?.name, item.addons, item.isNoAddOns])
 
   if (!isOpen) return null
 
@@ -424,8 +431,8 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
           </div>
           )}
 
-          {/* Addons (only for food) */}
-          {!isDrink && currentAddons && currentAddons.length > 0 && (
+          {/* Addons (only for food and if product doesn't have isNoAddOns flag) */}
+          {!isDrink && !item.isNoAddOns && currentAddons && currentAddons.length > 0 && (
             <div>
               <h4 className="font-medium text-text mb-4">Добавки:</h4>
               <p className="text-sm text-muted mb-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Printer, ArrowLeft, Mail, Lock, AlertCircle, Eye, EyeOff, LogOut } from "lucide-react";
 import { fetchMenuData, fetchAddons } from "@/lib/menuData";
@@ -23,6 +23,7 @@ interface Product {
     multiplier: number;
     weight?: number | null;
   }>;
+  isNoAddOns?: boolean;
 }
 
 interface ProductModalData {
@@ -60,7 +61,7 @@ export default function PrinterPage() {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     name: "",
     phone: "",
-    address: "",
+    address: "Взимане от ресторант", // Default address for pickup
     orderType: 1, // Default to Pickup (free)
     deliveryPrice: 0
   });
@@ -73,6 +74,13 @@ export default function PrinterPage() {
   // Address autocomplete
   const [autocomplete, setAutocomplete] = useState<any>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
+
+  // Customer search
+  const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 50/50 Pizza state
   const [fiftyFiftySelection, setFiftyFiftySelection] = useState<{
@@ -265,6 +273,62 @@ export default function PrinterPage() {
     setAutocomplete(autocompleteInstance as any);
   };
 
+  // Search for customers by phone number
+  const searchCustomersByPhone = useCallback(async (phone: string) => {
+    if (!phone || phone.trim().length < 3) {
+      setCustomerSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsSearchingCustomers(true);
+    try {
+      const response = await fetch(`/api/printer/customer-search?phone=${encodeURIComponent(phone.trim())}`);
+      const data = await response.json();
+      setCustomerSuggestions(data.customers || []);
+      setShowSuggestions(data.customers && data.customers.length > 0);
+    } catch (error) {
+      setCustomerSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsSearchingCustomers(false);
+    }
+  }, []);
+
+  // Debounced phone number search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (customerInfo.phone && customerInfo.phone.trim().length >= 3) {
+      searchTimeoutRef.current = setTimeout(() => {
+        searchCustomersByPhone(customerInfo.phone);
+      }, 500); // 500ms debounce
+    } else {
+      setCustomerSuggestions([]);
+      setShowSuggestions(false);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [customerInfo.phone, searchCustomersByPhone]);
+
+  // Handle customer suggestion selection
+  const handleSelectCustomer = (customer: any) => {
+    setCustomerInfo(prev => ({
+      ...prev,
+      name: customer.Name || '',
+      phone: customer.phone || '',
+      address: customer.LocationText || ''
+    }));
+    setShowSuggestions(false);
+    setCustomerSuggestions([]);
+  };
+
   // Load Google Maps script and initialize autocomplete when customer form is shown
   useEffect(() => {
     if (showCustomerForm) {
@@ -388,9 +452,19 @@ export default function PrinterPage() {
     });
     setShowProductModal(true);
     
-    // Load addons based on product category
+    // Load addons based on product category (only if product doesn't have isNoAddOns flag)
     try {
       let addons: any[] = [];
+      
+      // Check if product has isNoAddOns flag - if so, skip fetching addons
+      if (product.isNoAddOns) {
+        setProductModalData(prev => prev ? {
+          ...prev,
+          availableAddons: [],
+          isLoadingAddons: false
+        } : null);
+        return;
+      }
       
       // Determine product type ID based on category
       if (selectedCategory === 'pizza') {
@@ -546,10 +620,12 @@ export default function PrinterPage() {
         setCustomerInfo({
           name: "",
           phone: "",
-          address: "",
+          address: "Взимане от ресторант", // Default address for pickup
           orderType: 1,
           deliveryPrice: 0
         });
+        setCustomerSuggestions([]);
+        setShowSuggestions(false);
         setSelectedCategory("");
         resetFiftyFiftySelection();
         setCurrentView("main");
@@ -840,7 +916,61 @@ export default function PrinterPage() {
                 <h1 className="text-2xl font-bold text-white mb-1">Данни за клиента</h1>
                 <p className="text-gray-400 text-sm">Попълнете информацията за поръчката</p>
               </div>
-              <div>
+              
+              {/* Phone Number - First Field */}
+              <div className="relative mb-4">
+                <label className="block text-white text-sm font-medium mb-1">
+                  Телефон *
+                </label>
+                <input
+                  ref={phoneInputRef}
+                  type="tel"
+                  value={customerInfo.phone}
+                  onChange={(e) => {
+                    setCustomerInfo(prev => ({ ...prev, phone: e.target.value }));
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => {
+                    if (customerSuggestions.length > 0) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Delay hiding suggestions to allow click on suggestion
+                    setTimeout(() => setShowSuggestions(false), 200);
+                  }}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-base"
+                  placeholder="Въведете телефон"
+                  required
+                />
+                {isSearchingCustomers && (
+                  <div className="absolute right-3 top-9 text-gray-400 text-sm">
+                    Търсене...
+                  </div>
+                )}
+                {/* Customer Suggestions Dropdown */}
+                {showSuggestions && customerSuggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {customerSuggestions.map((customer) => (
+                      <button
+                        key={customer.LoginID}
+                        type="button"
+                        onClick={() => handleSelectCustomer(customer)}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-700 border-b border-gray-700 last:border-b-0 transition-colors"
+                      >
+                        <div className="text-white font-medium text-sm">{customer.Name}</div>
+                        <div className="text-gray-400 text-xs">{customer.phone}</div>
+                        {customer.LocationText && (
+                          <div className="text-gray-500 text-xs mt-1 truncate">{customer.LocationText}</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Name - Second Field */}
+              <div className="mb-4">
                 <label className="block text-white text-sm font-medium mb-1">
                   Име *
                 </label>
@@ -854,20 +984,7 @@ export default function PrinterPage() {
                 />
               </div>
               
-              <div>
-                <label className="block text-white text-sm font-medium mb-1">
-                  Телефон *
-                </label>
-                <input
-                  type="tel"
-                  value={customerInfo.phone}
-                  onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-base"
-                  placeholder="Въведете телефон"
-                  required
-                />
-              </div>
-              
+              {/* Address - Third Field */}
               <div>
                 <label className="block text-white text-sm font-medium mb-1">
                   Адрес *
@@ -893,7 +1010,7 @@ export default function PrinterPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
-                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 1, deliveryPrice: 0 }))}
+                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 1, deliveryPrice: 0, address: "Взимане от ресторант" }))}
                     className={`p-4 border transition-colors duration-200 ${
                       customerInfo.orderType === 1
                         ? 'bg-green-600 border-green-600 text-white'
