@@ -1112,6 +1112,7 @@ const KitchenCommandCenter = () => {
         paymentMethodId: order.paymentMethodId, // Add payment method ID for status determination
         isPaid: order.isPaid,
         placedTime: order.orderTime.toLocaleString('bg-BG'),
+        expectedTime: order.expectedTime ? order.expectedTime.toLocaleString('bg-BG') : undefined,
         restaurantPhone: '068 670 070'
       };
 
@@ -1175,6 +1176,7 @@ const KitchenCommandCenter = () => {
         paymentMethodId: order.paymentMethodId, // Add payment method ID for status determination
         isPaid: order.isPaid,
         placedTime: order.orderTime.toLocaleString('bg-BG'),
+        expectedTime: order.expectedTime ? order.expectedTime.toLocaleString('bg-BG') : undefined,
         restaurantPhone: '068 670 070'
       };
 

@@ -24,6 +24,7 @@ export interface OrderData {
   paymentMethodId?: number; // Payment method ID for status determination
   isPaid: boolean;
   placedTime: string;
+  expectedTime?: string; // Expected delivery/collection time
   restaurantPhone: string;
 }
 
@@ -288,10 +289,70 @@ export class ESCPOSCommands {
       this.lineFeed()
     );
 
-    // Order info
+    // Order info - Поръчана and Очаквана times
+    const placedTimeText = `Поръчана: ${order.placedTime}`;
     commands.push(
-      this.text(`Дата/Час: ${order.placedTime}`),
-      this.lineFeed(),
+      this.text(placedTimeText),
+      this.lineFeed()
+    );
+    
+    // Expected time with "(Веднага)" if difference is 45 minutes or less
+    if (order.expectedTime) {
+      // Helper function to parse Bulgarian date format (DD.MM.YYYY, HH:MM:SS or DD.MM.YYYY, HH:MM)
+      const parseBulgarianDate = (dateStr: string): Date | null => {
+        try {
+          // Check if it's an ISO format string (contains 'T' or starts with 4-digit year)
+          const isISOFormat = dateStr.includes('T') || /^\d{4}-\d{2}-\d{2}/.test(dateStr);
+          
+          if (isISOFormat) {
+            // Try parsing as ISO string
+            const isoDate = new Date(dateStr);
+            if (!isNaN(isoDate.getTime())) {
+              return isoDate;
+            }
+          }
+          
+          // Parse Bulgarian format: "DD.MM.YYYY, HH:MM:SS" or "DD.MM.YYYY, HH:MM"
+          const match = dateStr.match(/(\d{1,2})\.(\d{1,2})\.(\d{4}),\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
+          if (match) {
+            const [, day, month, year, hour, minute, second] = match;
+            return new Date(
+              parseInt(year, 10),
+              parseInt(month, 10) - 1,
+              parseInt(day, 10),
+              parseInt(hour, 10),
+              parseInt(minute, 10),
+              second ? parseInt(second, 10) : 0
+            );
+          }
+          
+          return null;
+        } catch {
+          return null;
+        }
+      };
+      
+      // Parse both times to calculate difference
+      const placedDate = parseBulgarianDate(order.placedTime);
+      const expectedDate = parseBulgarianDate(order.expectedTime);
+      
+      let expectedTimeText = `Очаквана: ${order.expectedTime}`;
+      
+      // Only append "(Веднага)" if we can parse both dates and difference is 45 minutes or less
+      if (placedDate && expectedDate) {
+        const diffMinutes = (expectedDate.getTime() - placedDate.getTime()) / (1000 * 60);
+        if (diffMinutes <= 45) {
+          expectedTimeText += ' (Веднага)';
+        }
+      }
+      
+      commands.push(
+        this.text(expectedTimeText),
+        this.lineFeed()
+      );
+    }
+    
+    commands.push(
       this.separator('-', 48),
       this.lineFeed()
     );
