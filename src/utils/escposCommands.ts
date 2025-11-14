@@ -9,6 +9,7 @@ export interface OrderData {
   customerName: string;
   phone: string;
   address?: string;
+  comments?: string | null; // Order-level comments
   items: Array<{
     name: string;
     quantity: number;
@@ -341,7 +342,7 @@ export class ESCPOSCommands {
       // Only append "(Веднага)" if we can parse both dates and difference is 45 minutes or less
       if (placedDate && expectedDate) {
         const diffMinutes = (expectedDate.getTime() - placedDate.getTime()) / (1000 * 60);
-        if (diffMinutes <= 45) {
+        if (diffMinutes <= 60) {
           expectedTimeText += ' (Веднага)';
         }
       }
@@ -351,7 +352,6 @@ export class ESCPOSCommands {
         this.lineFeed()
       );
     }
-    
     commands.push(
       this.separator('-', 48),
       this.lineFeed()
@@ -414,6 +414,23 @@ export class ESCPOSCommands {
       commands.push(
         this.setFont(0)
       );
+    }
+
+    // Order comments
+    if (order.comments && order.comments.trim().length > 0) {
+      commands.push(
+        this.text('Коментар: '),
+        this.lineFeed()
+      );
+      
+      // Wrap long comments
+      const commentLines = this.wrapText(order.comments, 48);
+      for (const line of commentLines) {
+        commands.push(
+          this.text(line),
+          this.lineFeed()
+        );
+      }
     }
 
     commands.push(

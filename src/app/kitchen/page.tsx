@@ -1127,6 +1127,7 @@ const KitchenCommandCenter = () => {
         customerName: order.customerName,
         phone: order.phone,
         address: order.address,
+        comments: order.comments,
         items: order.items.map(item => {
           // Check if item is composite (50/50) by looking at customizations or name
           const isComposite = item.name.includes('50/50') || 
@@ -1191,6 +1192,7 @@ const KitchenCommandCenter = () => {
         customerName: order.customerName,
         phone: order.phone,
         address: order.address,
+        comments: order.comments,
         items: order.items.map(item => {
           // Check if item is composite (50/50) by looking at customizations or name
           const isComposite = item.name.includes('50/50') || 
