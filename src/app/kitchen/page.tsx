@@ -81,6 +81,42 @@ const KitchenCommandCenter = () => {
 
   // Cache for product size information (productId -> hasMultipleSizes)
   const productSizeCacheRef = useRef<Map<number, boolean>>(new Map());
+  
+  // Cache for product type information (productId -> ProductTypeID)
+  const productTypeCacheRef = useRef<Map<number, number>>(new Map());
+
+  // Helper function to get ProductTypeID from Product table
+  const getProductTypeID = useCallback(async (productId: number | null): Promise<number | null> => {
+    if (!productId) return null; // Composite products or products without ID
+    
+    // Check cache first
+    if (productTypeCacheRef.current.has(productId)) {
+      return productTypeCacheRef.current.get(productId) || null;
+    }
+
+    try {
+      // Fetch product from database
+      const { data: product, error } = await supabase
+        .from('Product')
+        .select('ProductTypeID')
+        .eq('ProductID', productId)
+        .single();
+
+      if (error || !product) {
+        // If product not found, cache null
+        productTypeCacheRef.current.set(productId, 0);
+        return null;
+      }
+
+      const productTypeID = product.ProductTypeID;
+      productTypeCacheRef.current.set(productId, productTypeID);
+      return productTypeID;
+    } catch (error) {
+      // On error, cache null
+      productTypeCacheRef.current.set(productId, 0);
+      return null;
+    }
+  }, []);
 
   // Helper function to check if a product has only one size
   const hasOnlyOneSize = useCallback(async (productId: number | null): Promise<boolean> => {
@@ -196,33 +232,35 @@ const KitchenCommandCenter = () => {
         let displayName = product.ProductName;
         let productSize = product.ProductSize;
         
-        // Helper function to determine product category from name
-        const getProductCategory = (name: string): 'pizza' | 'kebab' | 'other' => {
-          const nameLower = name.toLowerCase();
-          // Check for kebabs/doners first
-          if (nameLower.includes('кебап') || nameLower.includes('дюнер') || 
-              nameLower.includes('kebab') || nameLower.includes('doner')) {
+        // Helper function to determine product category from ProductTypeID
+        const getProductCategory = (productTypeID: number | null): 'pizza' | 'kebab' | 'other' => {
+          if (!productTypeID) return 'other';
+          
+          // ProductTypeID mapping:
+          // 1 = Пица -> 'pizza'
+          // 3 = Дюнер -> 'kebab'
+          // Everything else (2=Бургер, 4=Напитка, 5=Сос, 6-9=Добавки/Панини) -> 'other'
+          if (productTypeID === 1) {
+            return 'pizza';
+          } else if (productTypeID === 3) {
             return 'kebab';
           }
-          // Check for pizzas (common pizza names or the word pizza)
-          if (nameLower.includes('пица') || nameLower.includes('pizza') ||
-              nameLower.includes('маргарита') || nameLower.includes('капричоза') ||
-              nameLower.includes('кватро') || nameLower.includes('формаджо')) {
-            return 'pizza';
-          }
-          // Everything else (burgers, drinks, sauces, etc.)
           return 'other';
         };
         
-        const category = getProductCategory(product.ProductName);
+        // Get ProductTypeID from database
+        // For composite products (50/50 pizzas), they're always pizzas, so use 'pizza' category
+        const productTypeID = product.CompositeProduct ? null : await getProductTypeID(product.ProductID);
+        const category = product.CompositeProduct ? 'pizza' : getProductCategory(productTypeID);
         
         // Check if product has only one size - if so, don't append size to name
         const onlyOneSize = await hasOnlyOneSize(product.ProductID);
         
+        // Initialize sizeDisplay outside if/else blocks so it's accessible later
+        let sizeDisplay: string | null = null;
+        
         if (product.CompositeProduct) {
           // For 50/50 pizzas, add "50/50" prefix and convert size for pizzas
-          let sizeDisplay: string | null = null;
-          
           // Only add size if product has multiple sizes
           if (!onlyOneSize && productSize && category === 'pizza') {
             const sizeLower = productSize.toLowerCase();
@@ -237,8 +275,6 @@ const KitchenCommandCenter = () => {
           displayName = `50/50 ${product.ProductName}${sizeDisplay ? ` (${sizeDisplay})` : ''}`;
         } else {
           // For regular products - format size based on category
-          let sizeDisplay: string | null = null;
-          
           // Only add size if product has multiple sizes
           if (!onlyOneSize && productSize) {
             const sizeLower = productSize.toLowerCase();
@@ -265,10 +301,15 @@ const KitchenCommandCenter = () => {
         // TotalPrice already includes addons and is multiplied by quantity
         const unitPriceWithAddons = product.TotalPrice / product.Quantity;
         
+        // For composite products (50/50 pizzas), don't include size (they're always large)
+        // For regular products, include the original productSize or converted sizeDisplay
+        const itemSize = product.CompositeProduct ? undefined : (productSize || sizeDisplay || undefined);
+        
         return {
           name: displayName,
           quantity: product.Quantity,
           price: unitPriceWithAddons, // Price per unit including add-ons
+          size: itemSize, // Product size (only for regular products, not 50/50 pizzas)
           customizations,
           comment: product.Comment || undefined
         };
