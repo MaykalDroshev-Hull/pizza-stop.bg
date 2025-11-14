@@ -6,6 +6,7 @@ import { CheckCircle, Clock, MapPin, Phone, CreditCard, Home, ArrowLeft, Refresh
 import { decryptOrderId } from '../../utils/orderEncryption'
 import { useCart } from '../../components/CartContext'
 import { useLoginID } from '../../components/LoginIDContext'
+import { supabase } from '../../lib/supabase'
 
 interface OrderItem {
   ProductID: number
@@ -50,6 +51,7 @@ function OrderSuccessContent() {
   const [estimatedTime, setEstimatedTime] = useState<string>('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [productsWithSingleSize, setProductsWithSingleSize] = useState<Set<number>>(new Set())
 
   // Clear cart immediately when component mounts
   useEffect(() => {
@@ -143,6 +145,12 @@ function OrderSuccessContent() {
             }))
           }
         }
+
+        // Check which products have only one size
+        const uniqueProductIds = [...new Set(items.filter(it => it.ProductID).map(it => it.ProductID))]
+        if (uniqueProductIds.length > 0) {
+          checkProductSizes(uniqueProductIds)
+        }
       } catch (e: any) {
         setError(e?.message || 'Нещо се обърка при зареждане на поръчката')
       } finally {
@@ -152,6 +160,38 @@ function OrderSuccessContent() {
 
     fetchOrder()
   }, [encryptedOrderId])
+
+  // Function to check which products have only one size
+  async function checkProductSizes(productIds: number[]) {
+    try {
+      const { data: products, error } = await supabase
+        .from('Product')
+        .select('ProductID, SmallPrice, MediumPrice, LargePrice')
+        .in('ProductID', productIds)
+
+      if (error || !products) return
+
+      const singleSizeProducts = new Set<number>()
+      
+      products.forEach((product) => {
+        // Count how many sizes have prices > 0
+        const availableSizes = [
+          product.SmallPrice && product.SmallPrice > 0,
+          product.MediumPrice && product.MediumPrice > 0,
+          product.LargePrice && product.LargePrice > 0
+        ].filter(Boolean).length
+
+        // If only one size is available, add to the set
+        if (availableSizes === 1) {
+          singleSizeProducts.add(product.ProductID)
+        }
+      })
+
+      setProductsWithSingleSize(singleSizeProducts)
+    } catch (error) {
+      // Silently fail - if we can't check, we'll show sizes by default
+    }
+  }
 
   const handleGoHome = () => {
     window.location.href = '/'
@@ -411,7 +451,9 @@ function OrderSuccessContent() {
                   <div className="flex-1">
                     <p className="text-text font-medium">
                       {item.ProductName}
-                      {item.ProductSize ? <span className="text-muted ml-2">({item.ProductSize})</span> : null}
+                      {item.ProductSize && item.ProductID && !productsWithSingleSize.has(item.ProductID) ? (
+                        <span className="text-muted ml-2">({item.ProductSize})</span>
+                      ) : null}
                     </p>
                     {item.Addons && item.Addons.length > 0 ? (
                       <p className="text-sm text-muted mt-1">
