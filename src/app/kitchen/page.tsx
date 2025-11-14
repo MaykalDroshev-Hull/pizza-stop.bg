@@ -1067,14 +1067,9 @@ const KitchenCommandCenter = () => {
         restaurantPhone: '068 670 070'
       };
 
-      // Use Web Serial printer if configured
-      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
-        await printOrder(orderData);
-        addNotification(`Поръчка #${order.id} отпечатана на Web Serial принтер`, 'info');
-      } else {
-        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
-        return;
-      }
+      // Use Web Serial printer - will connect automatically using saved config
+      await printOrder(orderData);
+      addNotification(`Поръчка #${order.id} отпечатана на Web Serial принтер`, 'info');
     } catch (error) {
       addNotification(`Грешка при печат на поръчка #${order.id}`, 'warning');
     }
@@ -1083,25 +1078,25 @@ const KitchenCommandCenter = () => {
   // Print Cyrillic test page
   const handlePrintCyrillicTest = async () => {
     try {
-      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
-        const port = webSerialDefaultPrinter;
-        const testData = ESCPOSCommands.generateCyrillicTestPage();
-        await webSerialPrinter.print(port, testData);
-        addNotification('Тестова страница с кирилски букви отпечатана', 'info');
-      } else {
-        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
-      }
+      const testData = ESCPOSCommands.generateCyrillicTestPage();
+      await webSerialPrinter.printAndDisconnect(testData);
+      addNotification('Тестова страница с кирилски букви отпечатана', 'info');
     } catch (error) {
-      addNotification('Грешка при печат на тестова страница', 'warning');
+      addNotification('Грешка при печат на тестова страница. Моля конфигурирайте принтер от настройките.', 'warning');
     }
   };
 
   // Handle cut command using proper Datecs fiscal protocol
   const handleCutPaper = async () => {
+    let port: SerialPort | null = null;
     try {
+      // Connect using saved config
+      port = await webSerialPrinter.connectWithSavedConfig();
       
-      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
-        const port = webSerialDefaultPrinter;
+      if (!port) {
+        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
+        return;
+      }
         
         // According to FP-2000 manual (line 536-537):
         // "The program must advance the paper with at least two lines or the document will not be cut off correctly"
@@ -1176,12 +1171,17 @@ const KitchenCommandCenter = () => {
             addNotification('✅ Команди изпратени (принтерът може да не върне пълен отговор)', 'info');
           }
         }
-      } else {
-        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
-        return;
-      }
     } catch (error) {
       addNotification('Грешка при изпращане на команда за рязане', 'warning');
+    } finally {
+      // Always disconnect after cut command
+      if (port) {
+        try {
+          await webSerialPrinter.disconnect(port);
+        } catch (error) {
+          console.warn('Error disconnecting after cut:', error);
+        }
+      }
     }
   };
 
@@ -1404,11 +1404,8 @@ const KitchenCommandCenter = () => {
         restaurantPhone: '068 670 070'
       };
 
-      // Use Web Serial printer if configured
-      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
-        await printOrder(orderData);
-      } else {
-      }
+      // Use Web Serial printer - will connect automatically using saved config
+      await printOrder(orderData);
     } catch (error) {
     }
   };
@@ -2323,12 +2320,12 @@ const KitchenCommandCenter = () => {
               </button>
 
               {/* Printer Status Indicator */}
-              {webSerialDefaultPrinter && connectedPrinters.length > 0 ? (
-                <div className="flex items-center justify-center bg-blue-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]">
+              {webSerialPrinter.getSavedPrinterConfig() ? (
+                <div className="flex items-center justify-center bg-blue-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]" title="Принтерът е конфигуриран">
                   <Printer className="w-3 h-3" />
                 </div>
               ) : (
-                <div className="flex items-center justify-center bg-gray-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]">
+                <div className="flex items-center justify-center bg-gray-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]" title="Няма конфигуриран принтер">
                   <Printer className="w-3 h-3" />
                 </div>
               )}
