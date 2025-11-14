@@ -23,6 +23,7 @@ interface Product {
     multiplier: number;
     weight?: number | null;
   }>;
+  isNoAddOns?: boolean;
 }
 
 interface ProductModalData {
@@ -388,9 +389,19 @@ export default function PrinterPage() {
     });
     setShowProductModal(true);
     
-    // Load addons based on product category
+    // Load addons based on product category (only if product doesn't have isNoAddOns flag)
     try {
       let addons: any[] = [];
+      
+      // Check if product has isNoAddOns flag - if so, skip fetching addons
+      if (product.isNoAddOns) {
+        setProductModalData(prev => prev ? {
+          ...prev,
+          availableAddons: [],
+          isLoadingAddons: false
+        } : null);
+        return;
+      }
       
       // Determine product type ID based on category
       if (selectedCategory === 'pizza') {

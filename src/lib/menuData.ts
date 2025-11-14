@@ -31,6 +31,7 @@ export interface MenuItem {
   mediumWeight: number | null
   largeWeight: number | null
   addons: any[]
+  isNoAddOns?: boolean
 }
 
 // Map ProductTypeID to category keys
@@ -317,7 +318,8 @@ export async function fetchMenuData() {
         smallWeight: product.SmallWeight || null,
         mediumWeight: product.MediumWeight || null,
         largeWeight: product.LargeWeight || null,
-        addons: [] // Initialize addons array
+        addons: [], // Initialize addons array
+        isNoAddOns: product.IsNoAddOns || false
       }
 
       // Create sizes dynamically based on available prices in database

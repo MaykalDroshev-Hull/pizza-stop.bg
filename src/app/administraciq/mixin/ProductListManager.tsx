@@ -20,6 +20,7 @@ interface Product {
   description?: string | null;
   imageUrl?: string | null;
   isDisabled?: boolean;
+  isNoAddOns?: boolean;
   smallPrice?: number | null;
   mediumPrice?: number | null;
   largePrice?: number | null;
@@ -212,6 +213,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
           description: product.Description,
           imageUrl: product.ImageURL,
           isDisabled: product.IsDisabled === 1,
+          isNoAddOns: product.IsNoAddOns || false,
           smallPrice: product.SmallPrice,
           mediumPrice: product.MediumPrice,
           largePrice: product.LargePrice,
@@ -422,6 +424,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         Description: updatedProduct.description,
         ImageURL: updatedProduct.imageUrl,
         IsDisabled: updatedProduct.isDisabled ? 1 : 0,
+        IsNoAddOns: updatedProduct.isNoAddOns || false,
         SmallPrice: updatedProduct.smallPrice,
         MediumPrice: updatedProduct.mediumPrice,
         LargePrice: updatedProduct.largePrice,
@@ -436,6 +439,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         description: savedProduct.Description,
         imageUrl: updatedProduct.imageUrl,
         isDisabled: savedProduct.IsDisabled === 1,
+        isNoAddOns: savedProduct.IsNoAddOns || false,
         smallPrice: savedProduct.SmallPrice,
         mediumPrice: savedProduct.MediumPrice,
         largePrice: savedProduct.LargePrice,
@@ -593,6 +597,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         description: savedProduct.Description,
         imageUrl: savedProduct.ImageURL,
         isDisabled: savedProduct.IsDisabled === 1,
+        isNoAddOns: savedProduct.IsNoAddOns || false,
         smallPrice: savedProduct.SmallPrice,
         mediumPrice: savedProduct.MediumPrice,
         largePrice: savedProduct.LargePrice,

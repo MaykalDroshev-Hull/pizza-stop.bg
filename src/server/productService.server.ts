@@ -7,6 +7,7 @@ export type Product = {
   Description?: string | null;
   ImageURL?: string | null;
   IsDisabled?: number;
+  IsNoAddOns?: boolean;
   SmallPrice?: number | null;
   MediumPrice?: number | null;
   LargePrice?: number | null;

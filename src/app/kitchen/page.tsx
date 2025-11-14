@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw, Settings, Scissors, LogOut } from 'lucide-react';
-import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_STATUS, KitchenOrder } from '../../lib/supabase';
+import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, RefreshCw, Settings, LogOut } from 'lucide-react';
+import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_STATUS, KitchenOrder, supabase } from '../../lib/supabase';
 import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerator';
 import PrinterConfigModal from '../../components/PrinterConfigModal';
 import { useSerialPrinter } from '../../contexts/SerialPrinterContext';
-import { buildDatecsFrame, DatecsCommands, toHex, parseDatecsResponse, parseStatusBytes } from '../../utils/datecsFiscalProtocol';
 import { OrderData, ESCPOSCommands } from '../../utils/escposCommands';
 import { webSerialPrinter } from '../../utils/webSerialPrinter';
 // AdminLogin moved to separate page at /admin-kitchen-login
@@ -80,6 +79,49 @@ const KitchenCommandCenter = () => {
   // Serial printer integration
   const { printOrder, defaultPrinter: webSerialDefaultPrinter, connectedPrinters } = useSerialPrinter();
 
+  // Cache for product size information (productId -> hasMultipleSizes)
+  const productSizeCacheRef = useRef<Map<number, boolean>>(new Map());
+
+  // Helper function to check if a product has only one size
+  const hasOnlyOneSize = useCallback(async (productId: number | null): Promise<boolean> => {
+    if (!productId) return false; // Composite products or products without ID
+    
+    // Check cache first
+    if (productSizeCacheRef.current.has(productId)) {
+      return !productSizeCacheRef.current.get(productId); // Return true if NOT multiple sizes
+    }
+
+    try {
+      // Fetch product from database
+      const { data: product, error } = await supabase
+        .from('Product')
+        .select('SmallPrice, MediumPrice, LargePrice')
+        .eq('ProductID', productId)
+        .single();
+
+      if (error || !product) {
+        // If product not found, assume multiple sizes to be safe
+        productSizeCacheRef.current.set(productId, true);
+        return false;
+      }
+
+      // Count how many sizes have prices > 0
+      const availableSizes = [
+        product.SmallPrice && product.SmallPrice > 0,
+        product.MediumPrice && product.MediumPrice > 0,
+        product.LargePrice && product.LargePrice > 0
+      ].filter(Boolean).length;
+
+      const hasMultiple = availableSizes > 1;
+      productSizeCacheRef.current.set(productId, hasMultiple);
+      return !hasMultiple; // Return true if only one size
+    } catch (error) {
+      // On error, assume multiple sizes to be safe
+      productSizeCacheRef.current.set(productId, true);
+      return false;
+    }
+  }, []);
+
   // Load printed order IDs from localStorage on mount
   useEffect(() => {
     try {
@@ -103,7 +145,7 @@ const KitchenCommandCenter = () => {
   }, [printedOrderIds]);
 
   // Convert Supabase data to Order format
-  const convertKitchenOrderToOrder = (kitchenOrder: KitchenOrder): Order => {
+  const convertKitchenOrderToOrder = async (kitchenOrder: KitchenOrder): Promise<Order> => {
     const orderTime = new Date(kitchenOrder.OrderDT);
     const expectedTime = kitchenOrder.ExpectedDT ? new Date(kitchenOrder.ExpectedDT) : null;
     const readyTime = kitchenOrder.ReadyTime ? new Date(kitchenOrder.ReadyTime) : null;
@@ -115,7 +157,7 @@ const KitchenCommandCenter = () => {
       customerEmail: kitchenOrder.CustomerEmail,
       address: kitchenOrder.OrderLocation || kitchenOrder.CustomerLocation || '',
       phone: kitchenOrder.CustomerPhone,
-      items: kitchenOrder.Products.map(product => {
+      items: await Promise.all(kitchenOrder.Products.map(async (product) => {
         let customizations: string[] = [];
         
         // Handle CompositeProduct (50/50 pizza) customizations
@@ -174,12 +216,15 @@ const KitchenCommandCenter = () => {
         
         const category = getProductCategory(product.ProductName);
         
+        // Check if product has only one size - if so, don't append size to name
+        const onlyOneSize = await hasOnlyOneSize(product.ProductID);
+        
         if (product.CompositeProduct) {
           // For 50/50 pizzas, add "50/50" prefix and convert size for pizzas
           let sizeDisplay: string | null = null;
           
-          // Convert pizza sizes: Малка -> (30), Голяма -> (60), or Small -> (30), Large -> (60)
-          if (productSize && category === 'pizza') {
+          // Only add size if product has multiple sizes
+          if (!onlyOneSize && productSize && category === 'pizza') {
             const sizeLower = productSize.toLowerCase();
             if (sizeLower.includes('малка') || sizeLower.includes('small')) {
               sizeDisplay = '30';
@@ -194,7 +239,8 @@ const KitchenCommandCenter = () => {
           // For regular products - format size based on category
           let sizeDisplay: string | null = null;
           
-          if (productSize) {
+          // Only add size if product has multiple sizes
+          if (!onlyOneSize && productSize) {
             const sizeLower = productSize.toLowerCase();
             
             if (category === 'pizza') {
@@ -226,7 +272,7 @@ const KitchenCommandCenter = () => {
           customizations,
           comment: product.Comment || undefined
         };
-      }),
+      })),
       totalPrice: kitchenOrder.TotalOrderPrice,
       deliveryPrice: kitchenOrder.DeliveryPrice,
       status,
@@ -277,10 +323,13 @@ const KitchenCommandCenter = () => {
       setIsRefreshing(true);
       const kitchenOrders = await getKitchenOrders();
       
+      // Convert all kitchen orders to Order format (async conversion)
+      const convertedOrders: Order[] = await Promise.all(kitchenOrders.map(convertKitchenOrderToOrder));
+      
       // Update orders: remove orders no longer in DB, update existing ones, add new ones
       setOrders(prevOrders => {
-        const dbOrderIds = new Set(kitchenOrders.map(ko => ko.OrderID));
-        const dbOrdersMap = new Map(kitchenOrders.map(ko => [ko.OrderID, ko]));
+        const dbOrderIds = new Set(convertedOrders.map(o => o.id));
+        const dbOrdersMap = new Map(convertedOrders.map(o => [o.id, o]));
         
         // Remove orders that are no longer in the database (sent to delivery, etc.)
         const remainingOrders = prevOrders.filter(order => dbOrderIds.has(order.id));
@@ -289,15 +338,14 @@ const KitchenCommandCenter = () => {
         const updatedOrders = remainingOrders.map(order => {
           const dbOrder = dbOrdersMap.get(order.id);
           if (dbOrder) {
-            return convertKitchenOrderToOrder(dbOrder);
+            return dbOrder;
           }
           return order;
         });
         
         // Add new orders that don't exist locally
         const existingOrderIds = new Set(remainingOrders.map(o => o.id));
-        const newKitchenOrders = kitchenOrders.filter(ko => !existingOrderIds.has(ko.OrderID));
-        const newOrders = newKitchenOrders.map(convertKitchenOrderToOrder);
+        const newOrders = convertedOrders.filter(o => !existingOrderIds.has(o.id));
         
         
         // Auto-print new orders (only if not already printed)
@@ -1075,280 +1123,6 @@ const KitchenCommandCenter = () => {
     }
   };
 
-  // Print Cyrillic test page
-  const handlePrintCyrillicTest = async () => {
-    try {
-      const testData = ESCPOSCommands.generateCyrillicTestPage();
-      await webSerialPrinter.printAndDisconnect(testData);
-      addNotification('Тестова страница с кирилски букви отпечатана', 'info');
-    } catch (error) {
-      addNotification('Грешка при печат на тестова страница. Моля конфигурирайте принтер от настройките.', 'warning');
-    }
-  };
-
-  // Handle cut command using proper Datecs fiscal protocol
-  const handleCutPaper = async () => {
-    let port: SerialPort | null = null;
-    try {
-      // Connect using saved config
-      port = await webSerialPrinter.connectWithSavedConfig();
-      
-      if (!port) {
-        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
-        return;
-      }
-        
-        // According to FP-2000 manual (line 536-537):
-        // "The program must advance the paper with at least two lines or the document will not be cut off correctly"
-        // Step 1: Advance paper (0x2C) with 3 lines
-        // Step 2: Cut paper (0x2D) with NO parameters
-        
-        const advanceFrame = buildDatecsFrame(DatecsCommands.ADVANCE_PAPER, [0x33, 0x2C, 0x31]); // "3,1" = 3 lines, receipt paper
-        const cutFrame = buildDatecsFrame(DatecsCommands.CUT); // NO parameters for cut
-        
-        const writer = port.writable?.getWriter();
-        if (!writer) {
-          throw new Error('Не може да се запише в Web Serial принтер');
-        }
-        
-        // Send advance paper frame
-        await writer.write(advanceFrame);
-        await new Promise(resolve => setTimeout(resolve, 200)); // Wait for paper advance
-        
-        // Send cut frame
-        await writer.write(cutFrame);
-        writer.releaseLock();
-        
-        // Read responses from printer
-        const reader = port.readable?.getReader();
-        if (reader) {
-          try {
-            // Read response for advance command
-            const advanceTimeout = new Promise<Uint8Array>((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout on advance')), 1000)
-            );
-            
-            const advanceRead = (async () => {
-              const { value, done } = await reader.read();
-              if (done) throw new Error('Stream closed');
-              return value || new Uint8Array();
-            })();
-            
-            const advanceResponse = await Promise.race([advanceRead, advanceTimeout]);
-            
-            // Wait a bit before reading cut response
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            // Read response for cut command
-            const cutTimeout = new Promise<Uint8Array>((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout on cut')), 1000)
-            );
-            
-            const cutRead = (async () => {
-              const { value, done } = await reader.read();
-              if (done) throw new Error('Stream closed');
-              return value || new Uint8Array();
-            })();
-            
-            const cutResponse = await Promise.race([cutRead, cutTimeout]);
-            
-            reader.releaseLock();
-            
-            // Parse cut response - should be "P" for success or "F" for blocked
-            const parsed = parseDatecsResponse(cutResponse);
-            if (parsed.valid && parsed.payload && parsed.payload.length > 0) {
-              const result = String.fromCharCode(parsed.payload[0]);
-              if (result === 'P') {
-                addNotification('✅ Хартията е изрязана успешно!', 'info');
-              } else if (result === 'F') {
-                addNotification('⚠️ Механизмът за рязане е блокиран', 'warning');
-              }
-            } else {
-              addNotification('✅ Команди за рязане изпратени', 'info');
-            }
-          } catch (readError) {
-            reader.releaseLock();
-            addNotification('✅ Команди изпратени (принтерът може да не върне пълен отговор)', 'info');
-          }
-        }
-    } catch (error) {
-      addNotification('Грешка при изпращане на команда за рязане', 'warning');
-    } finally {
-      // Always disconnect after cut command
-      if (port) {
-        try {
-          await webSerialPrinter.disconnect(port);
-        } catch (error) {
-          console.warn('Error disconnecting after cut:', error);
-        }
-      }
-    }
-  };
-
-  // Browser print (like Ctrl+P) for preview
-  const handleBrowserPrint = (order: Order) => {
-    // Determine order type text
-    const orderTypeText = order.orderType === 1 ? 'ВЗИМАНЕ' : 'ДОСТАВКА';
-    
-    // Format items with pizza diameter
-    const formattedItems = order.items.map(item => {
-      // Check if item is composite (50/50) by looking at customizations or name
-      const isComposite = item.name.includes('50/50') || 
-                         (item.customizations && item.customizations.some(c => 
-                           c.includes('Лява половина') || c.includes('Дясна половина')
-                         ));
-      
-      // Format the name for printing (pizza names get diameter)
-      const formattedName = formatPizzaNameForPrint(item.name, isComposite);
-      
-      return {
-        ...item,
-        name: formattedName
-      };
-    });
-    
-    // Create HTML ticket
-    const ticketHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Поръчка #${order.id}</title>
-  <style>
-    @media print {
-      @page { 
-        size: 80mm auto;
-        margin: 0;
-      }
-      body {
-        margin: 0;
-        padding: 10mm;
-      }
-    }
-    body {
-      font-family: 'Courier New', monospace;
-      width: 80mm;
-      margin: 0 auto;
-      padding: 10mm;
-      background: white;
-      color: black;
-      font-size: 12pt;
-      line-height: 1.4;
-    }
-    .center {
-      text-align: center;
-    }
-    .bold {
-      font-weight: bold;
-    }
-    .large {
-      font-size: 24pt;
-    }
-    .separator {
-      border-top: 1px dashed #000;
-      margin: 8px 0;
-    }
-    .separator-solid {
-      border-top: 2px solid #000;
-      margin: 8px 0;
-    }
-    .item {
-      margin: 8px 0;
-    }
-    .addons {
-      font-size: 10pt;
-      margin-left: 15px;
-      margin-top: 2px;
-    }
-    .comment {
-      font-size: 10pt;
-      margin-left: 15px;
-      margin-top: 2px;
-      font-style: italic;
-    }
-    .address {
-      font-family: 'Arial', sans-serif;
-      font-size: 10pt;
-    }
-    .no-payment {
-      font-size: 18pt;
-      font-weight: bold;
-      text-align: center;
-      margin: 20px 0;
-    }
-  </style>
-</head>
-<body>
-  <div class="center large bold">${orderTypeText}</div>
-  <br>
-  
-  <div class="center large bold">PIZZA STOP</div>
-  <div class="center">www.pizza-stop.bg</div>
-  <div class="center">тел: 068 670 070</div>
-  <br><br>
-  
-  <div class="separator-solid"></div>
-  
-  <div class="center bold">ПОРЪЧКА #${order.id}</div>
-  
-  <div class="separator-solid"></div>
-  
-  <div>Дата/Час: ${order.orderTime.toLocaleString('bg-BG')}</div>
-  
-  <div class="separator"></div>
-  
-  <div class="bold">КЛИЕНТ:</div>
-  <div>Име: ${order.customerName}</div>
-  <div>Тел: ${order.phone}</div>
-  <div class="address">Адрес: ${order.address}</div>
-  ${order.comments ? `<div>Коментар: ${order.comments}</div>` : ''}
-  
-  <div class="separator-solid"></div>
-  
-  <div class="bold">АРТИКУЛИ:</div>
-  <div class="separator"></div>
-  
-  ${formattedItems.map(item => `
-    <div class="item">
-      <div>${item.quantity}x ${item.name}</div>
-      ${item.customizations.length > 0 ? `<div class="addons">+ ${item.customizations.join(', ')}</div>` : ''}
-      ${item.comment ? `<div class="comment">Забележка: ${item.comment}</div>` : ''}
-    </div>
-  `).join('')}
-  
-  <div class="separator-solid"></div>
-  
-  ${order.specialInstructions ? `
-    <div class="bold">СПЕЦИАЛНИ ИНСТРУКЦИИ:</div>
-    <div>${order.specialInstructions}</div>
-    <br>
-  ` : ''}
-  
-  <div class="no-payment">НЕ СЕ ИЗИСКВА ПЛАЩАНЕ</div>
-  
-  <div class="separator-solid"></div>
-  <br><br>
-  
-  <div class="center">Благодарим Ви!</div>
-  <div class="center">Приятен апетит!</div>
-  
-</body>
-</html>
-    `;
-    
-    // Open in new window and print
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(ticketHTML);
-      printWindow.document.close();
-      printWindow.focus();
-      
-      // Wait for content to load, then print
-      setTimeout(() => {
-        printWindow.print();
-      }, 250);
-    }
-  };
 
   // Auto-print new orders
   const autoPrintNewOrder = async (order: Order) => {
@@ -1862,16 +1636,6 @@ const KitchenCommandCenter = () => {
             >
                 <Printer className="w-3.5 h-3.5" />
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleBrowserPrint(order);
-              }}
-                className="bg-blue-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-blue-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation"
-              title="Преглед за печат (Ctrl+P)"
-            >
-              👁️
-            </button>
           </div>
         </div>
       </div>
@@ -1998,16 +1762,6 @@ const KitchenCommandCenter = () => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleBrowserPrint(order);
-              }}
-                className="bg-blue-600 text-white font-bold py-1 px-1.5 rounded-lg text-xs hover:bg-blue-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation"
-              title="Преглед за печат (Ctrl+P)"
-            >
-              👁️
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
                 updateOrderStatus(order.id, 'completed', true);
               }}
                 className="bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-1.5 px-2 rounded-lg text-xs hover:from-green-600 hover:to-green-700 transition-all min-w-[40px] min-h-[40px] touch-manipulation"
@@ -2061,16 +1815,6 @@ const KitchenCommandCenter = () => {
               title="Принтирай на термален принтер"
             >
               <Printer className="w-4 h-4" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleBrowserPrint(order);
-              }}
-              className={`bg-blue-500 hover:bg-blue-600 text-white ${buttonSizeClasses[cardSize]} rounded-lg transition-colors min-w-[44px] min-h-[44px] touch-manipulation flex items-center justify-center`}
-              title="Преглед за печат (Ctrl+P)"
-            >
-              <span className={`${emojiSizeClasses[cardSize]}`}>👁️</span>
             </button>
             <button
               onClick={(e) => {
@@ -2242,26 +1986,6 @@ const KitchenCommandCenter = () => {
 
           {/* Right side info */}
           <div className="absolute right-1 flex items-center space-x-1">
-            {/* Cut Button - Datecs Protocol */}
-            <button
-              onClick={handleCutPaper}
-              className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors flex items-center space-x-1 min-w-[60px] min-h-[44px] touch-manipulation"
-              title="Рязвай хартия (Datecs 0x2D)"
-            >
-              <Scissors className="w-4 h-4" />
-              <span className="hidden sm:inline">РЕЖИ</span>
-            </button>
-
-            {/* Cyrillic Test Button */}
-            <button
-              onClick={handlePrintCyrillicTest}
-              className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 transition-colors flex items-center space-x-1 min-w-[60px] min-h-[44px] touch-manipulation"
-              title="Принтирай тестова страница с кирилски букви и кодове"
-            >
-              <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline">КИРИЛ</span>
-            </button>
-
             <div className="text-lg font-mono">
               {formatTimeForDisplay(currentTime)}
               {debugMode && (
