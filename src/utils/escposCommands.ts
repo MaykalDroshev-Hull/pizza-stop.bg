@@ -328,7 +328,7 @@ export class ESCPOSCommands {
     }
 
     if (order.address) {
-      // Switch to Font B for address (compact font)
+      // Switch to Fnpm run bont B for address (compact font)
       commands.push(
         this.setFont(1)
       );

@@ -330,12 +330,12 @@ export class WebSerialPrinter {
         // Get or use saved config
         const savedConfig = this.getSavedPrinterConfig();
         const name = savedConfig?.name || 'Kitchen Printer';
-        const config = savedConfig?.config || {
+        const config: SerialPrinterConfig = savedConfig?.config || {
           baudRate: 9600,
-          dataBits: 8,
-          stopBits: 1,
-          parity: 'none',
-          flowControl: 'none'
+          dataBits: 8 as 7 | 8,
+          stopBits: 1 as 1 | 2,
+          parity: 'none' as const,
+          flowControl: 'none' as const
         };
         
         await this.connect(port, name, config);

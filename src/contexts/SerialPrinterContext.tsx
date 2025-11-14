@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { webSerialPrinter, ConnectedPrinter } from '@/utils/webSerialPrinter';
+import { webSerialPrinter, ConnectedPrinter, SerialPrinterConfig } from '@/utils/webSerialPrinter';
 import { ESCPOSCommands, OrderData } from '@/utils/escposCommands';
 
 interface SerialPrinterContextType {
@@ -86,10 +86,10 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
       const baudRateInput = prompt('Baud Rate (по подразбиране 9600):', '9600');
       const baudRate = baudRateInput ? parseInt(baudRateInput) : 9600;
 
-      const config = {
+      const config: SerialPrinterConfig = {
         baudRate,
-        dataBits: 8,
-        stopBits: 1,
+        dataBits: 8 as 7 | 8,
+        stopBits: 1 as 1 | 2,
         parity: 'none' as const,
         flowControl: 'none' as const
       };
