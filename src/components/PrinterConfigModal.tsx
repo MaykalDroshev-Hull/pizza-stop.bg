@@ -30,22 +30,16 @@ export default function PrinterConfigModal({ isOpen, onClose, onConfigSaved }: P
     setTestResult(null);
     
     try {
-      if (defaultPrinter) {
-        await printTest(defaultPrinter);
-        setTestResult({ 
-          success: true, 
-          message: 'Web Serial принтерът е успешно тестван!' 
-        });
-      } else {
-        setTestResult({ 
-          success: false, 
-          message: 'Няма избран Web Serial принтер за тестване.' 
-        });
-      }
+      // Use printTest without port - it will connect using saved config
+      await printTest();
+      setTestResult({ 
+        success: true, 
+        message: 'Web Serial принтерът е успешно тестван!' 
+      });
     } catch (error) {
       setTestResult({ 
         success: false, 
-        message: `Грешка при тестване: ${error instanceof Error ? error.message : 'Неизвестна грешка'}` 
+        message: `Грешка при тестване: ${error instanceof Error ? error.message : 'Неизвестна грешка'}. Моля конфигурирайте принтер първо.` 
       });
     } finally {
       setIsLoading(false);

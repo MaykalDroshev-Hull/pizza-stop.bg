@@ -235,6 +235,127 @@ export class WebSerialPrinter {
       console.error('❌ [Web Serial] Error during auto-reconnect:', error);
     }
   }
+
+  /**
+   * Save printer configuration to localStorage
+   */
+  savePrinterConfig(port: SerialPort, name: string, config: SerialPrinterConfig): void {
+    try {
+      const portInfo = port.getInfo();
+      const savedConfig = {
+        name,
+        config,
+        portInfo: {
+          usbVendorId: portInfo.usbVendorId,
+          usbProductId: portInfo.usbProductId,
+        },
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem('serialPrinterConfig', JSON.stringify(savedConfig));
+    } catch (error) {
+      console.warn('Failed to save printer config:', error);
+    }
+  }
+
+  /**
+   * Load printer configuration from localStorage
+   */
+  getSavedPrinterConfig(): { name: string; config: SerialPrinterConfig; portInfo?: any } | null {
+    try {
+      const saved = localStorage.getItem('serialPrinterConfig');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.warn('Failed to load printer config:', error);
+    }
+    return null;
+  }
+
+  /**
+   * Connect to printer using saved config (if available)
+   * Returns the port if successful, null otherwise
+   */
+  async connectWithSavedConfig(): Promise<SerialPort | null> {
+    try {
+      const savedConfig = this.getSavedPrinterConfig();
+      if (!savedConfig) {
+        return null;
+      }
+
+      // Get previously authorized ports
+      const savedPorts = await this.getPorts();
+      
+      // Try to find matching port
+      for (const port of savedPorts) {
+        const portInfo = port.getInfo();
+        if (savedConfig.portInfo && 
+            portInfo.usbVendorId === savedConfig.portInfo.usbVendorId &&
+            portInfo.usbProductId === savedConfig.portInfo.usbProductId) {
+          
+          // Port found, open it if not already open
+          if (!port.readable || !port.writable) {
+            await port.open(savedConfig.config);
+          }
+          
+          return port;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to connect with saved config:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Connect, print, and disconnect in one operation
+   * Uses saved config if available, otherwise requests new port
+   */
+  async printAndDisconnect(data: Uint8Array): Promise<void> {
+    let port: SerialPort | null = null;
+    
+    try {
+      // Try to connect using saved config first
+      port = await this.connectWithSavedConfig();
+      
+      // If no saved config or connection failed, request new port
+      if (!port) {
+        port = await this.requestPort();
+        if (!port) {
+          throw new Error('Няма избран принтер');
+        }
+        
+        // Get or use saved config
+        const savedConfig = this.getSavedPrinterConfig();
+        const name = savedConfig?.name || 'Kitchen Printer';
+        const config: SerialPrinterConfig = savedConfig?.config || {
+          baudRate: 9600,
+          dataBits: 8 as 7 | 8,
+          stopBits: 1 as 1 | 2,
+          parity: 'none' as const,
+          flowControl: 'none' as const
+        };
+        
+        await this.connect(port, name, config);
+        this.savePrinterConfig(port, name, config);
+      }
+      
+      // Print
+      await this.print(port, data);
+      
+    } finally {
+      // Always disconnect after printing
+      if (port) {
+        try {
+          await this.disconnect(port);
+        } catch (error) {
+          console.warn('Error disconnecting after print:', error);
+        }
+      }
+    }
+  }
 }
 
 // Export singleton instance

@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { webSerialPrinter, ConnectedPrinter } from '@/utils/webSerialPrinter';
+import { webSerialPrinter, ConnectedPrinter, SerialPrinterConfig } from '@/utils/webSerialPrinter';
 import { ESCPOSCommands, OrderData } from '@/utils/escposCommands';
 
 interface SerialPrinterContextType {
@@ -28,10 +28,11 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const isSupported = webSerialPrinter.isSupported();
 
-  // Load saved default printer and auto-reconnect on mount
+  // Don't auto-reconnect on mount - we'll connect only when printing
   useEffect(() => {
     if (isSupported) {
-      initializePrinters();
+      // Just refresh the list, don't auto-connect
+      refreshPrinters();
     }
   }, [isSupported]);
 
@@ -40,7 +41,7 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
       setIsConnecting(true);
       setError(null);
       
-      // Auto-reconnect to previously authorized ports
+      // Auto-reconnect to previously authorized ports (only for manual connection)
       await webSerialPrinter.reconnectSavedPorts();
       await refreshPrinters();
       
@@ -85,13 +86,18 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
       const baudRateInput = prompt('Baud Rate (по подразбиране 9600):', '9600');
       const baudRate = baudRateInput ? parseInt(baudRateInput) : 9600;
 
-      await webSerialPrinter.connect(port, name, {
+      const config: SerialPrinterConfig = {
         baudRate,
-        dataBits: 8,
-        stopBits: 1,
-        parity: 'none',
-        flowControl: 'none'
-      });
+        dataBits: 8 as 7 | 8,
+        stopBits: 1 as 1 | 2,
+        parity: 'none' as const,
+        flowControl: 'none' as const
+      };
+
+      await webSerialPrinter.connect(port, name, config);
+      
+      // Save configuration to localStorage
+      webSerialPrinter.savePrinterConfig(port, name, config);
 
       await refreshPrinters();
       
@@ -126,36 +132,44 @@ export function SerialPrinterProvider({ children }: { children: ReactNode }) {
   const printOrder = async (order: OrderData, port?: SerialPort) => {
     try {
       setError(null);
-      const targetPort = port || defaultPrinter;
       
-      if (!targetPort) {
-        throw new Error('Няма свързан принтер. Моля свържете принтер от Debug панела.');
+      // If port is explicitly provided, use it (for backward compatibility)
+      if (port) {
+        const ticketData = ESCPOSCommands.generateOrderTicket(order);
+        await webSerialPrinter.print(port, ticketData);
+        return;
       }
-
-      const ticketData = ESCPOSCommands.generateOrderTicket(order);
-      await webSerialPrinter.print(targetPort, ticketData);
       
-    } catch {
-      setError('Print failed');
-      throw new Error('Print failed');
+      // Otherwise, use connect-print-disconnect pattern with saved config
+      const ticketData = ESCPOSCommands.generateOrderTicket(order);
+      await webSerialPrinter.printAndDisconnect(ticketData);
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Print failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
   const printTest = async (port?: SerialPort) => {
     try {
       setError(null);
-      const targetPort = port || defaultPrinter;
       
-      if (!targetPort) {
-        throw new Error('Няма свързан принтер. Моля свържете принтер от Debug панела.');
+      // If port is explicitly provided, use it (for backward compatibility)
+      if (port) {
+        const testData = ESCPOSCommands.generateTestTicket();
+        await webSerialPrinter.print(port, testData);
+        return;
       }
-
-      const testData = ESCPOSCommands.generateTestTicket();
-      await webSerialPrinter.print(targetPort, testData);
       
-    } catch {
-      setError('Test print failed');
-      throw new Error('Test print failed');
+      // Otherwise, use connect-print-disconnect pattern with saved config
+      const testData = ESCPOSCommands.generateTestTicket();
+      await webSerialPrinter.printAndDisconnect(testData);
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Test print failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 

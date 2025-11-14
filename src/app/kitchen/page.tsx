@@ -7,7 +7,8 @@ import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerat
 import PrinterConfigModal from '../../components/PrinterConfigModal';
 import { useSerialPrinter } from '../../contexts/SerialPrinterContext';
 import { buildDatecsFrame, DatecsCommands, toHex, parseDatecsResponse, parseStatusBytes } from '../../utils/datecsFiscalProtocol';
-import { OrderData } from '../../utils/escposCommands';
+import { OrderData, ESCPOSCommands } from '../../utils/escposCommands';
+import { webSerialPrinter } from '../../utils/webSerialPrinter';
 // AdminLogin moved to separate page at /admin-kitchen-login
 
 interface Order {
@@ -175,15 +176,15 @@ const KitchenCommandCenter = () => {
         
         if (product.CompositeProduct) {
           // For 50/50 pizzas, add "50/50" prefix and convert size for pizzas
-          let sizeDisplay = productSize;
+          let sizeDisplay: string | null = null;
           
-          // Convert pizza sizes: Small -> 30cm, Large -> 60cm
+          // Convert pizza sizes: Малка -> (30), Голяма -> (60), or Small -> (30), Large -> (60)
           if (productSize && category === 'pizza') {
             const sizeLower = productSize.toLowerCase();
-            if (sizeLower.includes('small')) {
-              sizeDisplay = '30cm';
-            } else if (sizeLower.includes('large')) {
-              sizeDisplay = '60cm';
+            if (sizeLower.includes('малка') || sizeLower.includes('small')) {
+              sizeDisplay = '30';
+            } else if (sizeLower.includes('голяма') || sizeLower.includes('large')) {
+              sizeDisplay = '60';
             }
           }
           
@@ -197,11 +198,11 @@ const KitchenCommandCenter = () => {
             const sizeLower = productSize.toLowerCase();
             
             if (category === 'pizza') {
-              // Pizzas: Convert Small -> 30cm, Large -> 60cm
-              if (sizeLower.includes('small')) {
-                sizeDisplay = '30cm';
-              } else if (sizeLower.includes('large')) {
-                sizeDisplay = '60cm';
+              // Pizzas: Convert Малка -> (30), Голяма -> (60), or Small -> (30), Large -> (60)
+              if (sizeLower.includes('малка') || sizeLower.includes('small')) {
+                sizeDisplay = '30';
+              } else if (sizeLower.includes('голяма') || sizeLower.includes('large')) {
+                sizeDisplay = '60';
               }
             } else if (category === 'kebab') {
               // Kebabs: Keep the size as-is (Small, Medium, Large)
@@ -962,12 +963,19 @@ const KitchenCommandCenter = () => {
       return itemName; // Not a pizza, return as-is
     }
 
-    // For 50/50 pizzas, they're always large (60cm)
+    // Check if name already has size format (30) or (60)
+    if (nameLower.includes('(30)') || nameLower.includes('(60)')) {
+      // Already has diameter format, just normalize it
+      return itemName.replace(/\(\s*30\s*\)/gi, '(30)').replace(/\(\s*60\s*\)/gi, '(60)');
+    }
+
+    // For 50/50 pizzas, they're always large (60)
     if (isComposite || nameLower.includes('50/50')) {
       // Remove any existing size/diameter info
       let cleanName = itemName
         .replace(/\s*\(?\s*(small|large|малка|голяма|средна)\s*\)?/gi, '')
         .replace(/\s*\(?\s*\d+\s*cm\s*\)?/gi, '')
+        .replace(/\s*\(?\s*\d+\s*\)?/gi, '') // Remove (30) or (60) if present
         .trim();
       
       // Add diameter
@@ -980,6 +988,7 @@ const KitchenCommandCenter = () => {
       let cleanName = itemName
         .replace(/\s*\(?\s*(small|малка)\s*\)?/gi, '')
         .replace(/\s*\(?\s*\d+\s*cm\s*\)?/gi, '')
+        .replace(/\s*\(?\s*\d+\s*\)?/gi, '') // Remove (30) or (60) if present
         .trim();
       return `${cleanName} (30)`;
     } else if (nameLower.includes('large') || nameLower.includes('голяма')) {
@@ -987,14 +996,17 @@ const KitchenCommandCenter = () => {
       let cleanName = itemName
         .replace(/\s*\(?\s*(large|голяма)\s*\)?/gi, '')
         .replace(/\s*\(?\s*\d+\s*cm\s*\)?/gi, '')
+        .replace(/\s*\(?\s*\d+\s*\)?/gi, '') // Remove (30) or (60) if present
         .trim();
       return `${cleanName} (60)`;
-    } else if (nameLower.includes('30cm') || nameLower.includes('(30)')) {
-      // Already has small diameter, keep it
-      return itemName.replace(/30\s*cm/gi, '30').replace(/\(\s*30\s*\)/gi, '(30)');
-    } else if (nameLower.includes('60cm') || nameLower.includes('(60)')) {
-      // Already has large diameter, keep it
-      return itemName.replace(/60\s*cm/gi, '60').replace(/\(\s*60\s*\)/gi, '(60)');
+    } else if (nameLower.includes('30cm')) {
+      // Has 30cm format, convert to (30)
+      let cleanName = itemName.replace(/30\s*cm/gi, '').trim();
+      return `${cleanName} (30)`;
+    } else if (nameLower.includes('60cm')) {
+      // Has 60cm format, convert to (60)
+      let cleanName = itemName.replace(/60\s*cm/gi, '').trim();
+      return `${cleanName} (60)`;
     }
 
     // Default: if no size info found, assume it's a standard size item
@@ -1055,25 +1067,36 @@ const KitchenCommandCenter = () => {
         restaurantPhone: '068 670 070'
       };
 
-      // Use Web Serial printer if configured
-      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
-        await printOrder(orderData);
-        addNotification(`Поръчка #${order.id} отпечатана на Web Serial принтер`, 'info');
-      } else {
-        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
-        return;
-      }
+      // Use Web Serial printer - will connect automatically using saved config
+      await printOrder(orderData);
+      addNotification(`Поръчка #${order.id} отпечатана на Web Serial принтер`, 'info');
     } catch (error) {
       addNotification(`Грешка при печат на поръчка #${order.id}`, 'warning');
     }
   };
 
+  // Print Cyrillic test page
+  const handlePrintCyrillicTest = async () => {
+    try {
+      const testData = ESCPOSCommands.generateCyrillicTestPage();
+      await webSerialPrinter.printAndDisconnect(testData);
+      addNotification('Тестова страница с кирилски букви отпечатана', 'info');
+    } catch (error) {
+      addNotification('Грешка при печат на тестова страница. Моля конфигурирайте принтер от настройките.', 'warning');
+    }
+  };
+
   // Handle cut command using proper Datecs fiscal protocol
   const handleCutPaper = async () => {
+    let port: SerialPort | null = null;
     try {
+      // Connect using saved config
+      port = await webSerialPrinter.connectWithSavedConfig();
       
-      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
-        const port = webSerialDefaultPrinter;
+      if (!port) {
+        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
+        return;
+      }
         
         // According to FP-2000 manual (line 536-537):
         // "The program must advance the paper with at least two lines or the document will not be cut off correctly"
@@ -1148,12 +1171,17 @@ const KitchenCommandCenter = () => {
             addNotification('✅ Команди изпратени (принтерът може да не върне пълен отговор)', 'info');
           }
         }
-      } else {
-        addNotification('Няма конфигуриран принтер. Моля конфигурирайте принтер от настройките.', 'warning');
-        return;
-      }
     } catch (error) {
       addNotification('Грешка при изпращане на команда за рязане', 'warning');
+    } finally {
+      // Always disconnect after cut command
+      if (port) {
+        try {
+          await webSerialPrinter.disconnect(port);
+        } catch (error) {
+          console.warn('Error disconnecting after cut:', error);
+        }
+      }
     }
   };
 
@@ -1376,11 +1404,8 @@ const KitchenCommandCenter = () => {
         restaurantPhone: '068 670 070'
       };
 
-      // Use Web Serial printer if configured
-      if (webSerialDefaultPrinter && connectedPrinters.length > 0) {
-        await printOrder(orderData);
-      } else {
-      }
+      // Use Web Serial printer - will connect automatically using saved config
+      await printOrder(orderData);
     } catch (error) {
     }
   };
@@ -2227,6 +2252,16 @@ const KitchenCommandCenter = () => {
               <span className="hidden sm:inline">РЕЖИ</span>
             </button>
 
+            {/* Cyrillic Test Button */}
+            <button
+              onClick={handlePrintCyrillicTest}
+              className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 transition-colors flex items-center space-x-1 min-w-[60px] min-h-[44px] touch-manipulation"
+              title="Принтирай тестова страница с кирилски букви и кодове"
+            >
+              <Printer className="w-4 h-4" />
+              <span className="hidden sm:inline">КИРИЛ</span>
+            </button>
+
             <div className="text-lg font-mono">
               {formatTimeForDisplay(currentTime)}
               {debugMode && (
@@ -2285,12 +2320,12 @@ const KitchenCommandCenter = () => {
               </button>
 
               {/* Printer Status Indicator */}
-              {webSerialDefaultPrinter && connectedPrinters.length > 0 ? (
-                <div className="flex items-center justify-center bg-blue-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]">
+              {webSerialPrinter.getSavedPrinterConfig() ? (
+                <div className="flex items-center justify-center bg-blue-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]" title="Принтерът е конфигуриран">
                   <Printer className="w-3 h-3" />
                 </div>
               ) : (
-                <div className="flex items-center justify-center bg-gray-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]">
+                <div className="flex items-center justify-center bg-gray-600 text-white px-2 py-1 rounded-lg text-xs min-w-[44px] min-h-[32px]" title="Няма конфигуриран принтер">
                   <Printer className="w-3 h-3" />
                 </div>
               )}
