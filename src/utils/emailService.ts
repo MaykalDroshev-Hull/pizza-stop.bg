@@ -86,19 +86,34 @@ interface DeliveryETAEmailOptions {
 }
 
 export class EmailService {
-  private transporter: nodemailer.Transporter
+  private transporter: nodemailer.Transporter | null = null
+  private hasCredentials: boolean = false
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    })
+    // Check if email credentials are available
+    const emailUser = process.env.EMAIL_USER
+    const emailPass = process.env.EMAIL_PASS
+    
+    if (emailUser && emailPass) {
+      this.hasCredentials = true
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: emailUser,
+          pass: emailPass,
+        },
+      })
+    } else {
+      this.hasCredentials = false
+    }
   }
 
   async sendWelcomeEmail({ to, name }: EmailOptions): Promise<void> {
+    // Skip sending emails if credentials are not configured
+    if (!this.hasCredentials || !this.transporter) {
+      return;
+    }
+    
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
       return;
@@ -217,21 +232,26 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER || 'noreply@pizza-stop.bg'}>`,
       to,
       subject: 'Добре дошли в Pizza Stop! 🍕',
       html: htmlContent,
     }
 
     try {
-      await this.transporter.sendMail(mailOptions)
+      await this.transporter!.sendMail(mailOptions)
     } catch (error) {
       console.error('Error sending welcome email:', error)
-      throw new Error('Failed to send welcome email')
+      // Don't throw error - just log it
     }
   }
 
   async sendPasswordResetEmail({ to, name, resetToken, resetUrl }: PasswordResetEmailOptions): Promise<void> {
+    // Skip sending emails if credentials are not configured
+    if (!this.hasCredentials || !this.transporter) {
+      return;
+    }
+    
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
       return;
@@ -364,21 +384,26 @@ export class EmailService {
     `
 
     const mailOptions = {
-      from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
+      from: `"Pizza Stop" <${process.env.EMAIL_USER || 'noreply@pizza-stop.bg'}>`,
       to,
       subject: 'Възстановяване на парола - Pizza Stop 🔐',
       html: htmlContent,
     }
 
     try {
-      await this.transporter.sendMail(mailOptions)
+      await this.transporter!.sendMail(mailOptions)
     } catch (error) {
       console.error('Error sending password reset email:', error)
-      throw new Error('Failed to send password reset email')
+      // Don't throw error - just log it
     }
   }
 
   async sendOrderConfirmationEmail({ to, name, orderId, orderDetails }: OrderConfirmationEmailOptions): Promise<void> {
+    // Skip sending emails if credentials are not configured
+    if (!this.hasCredentials || !this.transporter) {
+      return;
+    }
+    
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
       return;
@@ -693,6 +718,11 @@ export class EmailService {
       </html>
     `
 
+    // Skip sending if credentials are not configured
+    if (!this.hasCredentials || !this.transporter || !process.env.EMAIL_USER) {
+      return;
+    }
+
     const mailOptions = {
       from: `"Pizza Stop" <${process.env.EMAIL_USER}>`,
       to,
@@ -704,11 +734,16 @@ export class EmailService {
       await this.transporter.sendMail(mailOptions)
     } catch (error) {
       console.error('Error sending order confirmation email:', error)
-      throw new Error('Failed to send order confirmation email')
+      // Don't throw error - just log it so order can still be confirmed
     }
   }
 
   async sendDeliveryETAEmail({ to, name, orderId, etaMinutes, estimatedArrivalTime, orderDetails }: DeliveryETAEmailOptions): Promise<void> {
+    // Skip sending emails if credentials are not configured
+    if (!this.hasCredentials || !this.transporter) {
+      return;
+    }
+    
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
       return;
@@ -988,6 +1023,11 @@ export class EmailService {
   }
 
   async sendOrderReadyTimeEmail({ to, name, orderId, readyTimeMinutes, orderDetails }: OrderReadyTimeEmailOptions): Promise<void> {
+    // Skip sending emails if credentials are not configured
+    if (!this.hasCredentials || !this.transporter) {
+      return;
+    }
+    
     // Skip sending emails to printer guest accounts
     if (to.startsWith('printer_guest')) {
       return;

@@ -1078,7 +1078,7 @@ export default function DashboardPage() {
         const isFiftyFifty = orderProduct.ProductName.includes(' / ') || 
                             (orderProduct.Comment && orderProduct.Comment.includes('50/50'))
         
-        if (isFiftyFifty) {
+          if (isFiftyFifty) {
           // Handle 50/50 pizza - validate individual pizza components
           const pizzaNames = orderProduct.ProductName.split(' / ').map(name => name.trim())
           let allPizzasAvailable = true
@@ -1093,6 +1093,13 @@ export default function DashboardPage() {
           }
 
           if (allPizzasAvailable) {
+            const unitPrice = typeof orderProduct.UnitPrice === 'number'
+              ? orderProduct.UnitPrice
+              : Number(orderProduct.UnitPrice) || 0
+            const quantity = typeof orderProduct.Quantity === 'number'
+              ? orderProduct.Quantity
+              : Number(orderProduct.Quantity) || 1
+
             // Parse addons from JSON string if needed
             let parsedAddons: Array<{ Name: string; Price: number; AddonType: string }> = []
             if (orderProduct.Addons) {
@@ -1109,19 +1116,24 @@ export default function DashboardPage() {
                   ? (orderProduct.Addons as Array<{ Name: string; Price: number; AddonType: string }>)
                   : []
               }
+
+              parsedAddons = parsedAddons.map(addon => ({
+                ...addon,
+                Price: typeof addon.Price === 'number' ? addon.Price : Number(addon.Price) || 0
+              }))
             }
 
             // Create cart item for 50/50 pizza
             const cartItem = {
-              id: Date.now() + Math.random(), // Unique ID for 50/50 pizza
+              id: `${Date.now()}-${Math.random()}`, // Unique string ID for 50/50 pizza
               name: orderProduct.ProductName,
-              price: orderProduct.UnitPrice,
+              price: unitPrice,
               image: '🍕',
               category: 'pizza-5050', // Special category for 50/50 pizzas
               size: orderProduct.ProductSize || 'Голяма',
               addons: parsedAddons,
               comment: orderProduct.Comment || '',
-              quantity: orderProduct.Quantity
+              quantity
             }
             cartItems.push(cartItem)
           } else {
@@ -1135,6 +1147,13 @@ export default function DashboardPage() {
           )
           
           if (availableProduct) {
+            const unitPrice = typeof orderProduct.UnitPrice === 'number'
+              ? orderProduct.UnitPrice
+              : Number(orderProduct.UnitPrice) || 0
+            const quantity = typeof orderProduct.Quantity === 'number'
+              ? orderProduct.Quantity
+              : Number(orderProduct.Quantity) || 1
+
             // Parse addons from JSON string if needed
             let parsedAddons: Array<{ Name: string; Price: number; AddonType: string }> = []
             if (orderProduct.Addons) {
@@ -1148,19 +1167,27 @@ export default function DashboardPage() {
               } else {
                 parsedAddons = Array.isArray(orderProduct.Addons) ? orderProduct.Addons : []
               }
+
+              parsedAddons = parsedAddons.map(addon => ({
+                ...addon,
+                Price: typeof addon.Price === 'number' ? addon.Price : Number(addon.Price) || 0
+              }))
             }
             
             // Product is available - add to cart
             const cartItem = {
-              id: availableProduct.id,
+              id: `${availableProduct.id}-${Date.now()}-${Math.random()}`, // Unique ID for cart item
+              productId: typeof availableProduct.id === 'number'
+                ? availableProduct.id
+                : Number(availableProduct.id) || undefined, // CRITICAL: Database ProductID for backend validation
               name: orderProduct.ProductName,
-              price: orderProduct.UnitPrice,
+              price: unitPrice,
               image: availableProduct.image || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNjY2NjY2MiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn5GVPzwvdGV4dD4KPC9zdmc+',
               category: availableProduct.category || 'pizza',
               size: orderProduct.ProductSize || 'Medium',
               addons: parsedAddons,
               comment: orderProduct.Comment || '',
-              quantity: orderProduct.Quantity
+              quantity
             }
             cartItems.push(cartItem)
           } else {
