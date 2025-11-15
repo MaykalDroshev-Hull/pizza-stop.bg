@@ -12,7 +12,6 @@ import ConditionalNavBar from '../components/ConditionalNavBar'
 import { Suspense } from 'react'
 import { Analytics } from "@vercel/analytics/next"
 import { SerialPrinterProvider } from '../contexts/SerialPrinterContext'
-
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
@@ -51,9 +50,6 @@ export const metadata: Metadata = {
       'max-image-preview': 'large',
       'max-snippet': -1,
     },
-  },
-  verification: {
-    google: 'your-google-verification-code',
   },
   manifest: '/site.webmanifest',
 }
