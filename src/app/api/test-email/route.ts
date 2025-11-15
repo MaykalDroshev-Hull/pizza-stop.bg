@@ -11,9 +11,8 @@ export async function POST(request: NextRequest) {
     await emailService.sendWelcomeEmail({ to: email, name })
 
     return NextResponse.json({
-      message: 'Registration email sent successfully to hm.websiteprovisioning@gmail.com',
+      message: 'Registration email sent successfully',
       sentTo: email,
-      timestamp: new Date().toISOString(),
       emailType: 'registration'
     })
 
@@ -22,8 +21,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to send registration email',
-        details: error.message,
-        timestamp: new Date().toISOString()
+        details: error.message
       },
       { status: 500 }
     )

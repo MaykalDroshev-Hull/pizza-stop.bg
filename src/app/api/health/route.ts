@@ -4,7 +4,6 @@ import { createServerClient } from '@/lib/supabase';
 import { Logger } from '@/utils/logger';
 
 interface HealthCheckResponse {
-  timestamp: string;
   status: 'healthy' | 'unhealthy' | 'degraded';
   services: {
     database: 'healthy' | 'unhealthy' | 'unknown';
@@ -16,15 +15,10 @@ interface HealthCheckResponse {
     hasSupabaseKey: boolean;
     hasEmailConfig: boolean;
   };
-  uptime: number;
-  version: string;
 }
 
 export async function GET(request: NextRequest) {
-  const startTime = Date.now();
-  
   const healthCheck: HealthCheckResponse = {
-    timestamp: new Date().toISOString(),
     status: 'healthy',
     services: {
       database: 'unknown',
@@ -35,9 +29,7 @@ export async function GET(request: NextRequest) {
       hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       hasEmailConfig: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
-    },
-    uptime: process.uptime(),
-    version: process.env.npm_package_version || '1.0.0'
+    }
   };
 
   try {
@@ -93,10 +85,8 @@ export async function GET(request: NextRequest) {
     healthCheck.status = 'unhealthy';
   }
 
-  const responseTime = Date.now() - startTime;
   Logger.info('Health check completed', {
     status: healthCheck.status,
-    responseTime: `${responseTime}ms`,
     services: healthCheck.services
   });
 
