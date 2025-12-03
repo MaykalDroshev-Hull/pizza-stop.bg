@@ -39,7 +39,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   className = "",
   placeholder = "Качете изображение",
   maxSize = 5,
-  acceptedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+  acceptedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif']
 }): React.JSX.Element => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadState, setUploadState] = useState<UploadState>({
@@ -315,7 +315,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       {/* File Info */}
       {!hasImage && !isUploading && (
         <div className="text-xs text-gray-500 text-center space-y-1 hidden sm:block">
-          <p>Поддържани формати: JPG, PNG, GIF, WebP</p>
+          <p>Поддържани формати: JPG, PNG, GIF, WebP, AVIF</p>
           <p>Максимален размер: {maxSize}MB</p>
         </div>
       )}

@@ -192,7 +192,7 @@ export function validateImageFile(file: File): { isValid: boolean; error?: strin
   if (!file.type.startsWith('image/')) {
     return {
       isValid: false,
-      error: 'Файлът трябва да бъде изображение (JPG, PNG, GIF, WebP)'
+      error: 'Файлът трябва да бъде изображение (JPG, PNG, GIF, WebP, AVIF)'
     };
   }
 
