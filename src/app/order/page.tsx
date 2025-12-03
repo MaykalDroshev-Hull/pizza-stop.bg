@@ -778,13 +778,29 @@ export default function MenuPage() {
                       {/* Left Half */}
                       <div className="bg-white/5 rounded-xl p-6">
                         <h4 className="font-bold text-lg text-text mb-4">Лява половина</h4>
-                        <div className="text-center mb-3">
+                        <div className="text-center mb-3 relative group">
                           {fiftyFiftySelection.leftHalf?.image?.startsWith('http') ? (
-                            <img 
-                              src={fiftyFiftySelection.leftHalf.image} 
-                              alt={fiftyFiftySelection.leftHalf.name}
-                              className="w-20 h-20 object-cover rounded-lg shadow-lg mx-auto"
-                            />
+                            <>
+                              <img 
+                                src={fiftyFiftySelection.leftHalf.image} 
+                                alt={fiftyFiftySelection.leftHalf.name}
+                                className={`w-20 h-20 object-cover rounded-lg shadow-lg mx-auto transition-opacity duration-300 ${
+                                  fiftyFiftySelection.leftHalf?.secondImage ? 'group-hover:opacity-0' : ''
+                                }`}
+                              />
+                              {fiftyFiftySelection.leftHalf?.secondImage && fiftyFiftySelection.leftHalf.secondImage.startsWith('http') && (
+                                <img 
+                                  src={fiftyFiftySelection.leftHalf.secondImage} 
+                                  alt={`${fiftyFiftySelection.leftHalf.name} hover`}
+                                  className="absolute inset-0 w-20 h-20 object-cover rounded-lg shadow-lg mx-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                  style={{ left: '50%', transform: 'translateX(-50%)' }}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                              )}
+                            </>
                           ) : (
                             <div className="text-4xl">{fiftyFiftySelection.leftHalf?.image}</div>
                           )}
@@ -798,13 +814,29 @@ export default function MenuPage() {
                       {/* Right Half */}
                       <div className="bg-white/5 rounded-xl p-6">
                         <h4 className="font-bold text-lg text-text mb-4">Дясна половина</h4>
-                        <div className="text-center mb-3">
+                        <div className="text-center mb-3 relative group">
                           {fiftyFiftySelection.rightHalf?.image?.startsWith('http') ? (
-                            <img 
-                              src={fiftyFiftySelection.rightHalf.image} 
-                              alt={fiftyFiftySelection.rightHalf.name}
-                              className="w-20 h-20 object-cover rounded-lg shadow-lg mx-auto"
-                            />
+                            <>
+                              <img 
+                                src={fiftyFiftySelection.rightHalf.image} 
+                                alt={fiftyFiftySelection.rightHalf.name}
+                                className={`w-20 h-20 object-cover rounded-lg shadow-lg mx-auto transition-opacity duration-300 ${
+                                  fiftyFiftySelection.rightHalf?.secondImage ? 'group-hover:opacity-0' : ''
+                                }`}
+                              />
+                              {fiftyFiftySelection.rightHalf?.secondImage && fiftyFiftySelection.rightHalf.secondImage.startsWith('http') && (
+                                <img 
+                                  src={fiftyFiftySelection.rightHalf.secondImage} 
+                                  alt={`${fiftyFiftySelection.rightHalf.name} hover`}
+                                  className="absolute inset-0 w-20 h-20 object-cover rounded-lg shadow-lg mx-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                  style={{ left: '50%', transform: 'translateX(-50%)' }}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                              )}
+                            </>
                           ) : (
                             <div className="text-4xl">{fiftyFiftySelection.rightHalf?.image}</div>
                           )}
@@ -1178,27 +1210,49 @@ export default function MenuPage() {
             }}
           >
             {filteredItems.map(item => (
-              <div key={item.id} className="bg-card border border-white/12 rounded-xl p-4 md:p-6 overflow-hidden flex flex-col h-full min-h-[400px]">                <div className="text-center py-3 md:py-4 bg-gradient-to-br from-red/10 to-orange/10 min-h-[120px] md:min-h-[160px] flex items-center justify-center relative overflow-hidden">
+              <div key={item.id} className="bg-card border border-white/12 rounded-xl p-4 md:p-6 overflow-hidden flex flex-col h-full min-h-[400px]">                <div className="text-center py-3 md:py-4 bg-gradient-to-br from-red/10 to-orange/10 min-h-[120px] md:min-h-[160px] flex items-center justify-center relative overflow-hidden group">
                   {(() => {
-                    return item.image.startsWith('http') ? (
-                    <img 
-                      src={item.image} 
-                      alt={item.name}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      onError={(e) => {
-                        // Fallback to emoji if image fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        (target.nextElementSibling as HTMLElement)!.style.display = 'flex';
-                      }}
-                    />
-                    ) : (
-                      <div className="text-4xl md:text-6xl">{item.image}</div>
-                    )
+                    if (item.image.startsWith('http')) {
+                      return (
+                        <>
+                          {/* Main Image */}
+                          <img 
+                            src={item.image} 
+                            alt={item.name}
+                            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                              item.secondImage ? 'group-hover:opacity-0' : ''
+                            }`}
+                            onError={(e) => {
+                              // Fallback to emoji if image fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const fallbackDiv = target.parentElement?.querySelector('.fallback-emoji') as HTMLElement;
+                              if (fallbackDiv) {
+                                fallbackDiv.style.display = 'flex';
+                              }
+                            }}
+                          />
+                          {/* Second Image (Hover) */}
+                          {item.secondImage && item.secondImage.startsWith('http') && (
+                            <img 
+                              src={item.secondImage} 
+                              alt={`${item.name} hover`}
+                              className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                              onError={(e) => {
+                                // Hide if second image fails to load
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          )}
+                          {/* Fallback Emoji */}
+                          <div className="fallback-emoji absolute inset-0 hidden items-center justify-center text-4xl md:text-6xl">{fallbackEmojis[item.category] || '🍽️'}</div>
+                        </>
+                      )
+                    } else {
+                      return <div className="text-4xl md:text-6xl">{item.image}</div>
+                    }
                   })()}
-                  {item.image.startsWith('http') && (
-                    <div className="absolute inset-0 hidden items-center justify-center text-4xl md:text-6xl">{fallbackEmojis[item.category] || '🍽️'}</div>
-                  )}
                 </div>
                 <div className="flex flex-col flex-1">
                   {/* Content Area - Flexible */}
