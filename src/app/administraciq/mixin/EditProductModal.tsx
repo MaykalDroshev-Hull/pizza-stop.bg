@@ -9,6 +9,7 @@ interface Product {
   name: string;
   description?: string | null;
   imageUrl?: string | null;
+  secondImageUrl?: string | null; // Second image for hover effect
   isDisabled?: boolean;
   smallPrice?: number | null;
   mediumPrice?: number | null;
@@ -26,6 +27,7 @@ interface EditProductForm {
   largePrice: string;
   productTypeId: string;
   imageUrl: string;
+  secondImageUrl: string; // Second image for hover effect
   isDisabled: boolean;
   isNoAddOns: boolean;
 }
@@ -53,6 +55,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     largePrice: "",
     productTypeId: "",
     imageUrl: "",
+    secondImageUrl: "",
     isDisabled: false,
     isNoAddOns: false
   });
@@ -72,6 +75,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
         largePrice: product.largePrice ? product.largePrice.toString() : "",
         productTypeId: product.productTypeId ? product.productTypeId.toString() : "",
         imageUrl: product.imageUrl || "",
+        secondImageUrl: product.secondImageUrl || "",
         isDisabled: product.isDisabled || false,
         isNoAddOns: product.isNoAddOns || false
       };
@@ -100,6 +104,11 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     setImageUploadError(null);
   };
 
+  const handleSecondImageUpload = (url: string | null): void => {
+    setFormData((prev: EditProductForm) => ({ ...prev, secondImageUrl: url || "" }));
+    setImageUploadError(null);
+  };
+
   const handleImageUploadError = (error: string): void => {
     setImageUploadError(error);
   };
@@ -117,6 +126,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
       name: formData.name,
       description: formData.description || null,
       imageUrl: formData.imageUrl || null,
+      secondImageUrl: formData.secondImageUrl || null,
       isDisabled: formData.isDisabled,
       isNoAddOns: formData.isNoAddOns,
       smallPrice: formData.smallPrice ? parseFloat(formData.smallPrice) : null,
@@ -255,6 +265,23 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                     {imageUploadError}
                   </p>
                 )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Второ изображение за hover ефект (опционално)
+                </label>
+                <ImageUpload
+                  value={formData.secondImageUrl}
+                  onChange={handleSecondImageUpload}
+                  onError={handleImageUploadError}
+                  placeholder="Качете второ изображение"
+                  maxSize={5}
+                  className="w-full"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  Това изображение ще се показва при hover/touch
+                </p>
               </div>
             </div>
 

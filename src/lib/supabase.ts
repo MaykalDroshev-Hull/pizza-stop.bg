@@ -341,6 +341,7 @@ export interface Product {
   Product: string
   Description: string | null
   ImageURL: string | null
+  SecondImageURL: string | null // Second image for hover effect
   IsDisabled: number
   SmallPrice: number
   MediumPrice: number | null

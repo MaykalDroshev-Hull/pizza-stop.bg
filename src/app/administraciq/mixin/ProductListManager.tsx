@@ -19,6 +19,7 @@ interface Product {
   name: string;
   description?: string | null;
   imageUrl?: string | null;
+  secondImageUrl?: string | null; // Second image for hover effect
   isDisabled?: boolean;
   isNoAddOns?: boolean;
   smallPrice?: number | null;
@@ -52,6 +53,7 @@ interface AddProductForm {
   largePrice: string;
   productTypeId: string;
   imageUrl: string;
+  secondImageUrl: string; // Second image for hover effect
 }
 
 // Filter state interface
@@ -138,7 +140,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
     mediumPrice: "",
     largePrice: "",
     productTypeId: "",
-    imageUrl: ""
+    imageUrl: "",
+    secondImageUrl: ""
   });
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   
@@ -212,6 +215,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
           name: product.Product,
           description: product.Description,
           imageUrl: product.ImageURL,
+          secondImageUrl: product.SecondImageURL,
           isDisabled: product.IsDisabled === 1,
           isNoAddOns: product.IsNoAddOns || false,
           smallPrice: product.SmallPrice,
@@ -280,6 +284,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       original.name !== updated.name ||
       original.description !== updated.description ||
       original.imageUrl !== updated.imageUrl ||
+      original.secondImageUrl !== updated.secondImageUrl ||
       original.isDisabled !== updated.isDisabled ||
       original.smallPrice !== updated.smallPrice ||
       original.mediumPrice !== updated.mediumPrice ||
@@ -423,6 +428,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         Product: updatedProduct.name,
         Description: updatedProduct.description,
         ImageURL: updatedProduct.imageUrl,
+        SecondImageURL: updatedProduct.secondImageUrl,
         IsDisabled: updatedProduct.isDisabled ? 1 : 0,
         IsNoAddOns: updatedProduct.isNoAddOns || false,
         SmallPrice: updatedProduct.smallPrice,
@@ -438,6 +444,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         name: savedProduct.Product,
         description: savedProduct.Description,
         imageUrl: updatedProduct.imageUrl,
+        secondImageUrl: updatedProduct.secondImageUrl,
         isDisabled: savedProduct.IsDisabled === 1,
         isNoAddOns: savedProduct.IsNoAddOns || false,
         smallPrice: savedProduct.SmallPrice,
@@ -558,6 +565,11 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
     setImageUploadError(null);
   };
 
+  const handleSecondImageUpload = (url: string | null): void => {
+    setNewProduct((prev: AddProductForm) => ({ ...prev, secondImageUrl: url || "" }));
+    setImageUploadError(null);
+  };
+
   const handleImageUploadError = (error: string): void => {
     setImageUploadError(error);
   };
@@ -582,6 +594,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         Product: newProduct.name.trim(),
         Description: newProduct.description?.trim() || null,
         ImageURL: newProduct.imageUrl?.trim() || null,
+        SecondImageURL: newProduct.secondImageUrl?.trim() || null,
         IsDisabled: 0,
         SmallPrice: parseFloat(newProduct.smallPrice),
         MediumPrice: newProduct.mediumPrice ? parseFloat(newProduct.mediumPrice) : null,
@@ -596,6 +609,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         name: savedProduct.Product,
         description: savedProduct.Description,
         imageUrl: savedProduct.ImageURL,
+        secondImageUrl: savedProduct.SecondImageURL,
         isDisabled: savedProduct.IsDisabled === 1,
         isNoAddOns: savedProduct.IsNoAddOns || false,
         smallPrice: savedProduct.SmallPrice,
@@ -614,7 +628,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         mediumPrice: "", 
         largePrice: "", 
         productTypeId: "", 
-        imageUrl: "" 
+        imageUrl: "",
+        secondImageUrl: ""
       });
       setIsModalOpen(false);
       addFlashMessage('success', 'Продуктът беше добавен успешно!');
@@ -634,7 +649,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       mediumPrice: "", 
       largePrice: "", 
       productTypeId: "", 
-      imageUrl: "" 
+      imageUrl: "",
+      secondImageUrl: ""
     });
     setImageUploadError(null);
     setIsAddingProduct(false);
@@ -1503,6 +1519,23 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                 {imageUploadError}
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Второ изображение за hover ефект (опционално)
+            </label>
+            <ImageUpload
+              value={newProduct.secondImageUrl}
+              onChange={handleSecondImageUpload}
+              onError={handleImageUploadError}
+              placeholder={`Качете второ изображение`}
+              maxSize={5}
+              className="w-full"
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Това изображение ще се показва при hover/touch
+            </p>
           </div>
         </form>
       </div>

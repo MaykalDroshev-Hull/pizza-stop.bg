@@ -6,6 +6,7 @@ export type Product = {
   Product: string;
   Description?: string | null;
   ImageURL?: string | null;
+  SecondImageURL?: string | null; // Second image for hover effect
   IsDisabled?: number;
   IsNoAddOns?: boolean;
   SmallPrice?: number | null;
