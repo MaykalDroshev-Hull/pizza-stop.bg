@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react'
 import { Laptop, ChefHat, Pizza, Sandwich, Utensils } from 'lucide-react'
 import styles from '../styles/home.module.css'
-import TeamCarousel from '../components/TeamCarousel'
 import DeliveryAreaMap from '../components/DeliveryAreaMap'
 
 
@@ -141,13 +140,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ЗА НАС / ЕКИП / ИСТОРИЯ / СЕРТИФИКАТИ (ЛАНДИНГ ПРОСТРАНСТВО) */}
+        {/* ЗА НАС / ИСТОРИЯ (ЛАНДИНГ ПРОСТРАНСТВО) */}
         <section id="about" className={styles.aboutSection}>
           <div className="container">
             
-            {/* ЕКИП */}
-            <TeamCarousel />
-
             {/* ИСТОРИЯ - Modern Timeline Design */}
             <div className={styles.modernTimelineSection}>
               <h3 className={styles.sectionSubtitle}>Нашата история</h3>
@@ -225,66 +221,66 @@ export default function HomePage() {
               <div className={styles.galleryScroll} aria-label="Първи ред - Галерия изображения">
                 {/* First set of images */}
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-samerdaboul-2233729.jpg" alt="Салата Цезар" loading="lazy" />
+                  <img src="/images/gallery/1-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Дюнер с месо" loading="lazy" />
+                  <img src="/images/gallery/10-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-muffin-1653877.jpg" alt="Пица Хавайска" loading="lazy" />
+                  <img src="/images/gallery/101-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-valeriya-1639557.jpg" alt="Бургер класически" loading="lazy" />
+                  <img src="/images/gallery/103-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-guto-macedo-72150916-8444548.jpg" alt="Дюнер с пилешко" loading="lazy" />
+                  <img src="/images/gallery/105-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-rdne-8523507.jpg" alt="Пържени картофки" loading="lazy" />
+                  <img src="/images/gallery/107-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-viniciusbenedit-1082343.jpg" alt="Бургер с сирене" loading="lazy" />
+                  <img src="/images/gallery/109-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-andrebeltrame-1878346.jpg" alt="Пица Кватро Формаджи" loading="lazy" />
+                  <img src="/images/gallery/111-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-polina-tankilevitch-4109111.jpg" alt="Дюнер вегетариански" loading="lazy" />
+                  <img src="/images/gallery/113-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Бургер с бекон" loading="lazy" />
+                  <img src="/images/gallery/115-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 
                 {/* Duplicate set for seamless loop */}
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-samerdaboul-2233729.jpg" alt="Салата Цезар" loading="lazy" />
+                  <img src="/images/gallery/1-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Дюнер с месо" loading="lazy" />
+                  <img src="/images/gallery/10-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-muffin-1653877.jpg" alt="Пица Хавайска" loading="lazy" />
+                  <img src="/images/gallery/101-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-valeriya-1639557.jpg" alt="Бургер класически" loading="lazy" />
+                  <img src="/images/gallery/103-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-guto-macedo-72150916-8444548.jpg" alt="Дюнер с пилешко" loading="lazy" />
+                  <img src="/images/gallery/105-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-rdne-8523507.jpg" alt="Пържени картофки" loading="lazy" />
+                  <img src="/images/gallery/107-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-viniciusbenedit-1082343.jpg" alt="Бургер с сирене" loading="lazy" />
+                  <img src="/images/gallery/109-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-andrebeltrame-1878346.jpg" alt="Пица Кватро Формаджи" loading="lazy" />
+                  <img src="/images/gallery/111-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-polina-tankilevitch-4109111.jpg" alt="Дюнер вегетариански" loading="lazy" />
+                  <img src="/images/gallery/113-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Бургер с бекон" loading="lazy" />
+                  <img src="/images/gallery/115-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
               </div>
             </div>
@@ -294,66 +290,66 @@ export default function HomePage() {
               <div className={styles.galleryScroll} aria-label="Втори ред - Галерия изображения">
                 {/* First set of images */}
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Дюнер с месо" loading="lazy" />
+                  <img src="/images/gallery/117-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-valeriya-1639557.jpg" alt="Бургер класически" loading="lazy" />
+                  <img src="/images/gallery/119-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-rdne-8523507.jpg" alt="Пържени картофки" loading="lazy" />
+                  <img src="/images/gallery/121-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-samerdaboul-2233729.jpg" alt="Салата Цезар" loading="lazy" />
+                  <img src="/images/gallery/123-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-andrebeltrame-1878346.jpg" alt="Пица Кватро Формаджи" loading="lazy" />
+                  <img src="/images/gallery/125-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-polina-tankilevitch-4109111.jpg" alt="Дюнер вегетариански" loading="lazy" />
+                  <img src="/images/gallery/128-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-viniciusbenedit-1082343.jpg" alt="Бургер с сирене" loading="lazy" />
+                  <img src="/images/gallery/130-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-muffin-1653877.jpg" alt="Пица Хавайска" loading="lazy" />
+                  <img src="/images/gallery/104-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-guto-macedo-72150916-8444548.jpg" alt="Дюнер с пилешко" loading="lazy" />
+                  <img src="/images/gallery/106-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Бургер с бекон" loading="lazy" />
+                  <img src="/images/gallery/108-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 
                 {/* Duplicate set for seamless loop */}
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Дюнер с месо" loading="lazy" />
+                  <img src="/images/gallery/117-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-valeriya-1639557.jpg" alt="Бургер класически" loading="lazy" />
+                  <img src="/images/gallery/119-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-rdne-8523507.jpg" alt="Пържени картофки" loading="lazy" />
+                  <img src="/images/gallery/121-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-samerdaboul-2233729.jpg" alt="Салата Цезар" loading="lazy" />
+                  <img src="/images/gallery/123-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-andrebeltrame-1878346.jpg" alt="Пица Кватро Формаджи" loading="lazy" />
+                  <img src="/images/gallery/125-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-polina-tankilevitch-4109111.jpg" alt="Дюнер вегетариански" loading="lazy" />
+                  <img src="/images/gallery/128-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-viniciusbenedit-1082343.jpg" alt="Бургер с сирене" loading="lazy" />
+                  <img src="/images/gallery/130-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-muffin-1653877.jpg" alt="Пица Хавайска" loading="lazy" />
+                  <img src="/images/gallery/104-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-guto-macedo-72150916-8444548.jpg" alt="Дюнер с пилешко" loading="lazy" />
+                  <img src="/images/gallery/106-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
                 <div className={styles.galleryItem}>
-                  <img src="/images/home/toDelete/pexels-robinstickel-70497.jpg" alt="Бургер с бекон" loading="lazy" />
+                  <img src="/images/gallery/108-Pizza Stop.avif" alt="Pizza Stop" loading="lazy" />
                 </div>
               </div>
             </div>
