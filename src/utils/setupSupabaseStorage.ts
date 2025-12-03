@@ -22,7 +22,7 @@ export async function setupSupabaseStorage(): Promise<void> {
       // Create the bucket
       const { data, error } = await supabase.storage.createBucket('pizza-stop', {
         public: true,
-        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif'],
         fileSizeLimit: 5 * 1024 * 1024 // 5MB
       });
 

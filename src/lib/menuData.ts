@@ -14,6 +14,7 @@ export interface MenuItem {
   name: string
   basePrice: number
   image: string
+  secondImage?: string | null // Second image for hover effect
   category: string
   rating: number
   time: string
@@ -279,12 +280,18 @@ export async function fetchMenuData() {
 
       // Use ImageURL from database if available, otherwise fallback to emoji
       let selectedImage = emojiMap[product.ProductTypeID] || '🍽️'
+      let secondImage: string | null = null
       
       if (product.ImageURL && product.ImageURL.trim() !== '') {
         // Use the actual image URL from the database
         selectedImage = product.ImageURL
       } else {
         // Fallback to emoji if no image URL in database
+      }
+
+      // Get second image if available
+      if (product.SecondImageURL && product.SecondImageURL.trim() !== '') {
+        secondImage = product.SecondImageURL
       }
 
       // Determine base price - for burgers and drinks, use the first available price
@@ -307,6 +314,7 @@ export async function fetchMenuData() {
         name: product.Product,
         basePrice: basePrice,
         image: selectedImage,
+        secondImage: secondImage,
         category,
         rating: ratingMap[product.ProductTypeID] || 4.5,
         time: timeMap[product.ProductTypeID] || '10-15 мин',
