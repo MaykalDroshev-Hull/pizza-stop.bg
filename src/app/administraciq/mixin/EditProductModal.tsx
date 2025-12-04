@@ -17,6 +17,7 @@ interface Product {
   productTypeId?: number | null;
   productType?: string;
   isNoAddOns?: boolean;
+  sortOrder?: number | null;
 }
 
 interface EditProductForm {
@@ -30,6 +31,7 @@ interface EditProductForm {
   secondImageUrl: string; // Second image for hover effect
   isDisabled: boolean;
   isNoAddOns: boolean;
+  sortOrder: string;
 }
 
 interface EditProductModalProps {
@@ -57,7 +59,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     imageUrl: "",
     secondImageUrl: "",
     isDisabled: false,
-    isNoAddOns: false
+    isNoAddOns: false,
+    sortOrder: "0"
   });
 
   const [hasChanges, setHasChanges] = useState<boolean>(false);
@@ -77,7 +80,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
         imageUrl: product.imageUrl || "",
         secondImageUrl: product.secondImageUrl || "",
         isDisabled: product.isDisabled || false,
-        isNoAddOns: product.isNoAddOns || false
+        isNoAddOns: product.isNoAddOns || false,
+        sortOrder: product.sortOrder !== undefined && product.sortOrder !== null ? product.sortOrder.toString() : "0"
       };
 
       setFormData(initialData);
@@ -135,7 +139,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
       productTypeId: formData.productTypeId ? parseInt(formData.productTypeId) : null,
       productType: formData.productTypeId
         ? getProductTypeName(parseInt(formData.productTypeId))
-        : undefined
+        : undefined,
+      sortOrder: formData.sortOrder ? parseInt(formData.sortOrder) : 0
     };
 
     onSave(product.id, updatedProduct);
@@ -245,6 +250,25 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Ред на сортиране
+                </label>
+                <input
+                  type="number"
+                  step="1"
+                  value={formData.sortOrder}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    handleInputChange("sortOrder", e.target.value)
+                  }
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-600 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="0"
+                />
+                <p className="mt-1 text-xs text-gray-400">
+                  По-ниските числа се показват първи в категорията
+                </p>
               </div>
 
               <div>

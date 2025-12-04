@@ -2126,37 +2126,38 @@ export default function CheckoutPage() {
                    </div>
                  </button>
 
-                 <button
-                   type="button"
-                   onClick={() => setPaymentMethodId(4)}
-                   className={`p-4 rounded-lg border-2 transition-all ${
-                     paymentMethodId === 4
-                       ? 'border-yellow bg-yellow/10 text-yellow'
-                       : 'border-white/20 bg-white/5 text-text hover:border-white/30'
-                   }`}
-                 >
-                   <div className="flex items-center gap-3">
-                     <div className="w-3 h-3 rounded-full bg-yellow"></div>
-                     <Banknote size={20} />
-                     <span className="font-medium">В брой на адрес</span>
-                   </div>
-                 </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethodId(4)}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    paymentMethodId === 4
+                      ? 'border-yellow bg-yellow/10 text-yellow'
+                      : 'border-white/20 bg-white/5 text-text hover:border-white/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-yellow"></div>
+                    <Banknote size={20} />
+                    <span className="font-medium">В брой на адрес</span>
+                  </div>
+                </button>
 
-                 <button
-                   type="button"
-                   onClick={() => setPaymentMethodId(5)}
-                   className={`p-4 rounded-lg border-2 transition-all ${
-                     paymentMethodId === 5
-                       ? 'border-yellow bg-yellow/10 text-yellow'
-                       : 'border-white/20 bg-white/5 text-text hover:border-white/30'
-                   }`}
-                 >
-                   <div className="flex items-center gap-3">
-                     <div className="w-3 h-3 rounded-full bg-yellow"></div>
-                     <Globe size={20} />
-                     <span className="font-medium">Онлайн</span>
-                   </div>
-                 </button>
+                {/* Online payment temporarily disabled */}
+                {/* <button
+                  type="button"
+                  onClick={() => setPaymentMethodId(5)}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    paymentMethodId === 5
+                      ? 'border-yellow bg-yellow/10 text-yellow'
+                      : 'border-white/20 bg-white/5 text-text hover:border-white/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-yellow"></div>
+                    <Globe size={20} />
+                    <span className="font-medium">Онлайн</span>
+                  </div>
+                </button> */}
                </div>
              </div>
            )}
@@ -2426,7 +2427,8 @@ export default function CheckoutPage() {
               </div>
 
               {/* Payment Initiation - Only show when online payment is selected */}
-              {paymentMethodId === 5 && (
+              {/* Online payment temporarily disabled */}
+              {/* {paymentMethodId === 5 && (
                 <div className="bg-card border border-white/12 rounded-2xl p-6 mt-6">
                   <h3 className="text-xl font-bold text-text mb-6 flex items-center">
                     <CreditCard size={20} className="mr-2" />
@@ -2434,7 +2436,6 @@ export default function CheckoutPage() {
                   </h3>
 
                   <div className="space-y-4">
-                    {/* Security Notice */}
                     <div className="flex items-start gap-3 text-sm text-gray-300 bg-blue-400/10 border border-blue-400/20 rounded-lg p-4">
                       <Lightbulb size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
                       <div>
@@ -2442,7 +2443,6 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    {/* Payment Initiation Button */}
                     <button
                       type="button"
                       onClick={handleInitiatePayment}
@@ -2463,7 +2463,7 @@ export default function CheckoutPage() {
                     </button>
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Validation Messages */}
               <div className="space-y-2">

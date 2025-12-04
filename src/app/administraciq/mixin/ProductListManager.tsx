@@ -27,6 +27,7 @@ interface Product {
   largePrice?: number | null;
   productTypeId?: number | null;
   productType?: string;
+  sortOrder?: number | null;
   isMarkedForDeletion?: boolean;
   isAnimating?: boolean;
   isDeleted?: boolean;
@@ -54,6 +55,7 @@ interface AddProductForm {
   productTypeId: string;
   imageUrl: string;
   secondImageUrl: string; // Second image for hover effect
+  sortOrder: string;
 }
 
 // Filter state interface
@@ -141,7 +143,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
     largePrice: "",
     productTypeId: "",
     imageUrl: "",
-    secondImageUrl: ""
+    secondImageUrl: "",
+    sortOrder: "0"
   });
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   
@@ -223,6 +226,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
           largePrice: product.LargePrice,
           productTypeId: product.ProductTypeID,
           productType: getProductTypeName(product.ProductTypeID || 0),
+          sortOrder: product.SortOrder || 0,
           isMarkedForDeletion: false,
           isAnimating: false,
           isDeleted: product.isDeleted === 1 || product.isDeleted === true
@@ -434,7 +438,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         SmallPrice: updatedProduct.smallPrice,
         MediumPrice: updatedProduct.mediumPrice,
         LargePrice: updatedProduct.largePrice,
-        ProductTypeID: updatedProduct.productTypeId
+        ProductTypeID: updatedProduct.productTypeId,
+        SortOrder: updatedProduct.sortOrder || 0
       };
       
       const savedProduct = await upsertProductClient(productData);
@@ -452,6 +457,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         largePrice: savedProduct.LargePrice,
         productTypeId: savedProduct.ProductTypeID,
         productType: updatedProduct.productType || getProductTypeName(savedProduct.ProductTypeID || 0),
+        sortOrder: savedProduct.SortOrder || 0,
         isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
       
@@ -599,7 +605,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         SmallPrice: parseFloat(newProduct.smallPrice),
         MediumPrice: newProduct.mediumPrice ? parseFloat(newProduct.mediumPrice) : null,
         LargePrice: newProduct.largePrice ? parseFloat(newProduct.largePrice) : null,
-        ProductTypeID: parseInt(newProduct.productTypeId)
+        ProductTypeID: parseInt(newProduct.productTypeId),
+        SortOrder: newProduct.sortOrder ? parseInt(newProduct.sortOrder) : 0
       };
       
       const savedProduct = await upsertProductClient(productData);
@@ -617,6 +624,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         largePrice: savedProduct.LargePrice,
         productTypeId: savedProduct.ProductTypeID,
         productType: getProductTypeName(savedProduct.ProductTypeID || 0),
+        sortOrder: savedProduct.SortOrder || 0,
         isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
       
@@ -629,7 +637,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         largePrice: "", 
         productTypeId: "", 
         imageUrl: "",
-        secondImageUrl: ""
+        secondImageUrl: "",
+        sortOrder: "0"
       });
       setIsModalOpen(false);
       addFlashMessage('success', 'Продуктът беше добавен успешно!');
@@ -650,7 +659,8 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       largePrice: "", 
       productTypeId: "", 
       imageUrl: "",
-      secondImageUrl: ""
+      secondImageUrl: "",
+      sortOrder: "0"
     });
     setImageUploadError(null);
     setIsAddingProduct(false);
@@ -1448,6 +1458,25 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Ред на сортиране
+            </label>
+            <input
+              type="number"
+              step="1"
+              value={newProduct.sortOrder}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleInputChange('sortOrder', e.target.value)
+              }
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+              placeholder="0"
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              По-ниските числа се показват първи в категорията
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

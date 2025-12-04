@@ -247,6 +247,7 @@ export async function fetchMenuData() {
       .eq('IsDisabled', 0)
       .or('isDeleted.eq.false,isDeleted.is.null')
       .order('ProductTypeID', { ascending: true })
+      .order('SortOrder', { ascending: true })
       .order('Product', { ascending: true })
 
     if (error) {

@@ -375,7 +375,7 @@ export default function PrinterPage() {
     { id: "doners", name: "Дюнери", emoji: "" },
     { id: "burgers", name: "Бургери", emoji: "" },
     { id: "drinks", name: "Напитки", emoji: "" },
-    { id: "sauces", name: "Добавки и Сосове", emoji: "" },
+    { id: "sauces", name: "Сосове", emoji: "" },
   ];
 
   const handleCategorySelect = async (categoryId: string) => {
