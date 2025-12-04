@@ -147,6 +147,9 @@ export default function MenuPage() {
 
     addItem(cartItem)
 
+    // Scroll to top after adding to cart
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+
     // Reset selection and go back to step 1
     resetFiftyFiftySelection()
 
@@ -237,7 +240,7 @@ export default function MenuPage() {
     { key: 'doners', label: '🥙 Дюнери', count: menuData.doners?.length || 0 },
     { key: 'burgers', label: '🍔 Бургери', count: menuData.burgers?.length || 0 },
     { key: 'drinks', label: '🥤 Напитки', count: menuData.drinks?.length || 0 },
-    { key: 'sauces', label: '🍶 Добавки и Сосове\n(допълнително)', count: menuData.sauces?.length || 0 }
+    { key: 'sauces', label: '🍶 Сосове', count: menuData.sauces?.length || 0 }
   ]
 
   // Reset 50/50 selection when changing categories
@@ -380,31 +383,10 @@ export default function MenuPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="bg-card border-b border-white/8 sticky top-0 z-40 h-20">
-        <div className="container py-4 h-full">
-          <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 h-full">
-            <h1 className="text-3xl font-bold text-text">Поръчай сега!</h1>
-              
-           
-            
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={20} />
-              <input
-                type="text"
-                placeholder="Търсене в менюто..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-3 bg-card border border-white/12 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange focus:border-transparent w-64 text-text placeholder-muted"
-              />
-            </div>
-          </div>
-        </div>
-      </header>
 
-      {/* Category tabs */}
-      <div className="bg-card border-b border-white/8 sticky top-16 sm:top-20 z-30">
-        <div className="container py-2 sm:py-4 px-4">
+      {/* Product Grid */}
+      <div className="w-full max-w-7xl mx-auto py-4 sm:py-8 px-4">
+      <div className="container py-15 sm:pt-20 pb-10 px-4 ">
           <div 
             className="grid gap-2 sm:flex sm:justify-center sm:gap-4 sm:flex-wrap sm:overflow-visible sm:scrollbar-hide"
             style={{ 
@@ -422,15 +404,10 @@ export default function MenuPage() {
                 }`}
               >
                 <span className="font-medium whitespace-pre-line text-center leading-tight block">{category.label}</span>
-                <span className="ml-1 sm:ml-2 text-xs sm:text-sm opacity-75 block mt-0.5">({category.count})</span>
               </button>
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Product Grid */}
-      <div className="w-full max-w-7xl mx-auto py-4 sm:py-8 px-4">
         {activeCategory === 'pizza-5050' ? (
           /* 50/50 Pizza Special UI */
           <div className="max-w-7xl mx-auto">

@@ -11,6 +11,7 @@ export interface DatabaseProduct {
   MediumPrice?: number | null;
   LargePrice?: number | null;
   ProductTypeID?: number | null;
+  SortOrder?: number | null;
   isDeleted?: number | boolean;
 }
 
