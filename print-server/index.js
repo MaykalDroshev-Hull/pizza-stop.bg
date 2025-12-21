@@ -234,7 +234,7 @@ app.post('/print', (req, res) => {
       
       ticketData.items.forEach(item => {
         const itemLine = `${item.quantity}x ${item.name}`;
-        const price = `${item.totalPrice.toFixed(2)} лв`;
+        const price = `${item.totalPrice.toFixed(2)} €`;
         const spaces = 48 - itemLine.length - price.length;
         
         printer.text(itemLine + ' '.repeat(spaces) + price);
@@ -263,16 +263,16 @@ app.post('/print', (req, res) => {
       // Totals
       printer
         .style('b')
-        .text('Междинна сума:' + ' '.repeat(20) + ticketData.subtotal.toFixed(2) + ' лв');
+        .text('Междинна сума:' + ' '.repeat(20) + ticketData.subtotal.toFixed(2) + ' €');
       
       if (ticketData.deliveryFee > 0) {
-        printer.text('Доставка:' + ' '.repeat(26) + ticketData.deliveryFee.toFixed(2) + ' лв');
+        printer.text('Доставка:' + ' '.repeat(26) + ticketData.deliveryFee.toFixed(2) + ' €');
       }
       
       printer
         .text('='.repeat(48))
         .size(1, 2)
-        .text('ОБЩО:' + ' '.repeat(20) + ticketData.totalPrice.toFixed(2) + ' лв')
+        .text('ОБЩО:' + ' '.repeat(20) + ticketData.totalPrice.toFixed(2) + ' €')
         .size(1, 1)
         .style('normal')
         .text('='.repeat(48));

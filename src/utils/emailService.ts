@@ -432,10 +432,10 @@ export class EmailService {
           </div>
           <div style="text-align: right; min-width: 120px;">
             <p style="margin: 0; font-weight: 800; color: #ff7f11; font-size: 16px;">
-              ${item.quantity} × ${item.price.toFixed(2)} лв.
+              ${item.quantity} × ${item.price.toFixed(2)} €.
             </p>
             <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">
-              Общо: ${(item.quantity * (item.price || 0)).toFixed(2)} лв.
+              Общо: ${(item.quantity * (item.price || 0)).toFixed(2)} €.
             </p>
           </div>
         </div>
@@ -688,7 +688,7 @@ export class EmailService {
           </div>
           
           <div class="total-section">
-            <h3 class="total-amount">Обща сума: ${orderDetails.totalAmount.toFixed(2)} лв.</h3>
+            <h3 class="total-amount">Обща сума: ${orderDetails.totalAmount.toFixed(2)} €.</h3>
           </div>
           
           <div class="action-buttons">
@@ -767,7 +767,7 @@ export class EmailService {
           </div>
           <div style="text-align: right;">
             <div style="font-weight: 600; color: #333;">${item.quantity}x</div>
-            <div style="font-weight: 700; color: #ff7f11; font-size: 16px;">${item.price.toFixed(2)} лв.</div>
+            <div style="font-weight: 700; color: #ff7f11; font-size: 16px;">${item.price.toFixed(2)} €.</div>
           </div>
         </div>
       </div>
@@ -985,7 +985,7 @@ export class EmailService {
           </div>
 
           <div class="total-section">
-            <div class="total-amount">${orderDetails.totalAmount.toFixed(2)} лв.</div>
+            <div class="total-amount">${orderDetails.totalAmount.toFixed(2)} €.</div>
             <div class="total-label">Обща сума</div>
           </div>
 
@@ -1042,7 +1042,7 @@ export class EmailService {
           ${item.name}${item.size ? ` (${item.size})` : ''}
         </div>
         <div style="color: #666; font-size: 14px;">
-          Количество: ${item.quantity} × ${item.price.toFixed(2)} лв. = ${(item.quantity * item.price).toFixed(2)} лв.
+          Количество: ${item.quantity} × ${item.price.toFixed(2)} €. = ${(item.quantity * item.price).toFixed(2)} €.
         </div>
         ${item.addons && item.addons.length > 0 ? `
           <div style="color: #d32f2f; font-size: 13px; margin-top: 5px;">
@@ -1225,7 +1225,7 @@ export class EmailService {
           </div>
           
           <div class="total-section">
-            <div class="total-text">Обща сума: ${orderDetails.totalAmount.toFixed(2)} лв.</div>
+            <div class="total-text">Обща сума: ${orderDetails.totalAmount.toFixed(2)} €.</div>
           </div>
           
           <div style="text-align: center; margin: 30px 0;">

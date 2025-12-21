@@ -254,7 +254,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                     const totalPrice = basePrice + addonCost;
                     
                     return totalPrice.toFixed(2);
-                  })()} лв.
+                  })()} €.
                 </span>
               </div>
             </div>
@@ -316,7 +316,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                     }
                     return selectedSize.name;
                   })()}</span>
-                  <span className="text-orange font-bold text-lg">{selectedSize.price?.toFixed(2)} лв.</span>
+                  <span className="text-orange font-bold text-lg">{selectedSize.price?.toFixed(2)} €.</span>
                 </div>
                 <button
                   type="button"
@@ -360,7 +360,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                           )}
                         </div>
                         <div className="text-sm font-bold text-orange">
-                          {(sizeOption.price || 0).toFixed(2)} лв.
+                          {(sizeOption.price || 0).toFixed(2)} €.
                         </div>
                       </button>
                     ))
@@ -415,7 +415,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                           )}
                         </div>
                         <div className="text-sm font-bold text-orange">
-                          {(sizeOption.price || 0).toFixed(2)} лв.
+                          {(sizeOption.price || 0).toFixed(2)} €.
                         </div>
                       </button>
                     );
@@ -514,14 +514,14 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                                     const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID)
                                     if (positionInType >= 3) {
                                       // 4th and beyond of this type are paid
-                                      return `${addon.Price.toFixed(2)} лв.`
+                                      return `${addon.Price.toFixed(2)} €.`
                                     } else {
                                       // First 3 of this type remain free
                                       return 'Безплатно'
                                     }
                                   } else {
                                     // Unselected ones show price after 3 of this type are selected
-                                    return `${addon.Price.toFixed(2)} лв.`
+                                    return `${addon.Price.toFixed(2)} €.`
                                   }
                                 }
                               })()}
@@ -599,14 +599,14 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                                     const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID)
                                     if (positionInType >= 3) {
                                       // 4th and beyond of this type are paid
-                                      return `${addon.Price.toFixed(2)} лв.`
+                                      return `${addon.Price.toFixed(2)} €.`
                                     } else {
                                       // First 3 of this type remain free
                                       return 'Безплатно'
                                     }
                                   } else {
                                     // Unselected ones show price after 3 of this type are selected
-                                    return `${addon.Price.toFixed(2)} лв.`
+                                    return `${addon.Price.toFixed(2)} €.`
                                   }
                                 }
                               })()}
@@ -650,7 +650,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                               whiteSpace: 'nowrap'
                             }}>{addon.Name}</div>
                             <div className="text-xs mt-1 text-red-400">
-                              {addon.Price.toFixed(2)} лв.
+                              {addon.Price.toFixed(2)} €.
                             </div>
                           </button>
                         ))}
@@ -691,7 +691,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                               whiteSpace: 'nowrap'
                             }}>{addon.Name}</div>
                             <div className="text-xs mt-1 text-red-400">
-                              {addon.Price.toFixed(2)} лв.
+                              {addon.Price.toFixed(2)} €.
                             </div>
                           </button>
                         ))}
@@ -732,7 +732,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                               whiteSpace: 'nowrap'
                             }}>{addon.Name}</div>
                             <div className="text-xs mt-1 text-red-400">
-                              {addon.Price.toFixed(2)} лв.
+                              {addon.Price.toFixed(2)} €.
                             </div>
                           </button>
                         ))}
@@ -811,7 +811,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                       {item.name} {quantity > 1 && `× ${quantity}`}
                     </span>
                     <span className="text-sm font-medium text-text">
-                      {basePrice.toFixed(2)} лв.
+                      {basePrice.toFixed(2)} €.
                     </span>
                   </div>
                   
@@ -840,7 +840,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                               {isFree && <span className="text-green-400 ml-1">(безплатно)</span>}
                             </span>
                             <span className="text-xs font-medium text-text">
-                              {addonTotal.toFixed(2)} лв.
+                              {addonTotal.toFixed(2)} €.
                             </span>
                           </div>
                         )
@@ -853,7 +853,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-text">Общо:</span>
                       <span className="text-xl font-bold text-orange">
-                        {totalPrice.toFixed(2)} лв.
+                        {totalPrice.toFixed(2)} €.
                       </span>
                     </div>
                   </div>

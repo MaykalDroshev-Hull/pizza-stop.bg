@@ -1292,7 +1292,7 @@ export default function DashboardPage() {
                       <h3>Поръчка #{favouriteOrder.OrderID}</h3>
                     </div>
                     <div className={styles.orderTotal}>
-                      {favouriteOrder.TotalAmount.toFixed(2)} лв.
+                      {favouriteOrder.TotalAmount.toFixed(2)} €.
                     </div>
                   </div>
                   <div className={styles.orderProducts}>
@@ -1302,14 +1302,14 @@ export default function DashboardPage() {
                           <span className={styles.productName}>{product.ProductName}</span>
                           <span className={styles.productSize}>{product.ProductSize}</span>
                           <span className={styles.productQuantity}>x{product.Quantity}</span>
-                          <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} лв.</span>
+                          <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} €.</span>
                         </div>
                         {product.Addons && product.Addons.length > 0 && (
                           <div className={styles.productAddons}>
                             {product.Addons.map((addon, addonIndex) => (
                               <span key={addonIndex} className={styles.addonItem}>
                                 {addon.Name}
-                                {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                                {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
                               </span>
                             ))}
                           </div>
@@ -1361,7 +1361,7 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <div className={styles.orderTotal}>
-                          {order.TotalAmount.toFixed(2)} лв.
+                          {order.TotalAmount.toFixed(2)} €.
                         </div>
                       </div>
                       <div className={styles.orderProducts}>
@@ -1371,14 +1371,14 @@ export default function DashboardPage() {
                               <span className={styles.productName}>{product.ProductName}</span>
                               <span className={styles.productSize}>{product.ProductSize}</span>
                               <span className={styles.productQuantity}>x{product.Quantity}</span>
-                              <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} лв.</span>
+                              <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} €.</span>
                             </div>
                             {product.Addons && product.Addons.length > 0 && (
                               <div className={styles.productAddons}>
                                 {product.Addons.slice(0, 2).map((addon, addonIndex) => (
                                   <span key={addonIndex} className={styles.addonItem}>
                                     {addon.Name}
-                                    {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                                    {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
                                   </span>
                                 ))}
                                 {product.Addons.length > 2 && (
@@ -1636,13 +1636,13 @@ export default function DashboardPage() {
                          {addressZone === 'yellow' && (
                            <div className={styles.zoneYellow}>
                              <CheckCircle size={16} />
-                             <span>Зона 1 (3 лв.)</span>
+                             <span>Зона 1 (3 €.)</span>
                            </div>
                          )}
                          {addressZone === 'blue' && (
                            <div className={styles.zoneBlue}>
                              <CheckCircle size={16} />
-                             <span>Зона 2 (7 лв.)</span>
+                             <span>Зона 2 (7 €.)</span>
                            </div>
                          )}
                          {addressZone === 'outside' && (
@@ -1724,11 +1724,11 @@ export default function DashboardPage() {
                 <div className={styles.zoneLegend}>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#fbbf24' }}></div>
-                    <span>Зона 1 (3 лв.)</span>
+                    <span>Зона 1 (3 €.)</span>
                   </div>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#3b82f6' }}></div>
-                    <span>Зона 2 (7 лв.)</span>
+                    <span>Зона 2 (7 €.)</span>
                   </div>
                 </div>
                 <div className={styles.mapModalActions}>

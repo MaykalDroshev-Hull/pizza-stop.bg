@@ -326,7 +326,7 @@ npm run dev
 - [ ] **SSL сертификат инсталиран** на production domain
 - [ ] **Private keys съхранени сигурно** на production server
 - [ ] **File permissions настроени правилно** (chmod 400)
-- [ ] **Тествано с малка сума** (например 0.01 лв)
+- [ ] **Тествано с малка сума** (например 0.01 €)
 - [ ] **Monitoring и logging активирани**
 
 ### Production Environment Variables:

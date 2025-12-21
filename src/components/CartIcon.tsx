@@ -99,7 +99,7 @@ export default function CartIcon() {
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-orange">{(getItemTotalPrice(item) / item.quantity).toFixed(2)} лв.</p>
+                        <p className="font-bold text-orange">{(getItemTotalPrice(item) / item.quantity).toFixed(2)} €.</p>
                         <button
                           onClick={() => removeItem(item.id)}
                           className="text-muted hover:text-red transition-colors p-1 mt-1"
@@ -122,7 +122,7 @@ export default function CartIcon() {
                   <div className="text-center p-4 bg-white/6 rounded-xl border border-white/12 mb-4">
                     <div className="text-sm text-muted">Обща сума:</div>
                     <div className="text-2xl font-bold text-orange">
-                      {totalPrice.toFixed(2)} лв.
+                      {totalPrice.toFixed(2)} €.
                     </div>
                   </div>
                   

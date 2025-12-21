@@ -872,7 +872,7 @@ export default function CheckoutPage() {
       }
 
       if (totalPrice < 15) {
-        alert('❌ Минималната сума за поръчка е 15 лв.')
+        alert('❌ Минималната сума за поръчка е 15 €.')
         setIsLoading(false)
         return
       }
@@ -1287,7 +1287,7 @@ export default function CheckoutPage() {
     
     // Validate minimum order amount
     if (totalPrice < 15) {
-      alert('❌ Минималната сума за поръчка е 15 лв.')
+      alert('❌ Минималната сума за поръчка е 15 €.')
       setIsLoading(false)
       return
     }
@@ -1548,7 +1548,7 @@ export default function CheckoutPage() {
                             </p>
                           </div>
                         </div>
-                        <p className="font-bold text-orange">{getItemTotalPrice(item).toFixed(2)} лв.</p>
+                        <p className="font-bold text-orange">{getItemTotalPrice(item).toFixed(2)} €.</p>
                       </div>
                       
                       {/* Display addons if any */}
@@ -1568,7 +1568,7 @@ export default function CheckoutPage() {
                                         className="text-xs bg-green/20 text-green px-2 py-1 rounded-md"
                                       >
                                         {addon.Name}
-                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
                                       </span>
                                     ))}
                                 </div>
@@ -1588,7 +1588,7 @@ export default function CheckoutPage() {
                                         className="text-xs bg-emerald/20 text-emerald px-2 py-1 rounded-md"
                                       >
                                         {addon.Name}
-                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
                                       </span>
                                     ))}
                                 </div>
@@ -1608,7 +1608,7 @@ export default function CheckoutPage() {
                                         className="text-xs bg-orange/20 text-orange px-2 py-1 rounded-md"
                                       >
                                         {addon.Name}
-                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
                                       </span>
                                     ))}
                                 </div>
@@ -1628,7 +1628,7 @@ export default function CheckoutPage() {
                                         className="text-xs bg-orange/20 text-orange px-2 py-1 rounded-md"
                                       >
                                         {addon.Name}
-                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} лв.)`}
+                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
                                       </span>
                                     ))}
                                 </div>
@@ -2244,7 +2244,7 @@ export default function CheckoutPage() {
                       {/* Autocomplete Info */}
                 <div className="text-xs text-muted bg-blue/10 border border-blue/20 rounded-lg p-2 flex items-center gap-2 mb-3">
                         <Lightbulb size={14} className="text-blue" />
-                        <span>Въведете адреса и ще се появят предложения за автоматично попълване</span>
+                        <span>Въведете адреса и ще се появят предложения за автоматично попъ€ане</span>
                       </div>
 
               {/* Action Buttons */}
@@ -2410,7 +2410,7 @@ export default function CheckoutPage() {
                     {deliveryCost === 0 ? (
                       <span className="text-white">Безплатна</span>
                     ) : (
-                      <span className="text-white">{deliveryCost.toFixed(2)} лв.</span>
+                      <span className="text-white">{deliveryCost.toFixed(2)} €.</span>
                     )}
                   </span>
                 </div>
@@ -2421,7 +2421,7 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between text-lg font-bold">
                   <span>Обща сума:</span>
                   <span className="text-white">
-                    {(totalPrice + (selectedDeliveryType === 'pickup' ? 0 : (deliveryCost || 0))).toFixed(2)} лв.
+                    {(totalPrice + (selectedDeliveryType === 'pickup' ? 0 : (deliveryCost || 0))).toFixed(2)} €.
                   </span>
                 </div>
               </div>
@@ -2471,14 +2471,14 @@ export default function CheckoutPage() {
                 {addressZone === 'yellow' && selectedDeliveryType !== 'pickup' && totalPrice < 15 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за жълта зона</div>
-                    <div>Минималната сума за доставка в жълта зона е 15 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
+                    <div>Минималната сума за доставка в жълта зона е 15 €. Текуща сума: {totalPrice.toFixed(2)} €.</div>
                   </div>
                 )}
                 
                 {addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < 30 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за синя зона</div>
-                    <div>Минималната сума за доставка в синя зона е 30 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
+                    <div>Минималната сума за доставка в синя зона е 30 €. Текуща сума: {totalPrice.toFixed(2)} €.</div>
                   </div>
                 )}
                 
@@ -2486,7 +2486,7 @@ export default function CheckoutPage() {
                 {selectedDeliveryType === 'pickup' && totalPrice < 15 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за поръчка</div>
-                    <div>Минималната сума за поръчка е 15 лв. Текуща сума: {totalPrice.toFixed(2)} лв.</div>
+                    <div>Минималната сума за поръчка е 15 €. Текуща сума: {totalPrice.toFixed(2)} €.</div>
                   </div>
                 )}
                 
@@ -2584,11 +2584,11 @@ export default function CheckoutPage() {
                 <div className={styles.zoneLegend}>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#fbbf24' }}></div>
-                    <span>Зона 1 (3 лв.)</span>
+                    <span>Зона 1 (3 €.)</span>
                   </div>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#3b82f6' }}></div>
-                    <span>Зона 2 (7 лв.)</span>
+                    <span>Зона 2 (7 €.)</span>
                   </div>
                 </div>
                 <div className={styles.mapModalActions}>

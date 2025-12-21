@@ -668,7 +668,7 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
 
   // Price formatting
   const formatPriceWithEuro = (bgnPrice: number): string => {
-    return `${bgnPrice.toFixed(2)} лв`;
+    return `${bgnPrice.toFixed(2)} €`;
   };
 
   // Autocomplete functions

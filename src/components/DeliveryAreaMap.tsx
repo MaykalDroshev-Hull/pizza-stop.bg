@@ -97,10 +97,10 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
     
     if (isInLovechCity || hasLovechPostalCode) {
       isInCoverage = true
-      deliveryZone = 'Ловеч град (3 лв.)'
+      deliveryZone = 'Ловеч град (3 €.)'
     } else if (isInVillage) {
       isInCoverage = true
-      deliveryZone = 'Разширена зона (7 лв.)'
+      deliveryZone = 'Разширена зона (7 €.)'
     }
     
     // Simulate API call delay
@@ -378,13 +378,13 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
                  <div className={styles.deliveryInfo}>
            <div className={styles.infoCard}>
              <MapPin className={styles.infoIcon} />
-             <h3>Ловеч - 3 лв.</h3>
+             <h3>Ловеч - 3 €.</h3>
              <p>Доставка в град Ловеч и близките райони - Гозница, Продимчец, Вилна зона - Бабаковец, Синантепе</p>
            </div>
            
                        <div className={styles.infoCard}>
               <MapPin className={styles.infoIcon} />
-              <h3>Разширена зона - 7 лв.</h3>
+              <h3>Разширена зона - 7 €.</h3>
               <p>Лисец, Баховица, Сливек, Пресяка, Умаревци</p>
             </div>
            
@@ -403,11 +403,11 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
            <div className={styles.mapLegend}>
              <div className={styles.legendItem}>
                <div className={styles.legendColor} style={{ backgroundColor: '#fbbf24' }}></div>
-               <span>Ловеч - 3 лв. доставка</span>
+               <span>Ловеч - 3 €. доставка</span>
              </div>
              <div className={styles.legendItem}>
                <div className={styles.legendColor} style={{ backgroundColor: '#3b82f6' }}></div>
-               <span>Разширена зона - 7 лв. доставка</span>
+               <span>Разширена зона - 7 €. доставка</span>
              </div>
            </div>
          </div>
@@ -429,9 +429,9 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
              <li><strong>Работно време:</strong><br/> Понеделник – Петък: 08:00 – 23:00<br/>Събота и Неделя: 11:00 – 21:00</li>
              <li><strong>Онлайн поръчки:</strong><br/> Понеделник – Петък: 09:00 - 22:30<br/>Събота и Неделя: 11:00 - 20:30</li>
              <li><strong>Телефон за поръчки:</strong> <br/> 068 670 070</li>
-             <li><strong>Минимална сума за доставка:</strong> 15 лв.</li>
-             <li><strong>Безплатна доставка в града при поръчка над 50 лв.</strong></li>
-             <li><strong>Доставка извън града: 7 лв.</strong></li>
+             <li><strong>Минимална сума за доставка:</strong> 15 €.</li>
+             <li><strong>Безплатна доставка в града при поръчка над 50 €.</strong></li>
+             <li><strong>Доставка извън града: 7 €.</strong></li>
              <li><strong>Поръчки с отложен час:</strong> <br/> приемат се до 5 дни предварително</li>
            </ul>
          </div>

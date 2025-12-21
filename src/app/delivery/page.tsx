@@ -597,7 +597,7 @@ const DeliveryDashboard = () => {
           </div>
           <div className="text-right flex-shrink-0 ml-2">
             <div className="text-green-400 font-bold text-sm sm:text-base">
-              {(order.totalAmount).toFixed(2)} лв
+              {(order.totalAmount).toFixed(2)} €
             </div>
           </div>
         </div>

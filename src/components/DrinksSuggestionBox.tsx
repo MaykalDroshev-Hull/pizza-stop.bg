@@ -124,7 +124,7 @@ export default function DrinksSuggestionBox({ onClose }: DrinksSuggestionBoxProp
               <div className="flex items-center justify-between mb-3">
                 <div className="flex-1">
                   <h4 className="font-medium text-text text-sm">{drink.name}</h4>
-                  <p className="text-muted text-xs">{drink.smallPrice?.toFixed(2)} лв.</p>
+                  <p className="text-muted text-xs">{drink.smallPrice?.toFixed(2)} €.</p>
                 </div>
                 {drink.image && (
                   <img 
@@ -163,7 +163,7 @@ export default function DrinksSuggestionBox({ onClose }: DrinksSuggestionBoxProp
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted">
           {hasSelectedItems && (
-            <span>Общо: {getTotalPrice().toFixed(2)} лв. ({getTotalSelectedItems()} напитки)</span>
+            <span>Общо: {getTotalPrice().toFixed(2)} €. ({getTotalSelectedItems()} напитки)</span>
           )}
         </div>
         
