@@ -397,11 +397,11 @@ function OrderSuccessContent() {
 
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-red/10 rounded-full flex items-center justify-center">
-                  <span className="text-red font-bold text-lg">лв</span>
+                  <span className="text-red font-bold text-lg">€</span>
                 </div>
                 <div>
                   <p className="text-sm text-muted">Обща сума</p>
-                  <p className="font-medium text-text">{(orderDetails.itemsTotal + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} лв.</p>
+                  <p className="font-medium text-text">{(orderDetails.itemsTotal + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} €.</p>
                 </div>
               </div>
             </div>
@@ -465,25 +465,25 @@ function OrderSuccessContent() {
                     ) : null}
                   </div>
                   <div className="text-right min-w-[140px]">
-                    <p className="text-text font-medium">{item.Quantity} × {Number(item.UnitPrice).toFixed(2)} лв.</p>
-                    <p className="text-muted text-sm">Общо: {Number(item.TotalPrice).toFixed(2)} лв.</p>
+                    <p className="text-text font-medium">{item.Quantity} × {Number(item.UnitPrice).toFixed(2)} €.</p>
+                    <p className="text-muted text-sm">Общо: {Number(item.TotalPrice).toFixed(2)} €.</p>
                   </div>
                 </div>
               ))}
               <div className="space-y-2 pt-2 border-t border-white/10">
                 <div className="flex items-center justify-between">
                   <p className="text-text">Сума на продуктите:</p>
-                  <p className="text-text">{orderDetails.itemsTotal.toFixed(2)} лв.</p>
+                  <p className="text-text">{orderDetails.itemsTotal.toFixed(2)} €.</p>
                 </div>
                 {!orderDetails.isCollection && orderDetails.deliveryCost > 0 && (
                   <div className="flex items-center justify-between">
                     <p className="text-text">Доставка:</p>
-                    <p className="text-text">{orderDetails.deliveryCost.toFixed(2)} лв.</p>
+                    <p className="text-text">{orderDetails.deliveryCost.toFixed(2)} €.</p>
                   </div>
                 )}
                 <div className="flex items-center justify-between pt-2 border-t border-white/10">
                   <p className="text-text font-semibold">Крайна сума</p>
-                  <p className="text-text font-semibold">{(orderDetails.itemsTotal + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} лв.</p>
+                  <p className="text-text font-semibold">{(orderDetails.itemsTotal + (orderDetails.isCollection ? 0 : orderDetails.deliveryCost)).toFixed(2)} €.</p>
                 </div>
               </div>
             </div>

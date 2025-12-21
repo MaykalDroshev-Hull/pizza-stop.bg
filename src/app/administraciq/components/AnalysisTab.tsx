@@ -393,7 +393,7 @@ const AnalysisTab = (): React.JSX.Element => {
       id: "revenue",
       icon: BarChart3,
       label: "Приходи",
-      value: `${dashboardMetrics.totalRevenue.toFixed(2)} лв`,
+      value: `${dashboardMetrics.totalRevenue.toFixed(2)} €`,
       bgColor: "bg-green-600/20",
       iconColor: "text-green-400"
     },
@@ -401,7 +401,7 @@ const AnalysisTab = (): React.JSX.Element => {
       id: "avgOrder",
       icon: Coffee,
       label: "Средна поръчка",
-      value: `${dashboardMetrics.averageOrderValue.toFixed(2)} лв`,
+      value: `${dashboardMetrics.averageOrderValue.toFixed(2)} €`,
       bgColor: "bg-blue-600/20",
       iconColor: "text-blue-400"
     },
@@ -419,9 +419,9 @@ const AnalysisTab = (): React.JSX.Element => {
   const fmtBG = new Intl.NumberFormat('bg-BG', { maximumFractionDigits: 2 });
 
   const formatMoney = (v: number): string => {
-    if (v >= 1_000_000) return `${(v/1_000_000).toFixed(2)}M лв`;
-    if (v >= 1_000) return `${(v/1_000).toFixed(2)}K лв`;
-    return `${fmtBG.format(v)} лв`;
+    if (v >= 1_000_000) return `${(v/1_000_000).toFixed(2)}M €`;
+    if (v >= 1_000) return `${(v/1_000).toFixed(2)}K €`;
+    return `${fmtBG.format(v)} €`;
   };
 
   const MetricValue = ({ children }: { children: React.ReactNode }): React.JSX.Element => (
@@ -605,7 +605,7 @@ const AnalysisTab = (): React.JSX.Element => {
                   </div>
 
                   <div className="text-right shrink-0 whitespace-nowrap">
-                    <div className="text-green-400 font-bold tabular-nums">{product.totalRevenue.toFixed(2)} лв</div>
+                    <div className="text-green-400 font-bold tabular-nums">{product.totalRevenue.toFixed(2)} €</div>
                     <div className="text-xs text-gray-300 tabular-nums">{product.totalQuantity} бр</div>
                   </div>
                 </div>
@@ -639,7 +639,7 @@ const AnalysisTab = (): React.JSX.Element => {
                         </span>
                       </td>
                       <td className="py-3 px-3 text-white text-right font-semibold tabular-nums whitespace-nowrap">{product.totalQuantity} бр</td>
-                      <td className="py-3 px-3 text-green-400 text-right font-bold tabular-nums whitespace-nowrap">{product.totalRevenue.toFixed(2)} лв</td>
+                      <td className="py-3 px-3 text-green-400 text-right font-bold tabular-nums whitespace-nowrap">{product.totalRevenue.toFixed(2)} €</td>
                       <td className="py-3 px-3 text-gray-300 text-right tabular-nums whitespace-nowrap">{product.orderCount}</td>
                     </tr>
                   ))}
@@ -729,7 +729,7 @@ const AnalysisTab = (): React.JSX.Element => {
                   <div className="text-right">
                     <div className="text-xs text-gray-400">Общо продажби</div>
                     <div className="text-sm font-semibold text-white">
-                      {payment.totalQuantity} бр. <span className={color.text}>/ {payment.totalRevenue.toFixed(2)} лв</span>
+                      {payment.totalQuantity} бр. <span className={color.text}>/ {payment.totalRevenue.toFixed(2)} €</span>
                     </div>
                   </div>
                 </div>
@@ -748,7 +748,7 @@ const AnalysisTab = (): React.JSX.Element => {
                         <tr key={`${payment.paymentMethodId}-${product.productId}`} className="border-b border-gray-800 hover:bg-gray-900/50 transition-colors">
                           <td className="py-2 px-3 text-white">{product.productName}</td>
                           <td className="py-2 px-3 text-white text-right font-semibold">{product.quantity} бр</td>
-                          <td className="py-2 px-3 text-green-400 text-right font-bold">{product.revenue.toFixed(2)} лв</td>
+                          <td className="py-2 px-3 text-green-400 text-right font-bold">{product.revenue.toFixed(2)} €</td>
                         </tr>
                       ))}
                     </tbody>
@@ -823,7 +823,7 @@ const AnalysisTab = (): React.JSX.Element => {
                   year: 'numeric' 
                 })}
                 formatter={(value, name) => [
-                  name === 'orders' ? `${value} бр.` : `${Number(value).toFixed(2)} лв`,
+                  name === 'orders' ? `${value} бр.` : `${Number(value).toFixed(2)} €`,
                   name === 'orders' ? 'Поръчки' : 'Приходи'
                 ]}
               />

@@ -127,9 +127,9 @@ function getDeliveryZone(coordinates: { lat: number; lng: number }): 'yellow' | 
   const isInExtendedArea = isPointInPolygon(coordinates, extendedArea)
   
   if (isInLovechArea) {
-    return 'yellow' // Lovech city area - 3 лв delivery
+    return 'yellow' // Lovech city area - 3 € delivery
   } else if (isInExtendedArea) {
-    return 'blue' // Extended area - 7 лв delivery
+    return 'blue' // Extended area - 7 € delivery
   } else {
     return 'outside' // Outside delivery area - no delivery
   }
@@ -147,7 +147,7 @@ function calculateDeliveryCost(
   }
   
   if (!coordinates) {
-    console.warn('No coordinates provided for delivery cost calculation, using default 3 лв')
+    console.warn('No coordinates provided for delivery cost calculation, using default 3 €')
     return 3.00 // Default to yellow zone price
   }
   

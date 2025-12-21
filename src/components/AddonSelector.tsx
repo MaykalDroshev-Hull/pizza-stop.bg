@@ -78,7 +78,7 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons, category 
             
             // Calculate price based on category and selection
             const price = getAddonPrice(addon, 0, addon.AddonType, category)
-            const displayText = price === 0 ? 'Безплатно' : `${addon.Price.toFixed(2)} лв.`
+            const displayText = price === 0 ? 'Безплатно' : `${addon.Price.toFixed(2)} €.`
             const textColor = price === 0 
               ? (isSelected ? 'text-green-300' : 'text-green-400')
               : 'text-red-400'
@@ -155,7 +155,7 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons, category 
                 <div key={addon.AddonID} className="flex justify-between items-center text-sm">
                   <span className="text-white">{addon.Name}</span>
                   <span className={price === 0 ? 'text-green-400' : 'text-red-400'}>
-                    {price === 0 ? 'Безплатно' : `+${price.toFixed(2)} лв.`}
+                    {price === 0 ? 'Безплатно' : `+${price.toFixed(2)} €.`}
                   </span>
                 </div>
               )
@@ -167,7 +167,7 @@ export function AddonSelector({ addons, onAddonChange, selectedAddons, category 
               <div className="flex justify-between items-center">
                 <span className="text-white font-medium">Допълнителна цена:</span>
                 <span className="text-lg font-bold text-red-400">
-                  +{totalAddonCost.toFixed(2)} лв.
+                  +{totalAddonCost.toFixed(2)} €.
                 </span>
               </div>
             </div>

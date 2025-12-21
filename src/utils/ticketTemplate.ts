@@ -41,7 +41,7 @@ export function generateTicketHTML(data: TicketData): string {
         <div class="item-line">
           <span class="quantity">${item.quantity}x</span>
           <span class="item-name">${item.name}</span>
-          <span class="item-price">${item.price.toFixed(2)} лв</span>
+          <span class="item-price">${item.price.toFixed(2)} €</span>
         </div>
     `;
     
@@ -295,15 +295,15 @@ export function generateTicketHTML(data: TicketData): string {
     <div class="totals">
       <div class="total-line">
         <span>МЕЖДИННА СУМА</span>
-        <span>${data.subtotal.toFixed(2)} лв</span>
+        <span>${data.subtotal.toFixed(2)} €</span>
       </div>
       <div class="total-line">
         <span>ДОСТАВКА</span>
-        <span>${data.deliveryCharge.toFixed(2)} лв</span>
+        <span>${data.deliveryCharge.toFixed(2)} €</span>
       </div>
       <div class="total-line final">
         <span>ОБЩО</span>
-        <span>${data.total.toFixed(2)} лв</span>
+        <span>${data.total.toFixed(2)} €</span>
       </div>
     </div>
     

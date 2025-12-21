@@ -14,10 +14,10 @@ export default function CartSummaryDisplay() {
 
   // During SSR and initial render, show loading or placeholder
   if (!mounted) {
-    return <span className="text-white">0.00 лв. </span>
+    return <span className="text-white">0.00 €. </span>
   }
 
   return (
-    <span className="text-white">{totalPrice.toFixed(2)} лв. </span>
+    <span className="text-white">{totalPrice.toFixed(2)} €. </span>
   )
 }

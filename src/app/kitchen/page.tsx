@@ -874,7 +874,7 @@ const KitchenCommandCenter = () => {
                         {item.quantity}x {item.name}
                       </span>
                       <span className="text-orange font-semibold">
-                        {(item.price * item.quantity).toFixed(2)} лв.
+                        {(item.price * item.quantity).toFixed(2)} €.
                       </span>
                     </div>
                     
@@ -906,15 +906,15 @@ const KitchenCommandCenter = () => {
                   <div><span className="text-gray-400">Готово в:</span> <span className="text-white">{order.readyTime.toLocaleString('bg-BG')}</span></div>
                 )}
                 <div><span className="text-gray-400">Статус:</span> <span className="text-white">{order.status}</span></div>
-                <div><span className="text-gray-400">Артикули:</span> <span className="text-orange font-semibold">{order.totalPrice.toFixed(2)} лв.</span></div>
+                <div><span className="text-gray-400">Артикули:</span> <span className="text-orange font-semibold">{order.totalPrice.toFixed(2)} €.</span></div>
                 {order.deliveryPrice > 0 && (
                   <div className="flex items-center space-x-2 bg-blue-900/40 border border-blue-500/30 rounded-lg px-3 py-2">
                     <span className="text-blue-300 text-sm">🚚</span>
-                    <span className="text-blue-300 text-sm font-medium">Доставка: {order.deliveryPrice.toFixed(2)} лв.</span>
+                    <span className="text-blue-300 text-sm font-medium">Доставка: {order.deliveryPrice.toFixed(2)} €.</span>
                   </div>
                 )}
                 <div className="pt-2 border-t border-white/10">
-                  <span className="text-gray-400">Обща сума:</span> <span className="text-green-400 font-bold text-lg">{(order.totalPrice + order.deliveryPrice).toFixed(2)} лв.</span>
+                  <span className="text-gray-400">Обща сума:</span> <span className="text-green-400 font-bold text-lg">{(order.totalPrice + order.deliveryPrice).toFixed(2)} €.</span>
                 </div>
               </div>
             </div>
@@ -1652,14 +1652,14 @@ const KitchenCommandCenter = () => {
           <div className="flex items-center space-x-1 bg-blue-900/40 border border-blue-500/30 rounded px-1 py-0.5 mb-1">
             <span className="text-blue-300 text-[10px]">🚚</span>
             <span className="text-blue-300 text-[10px] font-medium">
-              Доставка: {order.deliveryPrice.toFixed(2)} лв
+              Доставка: {order.deliveryPrice.toFixed(2)} €
             </span>
           </div>
         )}
 
           <div className="flex justify-between items-center">
           <span className="text-green-400 font-bold text-xs">
-            Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} лв
+            Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} €
           </span>
           <div className="flex space-x-2">
             <button
@@ -1784,14 +1784,14 @@ const KitchenCommandCenter = () => {
           <div className="flex items-center space-x-2 bg-blue-900/40 border border-blue-500/30 rounded-lg px-2 py-1 mb-2">
             <span className="text-blue-300 text-xs">🚚</span>
             <span className="text-blue-300 text-xs font-medium">
-              Доставка: {order.deliveryPrice.toFixed(2)} лв
+              Доставка: {order.deliveryPrice.toFixed(2)} €
             </span>
           </div>
         )}
 
           <div className="flex justify-between items-center">
           <span className="text-green-400 font-bold text-sm">
-            Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} лв
+            Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} €
           </span>
           <div className="flex space-x-2">
             <button
@@ -1952,13 +1952,13 @@ const KitchenCommandCenter = () => {
           <div className="flex items-center space-x-2 bg-blue-900/40 border border-blue-500/30 rounded-lg px-2 py-1 mb-2">
             <span className="text-blue-300 text-xs">🚚</span>
             <span className="text-blue-300 text-xs font-medium">
-              Доставка: {order.deliveryPrice.toFixed(2)} лв
+              Доставка: {order.deliveryPrice.toFixed(2)} €
             </span>
           </div>
         )}
         
         <div className="text-green-400 font-bold text-xs">
-          Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} лв
+          Общо: {(order.totalPrice + order.deliveryPrice).toFixed(2)} €
         </div>
       </div>
     );

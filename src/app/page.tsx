@@ -379,7 +379,7 @@ export default function HomePage() {
               </div>
               <div className="card">
                 <h3>Доставяте ли извън Ловеч?</h3>
-                <p>Да – доставяме и до близките села (в зона 2, с такса 7 лв. и минимална поръчка от 30 лв.).</p>
+                <p>Да – доставяме и до близките села (в зона 2, с такса 7 €. и минимална поръчка от 30 €.).</p>
               </div>
             </div>
           </div>
@@ -404,12 +404,12 @@ export default function HomePage() {
                   
                   <div className={styles.ruleItem}>
                     <h4>Допълнителни добавки</h4>
-                    <p>Всяка допълнителна добавка над включените се заплаща по <span className={styles.price}>0.50 лв.</span></p>
+                    <p>Всяка допълнителна добавка над включените се заплаща по <span className={styles.price}>0.50 €.</span></p>
                   </div>
                   
                   <div className={styles.ruleItem}>
                     <h4>Допълнително месо</h4>
-                    <p>При дюнерите може да се добави допълнително месо (100 г) – <span className={styles.price}>2.00 лв.</span></p>
+                    <p>При дюнерите може да се добави допълнително месо (100 г) – <span className={styles.price}>2.00 €.</span></p>
                   </div>
                   
                   <div className={styles.ruleItem}>

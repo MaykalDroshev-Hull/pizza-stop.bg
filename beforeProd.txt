@@ -840,7 +840,7 @@ Environment Files Status:
 9. ✅ Server-Side Delivery Validation
    ├─ File: src/app/api/validate-delivery/route.ts
    ├─ Status: COMPLETE
-   └─ Validates: Yellow zone (3лв), Blue zone (7лв), Outside
+   └─ Validates: Yellow zone (3€), Blue zone (7€), Outside
 
 10. ✅ Structured Logging
     ├─ File: src/utils/logger.ts (existing)

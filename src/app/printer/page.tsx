@@ -690,7 +690,7 @@ export default function PrinterPage() {
           {/* Header */}
           <div className="text-center mb-3 md:mb-4">
             <h1 className="text-xl md:text-3xl font-bold text-white mb-1">{productModalData.product.name}</h1>
-            <p className="text-red-500 font-bold text-lg md:text-2xl border-2 border-red-500 inline-block px-4 py-2 rounded-lg">{calculateModalPrice().toFixed(2)} лв</p>
+            <p className="text-red-500 font-bold text-lg md:text-2xl border-2 border-red-500 inline-block px-4 py-2 rounded-lg">{calculateModalPrice().toFixed(2)} €</p>
           </div>
           
           {/* Responsive Layout */}
@@ -717,7 +717,7 @@ export default function PrinterPage() {
                         }`}
                       >
                         <div className="font-medium text-sm">{size.name}</div>
-                        <div className="text-xs text-red-400">{size.price.toFixed(2)} лв</div>
+                        <div className="text-xs text-red-400">{size.price.toFixed(2)} €</div>
                       </button>
                     ))}
                   </div>
@@ -854,7 +854,7 @@ export default function PrinterPage() {
                                 >
                                   <div className="font-medium text-xs leading-tight">{addon.Name}</div>
                                   <div className={`text-xs mt-1 ${isSelected ? (isFree ? 'text-green-400' : 'text-white') : 'text-red-400'}`}>
-                                    {isFree ? 'Безплатно' : `${addonPrice.toFixed(2)} лв.`}
+                                    {isFree ? 'Безплатно' : `${addonPrice.toFixed(2)} €.`}
                                   </div>
                                 </button>
                               );
@@ -1198,7 +1198,7 @@ export default function PrinterPage() {
                       {product.size && product.size !== 'Standard' && (
                         <span>Размер: {product.size} | </span>
                       )}
-                      Брой: {product.quantity} x {product.price.toFixed(2)} лв
+                      Брой: {product.quantity} x {product.price.toFixed(2)} €
                     </div>
                     {product.comment && (
                       <div className="text-gray-400 text-xs mb-1">
@@ -1211,7 +1211,7 @@ export default function PrinterPage() {
                       </div>
                     )}
                     <div className="text-red-500 font-bold text-base">
-                      {calculateItemTotal(product).toFixed(2)} лв
+                      {calculateItemTotal(product).toFixed(2)} €
                     </div>
                   </div>
                 ))}
@@ -1224,7 +1224,7 @@ export default function PrinterPage() {
               <div className="flex items-center justify-between text-white mb-2">
                 <span className="font-bold text-base">Общо:</span>
                 <span className="text-red-500 font-bold text-lg">
-                  {calculateTotal().toFixed(2)} лв
+                  {calculateTotal().toFixed(2)} €
                 </span>
               </div>
               <div className="flex gap-2">
@@ -1305,7 +1305,7 @@ export default function PrinterPage() {
                         {product.name}
                       </span>
                       <span className="text-red-500 font-bold text-base">
-                        {product.basePrice.toFixed(2)} лв
+                        {product.basePrice.toFixed(2)} €
                       </span>
                     </button>
                   ))}
@@ -1359,7 +1359,7 @@ export default function PrinterPage() {
                           }`}
                         >
                           <div className="text-white font-medium text-center text-[10px] mb-1 leading-tight line-clamp-2">{pizza.name}</div>
-                          <div className="text-red-500 font-bold text-xs text-center">{getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.</div>
+                          <div className="text-red-500 font-bold text-xs text-center">{getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} €.</div>
                           {fiftyFiftySelection.leftHalf?.id === pizza.id && (
                             <div className="text-green-400 text-[9px] text-center mt-0.5">✓ ЛЯВА</div>
                           )}
@@ -1398,7 +1398,7 @@ export default function PrinterPage() {
                           }`}
                         >
                           <div className="text-white font-medium text-center text-[10px] mb-1 leading-tight line-clamp-2">{pizza.name}</div>
-                          <div className="text-red-500 font-bold text-xs text-center">{getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.</div>
+                          <div className="text-red-500 font-bold text-xs text-center">{getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} €.</div>
                           {pizza.id === fiftyFiftySelection.leftHalf?.id && (
                             <div className="text-gray-400 text-[9px] text-center mt-0.5">ЛЯВА</div>
                           )}
@@ -1426,7 +1426,7 @@ export default function PrinterPage() {
                     <div className="flex gap-2 mb-2 flex-wrap">
                       <div className="inline-block px-2 py-1 bg-red-900 border border-red-500 text-red-400 text-[10px]">{fiftyFiftySelection.leftHalf?.name} / {fiftyFiftySelection.rightHalf?.name}</div>
                       <div className="inline-block px-2 py-1 bg-green-900 border border-green-500 text-green-400 text-[10px]">{fiftyFiftySelection.size} (~2000г | 60см)</div>
-                      <div className="inline-block px-2 py-1 bg-orange-900 border border-orange-500 text-orange-400 text-[10px]">{fiftyFiftySelection.finalPrice.toFixed(2)} лв.</div>
+                      <div className="inline-block px-2 py-1 bg-orange-900 border border-orange-500 text-orange-400 text-[10px]">{fiftyFiftySelection.finalPrice.toFixed(2)} €.</div>
                     </div>
                     <div className="mb-3 bg-gray-900 border border-gray-700 p-2 max-h-[calc(100vh-280px)] overflow-y-auto">
                       {isLoadingFiftyFiftyAddons ? (
@@ -1448,7 +1448,7 @@ export default function PrinterPage() {
                                         className={`p-2 border transition-colors duration-200 text-center ${isSelected ? 'bg-green-600 border-green-600 text-white' : 'bg-gray-800 border-gray-600 text-white hover:border-green-500'}`}
                                       >
                                         <div className="font-medium text-xs leading-tight">{addon.Name}</div>
-                                        <div className={`text-xs mt-1 ${isSelected ? 'text-white' : 'text-red-400'}`}>{addon.Price.toFixed(2)} лв.</div>
+                                        <div className={`text-xs mt-1 ${isSelected ? 'text-white' : 'text-red-400'}`}>{addon.Price.toFixed(2)} €.</div>
                                       </button>
                                     )
                                   })}
@@ -1513,7 +1513,7 @@ export default function PrinterPage() {
                       {product.name}
                     </span>
                     <span className="text-red-500 font-bold text-base">
-                      {product.basePrice.toFixed(2)} лв
+                      {product.basePrice.toFixed(2)} €
                     </span>
                   </button>
                 ))}
@@ -1550,7 +1550,7 @@ export default function PrinterPage() {
                       {product.size && product.size !== 'Standard' && (
                         <span>Размер: {product.size} | </span>
                       )}
-                      Брой: {product.quantity} x {product.price.toFixed(2)} лв
+                      Брой: {product.quantity} x {product.price.toFixed(2)} €
                     </div>
                     {product.comment && (
                       <div className="text-gray-400 text-[10px] mb-0.5">
@@ -1563,7 +1563,7 @@ export default function PrinterPage() {
                       </div>
                     )}
                     <div className="text-red-500 font-bold text-sm">
-                      {calculateItemTotal(product).toFixed(2)} лв
+                      {calculateItemTotal(product).toFixed(2)} €
                     </div>
                   </div>
                 ))}
@@ -1577,7 +1577,7 @@ export default function PrinterPage() {
               <div className="flex items-center justify-between text-white mb-2">
                 <span className="font-bold text-base">Общо:</span>
                 <span className="text-red-500 font-bold text-lg">
-                  {calculateTotal().toFixed(2)} лв
+                  {calculateTotal().toFixed(2)} €
                 </span>
               </div>
               <div className="flex gap-2">
@@ -1681,7 +1681,7 @@ export default function PrinterPage() {
                         {pizza.name}
                       </div>
                       <div className="text-red-500 font-bold text-xs text-center">
-                        {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.
+                        {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} €.
                       </div>
                       {fiftyFiftySelection.leftHalf?.id === pizza.id && (
                         <div className="text-green-400 text-[9px] text-center mt-0.5">✓ ЛЯВА</div>
@@ -1740,7 +1740,7 @@ export default function PrinterPage() {
                         {pizza.name}
                       </div>
                       <div className="text-red-500 font-bold text-xs text-center">
-                        {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} лв.
+                        {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} €.
                       </div>
                       {pizza.id === fiftyFiftySelection.leftHalf?.id && (
                         <div className="text-gray-400 text-[9px] text-center mt-0.5">ЛЯВА</div>
@@ -1776,7 +1776,7 @@ export default function PrinterPage() {
                     {fiftyFiftySelection.size} (~2000г | 60см)
                   </div>
                   <div className="inline-block px-2 py-1 bg-orange-900 border border-orange-500 text-orange-400 text-[10px]">
-                    {fiftyFiftySelection.finalPrice.toFixed(2)} лв.
+                    {fiftyFiftySelection.finalPrice.toFixed(2)} €.
                   </div>
                 </div>
 
@@ -1818,7 +1818,7 @@ export default function PrinterPage() {
                                   >
                                     <div className="font-medium text-xs leading-tight">{addon.Name}</div>
                                     <div className={`text-xs mt-1 ${isSelected ? 'text-white' : 'text-red-400'}`}>
-                                      {addon.Price.toFixed(2)} лв.
+                                      {addon.Price.toFixed(2)} €.
                                     </div>
                                   </button>
                                 )
@@ -1857,7 +1857,7 @@ export default function PrinterPage() {
                                   >
                                     <div className="font-medium text-xs leading-tight">{addon.Name}</div>
                                     <div className={`text-xs mt-1 ${isSelected ? 'text-white' : 'text-red-400'}`}>
-                                      {addon.Price.toFixed(2)} лв.
+                                      {addon.Price.toFixed(2)} €.
                                     </div>
                                   </button>
                                 )
@@ -1896,7 +1896,7 @@ export default function PrinterPage() {
                                   >
                                     <div className="font-medium text-xs leading-tight">{addon.Name}</div>
                                     <div className={`text-xs mt-1 ${isSelected ? 'text-white' : 'text-red-400'}`}>
-                                      {addon.Price.toFixed(2)} лв.
+                                      {addon.Price.toFixed(2)} €.
                                     </div>
                                   </button>
                                 )
@@ -1935,7 +1935,7 @@ export default function PrinterPage() {
                                   >
                                     <div className="font-medium text-xs leading-tight">{addon.Name}</div>
                                     <div className={`text-xs mt-1 ${isSelected ? 'text-white' : 'text-red-400'}`}>
-                                      {addon.Price.toFixed(2)} лв.
+                                      {addon.Price.toFixed(2)} €.
                                     </div>
                                   </button>
                                 )
@@ -1974,7 +1974,7 @@ export default function PrinterPage() {
                                   >
                                     <div className="font-medium text-xs leading-tight">{addon.Name}</div>
                                     <div className={`text-xs mt-1 ${isSelected ? 'text-white' : 'text-red-400'}`}>
-                                      {addon.Price.toFixed(2)} лв.
+                                      {addon.Price.toFixed(2)} €.
                                     </div>
                                   </button>
                                 )
@@ -2038,7 +2038,7 @@ export default function PrinterPage() {
                       {product.size && product.size !== 'Standard' && (
                         <span>Размер: {product.size} | </span>
                       )}
-                      Брой: {product.quantity} x {product.price.toFixed(2)} лв
+                      Брой: {product.quantity} x {product.price.toFixed(2)} €
                     </div>
                     {product.comment && (
                       <div className="text-gray-400 text-[10px] mb-0.5">
@@ -2051,7 +2051,7 @@ export default function PrinterPage() {
                       </div>
                     )}
                     <div className="text-red-500 font-bold text-sm">
-                      {calculateItemTotal(product).toFixed(2)} лв
+                      {calculateItemTotal(product).toFixed(2)} €
                     </div>
                   </div>
                 ))}
@@ -2065,7 +2065,7 @@ export default function PrinterPage() {
               <div className="flex items-center justify-between text-white mb-2">
                 <span className="font-bold text-base">Общо:</span>
                 <span className="text-red-500 font-bold text-lg">
-                  {calculateTotal().toFixed(2)} лв
+                  {calculateTotal().toFixed(2)} €
                 </span>
               </div>
               <div className="flex gap-2">

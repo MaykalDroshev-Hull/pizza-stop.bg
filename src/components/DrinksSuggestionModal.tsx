@@ -125,7 +125,7 @@ export default function DrinksSuggestionModal({ isOpen, onClose }: DrinksSuggest
                     />
                     <div>
                       <h3 className="text-white font-semibold">{drink.name}</h3>
-                      <p className="text-gray-400 text-sm">{(drink.smallPrice || 0).toFixed(2)} лв.</p>
+                      <p className="text-gray-400 text-sm">{(drink.smallPrice || 0).toFixed(2)} €.</p>
                     </div>
                   </div>
                   
@@ -157,7 +157,7 @@ export default function DrinksSuggestionModal({ isOpen, onClose }: DrinksSuggest
           <div className="flex items-center justify-between mb-4">
             <div className="text-white">
               <span className="text-gray-400">Общо:</span>
-              <span className="ml-2 text-xl font-bold">{getTotalPrice().toFixed(2)} лв.</span>
+              <span className="ml-2 text-xl font-bold">{getTotalPrice().toFixed(2)} €.</span>
             </div>
             <div className="text-gray-400">
               {getTotalSelectedItems()} напитки

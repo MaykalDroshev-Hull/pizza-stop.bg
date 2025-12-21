@@ -122,9 +122,9 @@ export async function POST(request: NextRequest) {
     if (!priceValidation.isValid) {
       console.error('🚨 SECURITY ALERT: PRICE MANIPULATION DETECTED!')
       console.error('🚨 ORDER REJECTED - Price mismatch detected!')
-      console.error(`   Client sent: ${clientTotal} лв`)
-      console.error(`   Server calculated: ${serverTotal} лв`)
-      console.error(`   Difference: ${priceValidation.difference} лв`)
+      console.error(`   Client sent: ${clientTotal} €`)
+      console.error(`   Server calculated: ${serverTotal} €`)
+      console.error(`   Difference: ${priceValidation.difference} €`)
 
       // Log for security audit
       console.error('🚨 PRICE MANIPULATION ATTEMPT BLOCKED:', {
@@ -160,14 +160,14 @@ export async function POST(request: NextRequest) {
 
     // Additional validation: Check for obviously manipulated individual item prices
     const obviousManipulationDetected = orderItems?.some(item => {
-      // Check for prices that are suspiciously low (less than 0.50 лв)
+      // Check for prices that are suspiciously low (less than 0.50 €)
       if (item.price < 0.50 && item.price > 0) {
-        console.error(`🚨 SUSPICIOUSLY LOW PRICE DETECTED: ${item.name} priced at ${item.price} лв`)
+        console.error(`🚨 SUSPICIOUSLY LOW PRICE DETECTED: ${item.name} priced at ${item.price} €`)
         return true
       }
       // Check for zero prices on non-free items
       if (item.price === 0 && !item.name.toLowerCase().includes('free')) {
-        console.error(`🚨 ZERO PRICE DETECTED: ${item.name} priced at 0 лв`)
+        console.error(`🚨 ZERO PRICE DETECTED: ${item.name} priced at 0 €`)
         return true
       }
       return false
