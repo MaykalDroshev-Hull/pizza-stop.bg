@@ -5,6 +5,7 @@ import { Clock, Wifi, WifiOff, Users, TrendingUp, X, RotateCcw, Printer, Eye, Re
 import { getKitchenOrders, updateOrderStatusInDB, updateOrderReadyTime, ORDER_STATUS, KitchenOrder, supabase } from '../../lib/supabase';
 import { printOrderTicket, downloadOrderTicket } from '../../utils/ticketGenerator';
 import PrinterConfigModal from '../../components/PrinterConfigModal';
+import SoundSettingsModal from '../../components/SoundSettingsModal';
 import { useSerialPrinter } from '../../contexts/SerialPrinterContext';
 import { OrderData, ESCPOSCommands } from '../../utils/escposCommands';
 import { webSerialPrinter } from '../../utils/webSerialPrinter';
@@ -54,6 +55,7 @@ const KitchenCommandCenter = () => {
   const [readyTimeModal, setReadyTimeModal] = useState<{ show: boolean; order: Order | null; selectedMinutes: number | null }>({ show: false, order: null, selectedMinutes: null });
   const [orderDetailsModal, setOrderDetailsModal] = useState<{ show: boolean; order: Order | null }>({ show: false, order: null });
   const [printerConfigModal, setPrinterConfigModal] = useState(false);
+  const [soundSettingsModal, setSoundSettingsModal] = useState(false);
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [debugMode, setDebugMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -65,6 +67,7 @@ const KitchenCommandCenter = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundTheme, setSoundTheme] = useState<'classic' | 'modern' | 'kitchen' | 'custom'>('classic');
   const [volume, setVolume] = useState(0.7);
+  const [newOrderSoundDuration, setNewOrderSoundDuration] = useState(2); // Duration in seconds
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'info' | 'warning' | 'urgent', timestamp: Date}>>([]);
   const [lastActionTime, setLastActionTime] = useState<{[key: string]: number}>({});
   
@@ -357,8 +360,109 @@ const KitchenCommandCenter = () => {
     }
   };
 
+  // Special function for new order arrivals with volume ducking and configurable duration
+  const playNewOrderArrivalSound = useCallback(() => {
+    if (!soundEnabled) return;
+    
+    console.log('Playing new order sound with duration:', newOrderSoundDuration, 'seconds');
+    
+    try {
+      // Duck HTML5 audio/video elements by reducing their volume temporarily
+      const mediaElements: Array<{ element: HTMLMediaElement; originalVolume: number }> = [];
+      const allMediaElements = document.querySelectorAll('audio, video');
+      
+      allMediaElements.forEach((el) => {
+        const mediaEl = el as HTMLMediaElement;
+        if (!mediaEl.paused && mediaEl.volume > 0) {
+          mediaElements.push({
+            element: mediaEl,
+            originalVolume: mediaEl.volume
+          });
+          // Lower volume to 20% to make notification more prominent
+          mediaEl.volume = 0.2;
+        }
+      });
+      
+      // Restore original volumes after sound completes
+      const restoreVolumes = () => {
+        mediaElements.forEach(({ element, originalVolume }) => {
+          element.volume = originalVolume;
+        });
+      };
+      
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Resume AudioContext if suspended (browser autoplay policy)
+      const playSound = () => {
+        // Get current time after resuming (if needed)
+        const startTime = audioContext.currentTime;
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Calculate frequency changes based on duration
+        const quarterDuration = newOrderSoundDuration * 0.25;
+        const halfDuration = newOrderSoundDuration * 0.5;
+        const threeQuarterDuration = newOrderSoundDuration * 0.75;
+        const endTime = startTime + newOrderSoundDuration;
+        
+        // Create a repeating pattern that plays for the full duration
+        // For longer durations, repeat the pattern multiple times
+        const patternDuration = Math.min(2, newOrderSoundDuration); // Pattern repeats every 2 seconds max
+        const numRepeats = Math.ceil(newOrderSoundDuration / patternDuration);
+        
+        // Set up a continuous tone with frequency variations throughout the duration
+        oscillator.frequency.setValueAtTime(800, startTime);
+        oscillator.frequency.setValueAtTime(1200, startTime + quarterDuration);
+        oscillator.frequency.setValueAtTime(600, startTime + halfDuration);
+        oscillator.frequency.setValueAtTime(1000, startTime + threeQuarterDuration);
+        
+        // Keep frequency at end of duration (in case duration > threeQuarterDuration)
+        if (newOrderSoundDuration > threeQuarterDuration) {
+          oscillator.frequency.setValueAtTime(800, startTime + (newOrderSoundDuration * 0.9));
+        }
+        
+        // Use higher volume to make notification stand out - keep it audible for full duration
+        gainNode.gain.setValueAtTime(0.5 * volume, startTime); // Start louder
+        gainNode.gain.setValueAtTime(0.7 * volume, startTime + quarterDuration); // Peak volume
+        gainNode.gain.setValueAtTime(0.5 * volume, startTime + halfDuration);
+        gainNode.gain.setValueAtTime(0.6 * volume, startTime + threeQuarterDuration);
+        
+        // Only ramp down in the last 10% of duration to keep it audible most of the time
+        const rampStartTime = startTime + (newOrderSoundDuration * 0.9);
+        gainNode.gain.setValueAtTime(0.6 * volume, rampStartTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, endTime);
+        
+        console.log(`Starting oscillator at ${startTime}, will stop at ${endTime} (duration: ${newOrderSoundDuration}s)`);
+        
+        oscillator.start(startTime);
+        oscillator.stop(endTime);
+        
+        // Restore media volumes after sound completes (with small delay)
+        setTimeout(restoreVolumes, (newOrderSoundDuration * 1000) + 100);
+      };
+      
+      // Resume AudioContext if suspended, then play sound
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          playSound();
+        }).catch((error) => {
+          console.error('Failed to resume AudioContext:', error);
+        });
+      } else {
+        // AudioContext is already running, play sound immediately
+        playSound();
+      }
+    } catch (error) {
+      console.error('Error playing new order sound:', error);
+    }
+  }, [soundEnabled, volume, newOrderSoundDuration]);
+
   // Fetch orders from Supabase
-  const fetchOrders = async () => {
+  // Note: We use useCallback to ensure fetchOrders always uses the latest playNewOrderArrivalSound
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       setIsRefreshing(true);
@@ -389,11 +493,16 @@ const KitchenCommandCenter = () => {
         const newOrders = convertedOrders.filter(o => !existingOrderIds.has(o.id));
         
         
-        // Auto-print new orders (only if not already printed)
+        // Auto-print and play sound for new orders (only if not already printed)
         for (const newOrder of newOrders) {
           if (newOrder.status === 'new' && !printedOrderIds.has(newOrder.id)) {
             // Mark as printed immediately to prevent duplicates
             setPrintedOrderIds(prev => new Set(prev).add(newOrder.id));
+            
+            // Play new order arrival sound - use current duration from state
+            // The callback will use the latest newOrderSoundDuration value from its closure
+            playNewOrderArrivalSound();
+            addNotification(`Нова поръчка #${newOrder.id} получена!`, 'info');
             
             // Delay auto-print to ensure UI updates first
             setTimeout(() => {
@@ -417,7 +526,7 @@ const KitchenCommandCenter = () => {
       setIsRefreshing(false);
       setLastRefreshTime(new Date());
     }
-  };
+  }, [playNewOrderArrivalSound]);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -429,6 +538,29 @@ const KitchenCommandCenter = () => {
     }
     setIsAuthenticated(isLoggedIn);
   }, []);
+
+  // Load sound settings from database on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      const loadSoundSettings = async () => {
+        try {
+          const response = await fetch('/api/restaurant-settings');
+          if (response.ok) {
+            const settings = await response.json();
+            console.log('Loaded sound settings from database:', settings);
+            if (settings.NewOrderSoundDuration) {
+              const duration = parseInt(settings.NewOrderSoundDuration, 10);
+              console.log('Setting new order sound duration to:', duration, 'seconds');
+              setNewOrderSoundDuration(duration);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading sound settings:', error);
+        }
+      };
+      loadSoundSettings();
+    }
+  }, [isAuthenticated]);
 
   // Logout function
   const handleLogout = () => {
@@ -448,7 +580,7 @@ const KitchenCommandCenter = () => {
         return () => clearInterval(interval);
       }
     }
-  }, [isAuthenticated, autoRefreshEnabled, debugMode]);
+  }, [isAuthenticated, autoRefreshEnabled, debugMode, fetchOrders]);
 
   useEffect(() => {
     // Only update time once per minute to avoid constant re-renders
@@ -630,30 +762,6 @@ const KitchenCommandCenter = () => {
     }
   };
 
-  // Special function for new order arrivals (2-second continuous sound)
-  const playNewOrderArrivalSound = () => {
-    if (!soundEnabled) return;
-    
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    // Continuous 2-second sound for new order arrivals
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-    oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.5);
-    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 1.0);
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 1.5);
-    
-    gainNode.gain.setValueAtTime(0.3 * volume, audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.4 * volume, audioContext.currentTime + 0.5);
-    gainNode.gain.setValueAtTime(0.3 * volume, audioContext.currentTime + 1.0);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2.0);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 2.0);
-  };
 
   const playSoundPreview = (type: 'new' | 'urgent' | 'complete' = 'new') => {
     playNotificationSound(type);
@@ -2046,11 +2154,11 @@ const KitchenCommandCenter = () => {
               )}
             </div>
 
-            {/* Sound Toggle */}
+            {/* Sound Settings Button */}
             <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
+              onClick={() => setSoundSettingsModal(true)}
               className={`px-2 py-2 rounded-lg text-sm min-w-[44px] min-h-[44px] touch-manipulation ${soundEnabled ? 'bg-green-600' : 'bg-gray-600'} hover:opacity-80 transition-opacity`}
-              title={soundEnabled ? 'Звук включен' : 'Звук изключен'}
+              title={soundEnabled ? 'Звук включен - Настройки' : 'Звук изключен - Настройки'}
             >
               {soundEnabled ? '🔊' : '🔇'}
             </button>
@@ -2342,6 +2450,21 @@ const KitchenCommandCenter = () => {
           setPrinterConfigModal(false);
           addNotification('Принтерът е конфигуриран успешно!', 'info');
         }}
+      />
+
+      {/* Sound Settings Modal */}
+      <SoundSettingsModal
+        isOpen={soundSettingsModal}
+        onClose={() => setSoundSettingsModal(false)}
+        soundEnabled={soundEnabled}
+        onSoundEnabledChange={setSoundEnabled}
+        soundDuration={newOrderSoundDuration}
+        onSoundDurationChange={(duration) => {
+          console.log('Sound duration changed in modal to:', duration, 'seconds');
+          setNewOrderSoundDuration(duration);
+        }}
+        volume={volume}
+        onVolumeChange={setVolume}
       />
     </div>
   );
