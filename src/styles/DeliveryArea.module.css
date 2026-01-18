@@ -686,6 +686,40 @@
   opacity: 1;
 }
 
+.notificationActions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.requestPermissionButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 6px;
+  color: #93c5fd;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+}
+
+.requestPermissionButton:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.6);
+  transform: translateY(-1px);
+}
+
+.requestPermissionButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;

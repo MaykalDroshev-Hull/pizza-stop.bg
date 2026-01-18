@@ -509,9 +509,31 @@ export default function CheckoutPage() {
       window.google.maps.event.clearInstanceListeners(autocomplete);
     }
 
+    // Lovech center coordinates
+    const lovechCenter = { lat: 43.1333, lng: 24.7167 };
+    
+    // Calculate bounds for 30km radius around Lovech
+    // 1 degree latitude ≈ 111 km, so 30km ≈ 0.27 degrees
+    // 1 degree longitude ≈ 111 km * cos(latitude), so at 43.1333°: 30km ≈ 0.37 degrees
+    const radiusLat = 0.27; // ~30km in latitude
+    const radiusLng = 0.37; // ~30km in longitude at Lovech's latitude
+    
+    const bounds = new window.google.maps.LatLngBounds(
+      new window.google.maps.LatLng(
+        lovechCenter.lat - radiusLat,
+        lovechCenter.lng - radiusLng
+      ),
+      new window.google.maps.LatLng(
+        lovechCenter.lat + radiusLat,
+        lovechCenter.lng + radiusLng
+      )
+    );
+
     const autocompleteInstance = new window.google.maps.places.Autocomplete(addressInputRef.current, {
       types: ['address'],
       componentRestrictions: { country: 'bg' }, // Restrict to Bulgaria
+      bounds: bounds, // Limit to Lovech and 30km radius
+      strictBounds: true, // Strictly enforce bounds - don't show results outside
       fields: ['formatted_address', 'geometry', 'place_id']
     });
 
@@ -519,17 +541,54 @@ export default function CheckoutPage() {
       const place = autocompleteInstance.getPlace();
 
       if (place.formatted_address) {
-        // Update the address with the selected place
-        setCustomerInfo(prev => ({
-          ...prev,
-          LocationText: place.formatted_address || ''
-        }));
+        // Filter out addresses from major cities outside Lovech area
+        const excludedCities = ['Sofia', 'София', 'Varna', 'Варна', 'Plovdiv', 'Пловдив', 'Burgas', 'Бургас', 'Ruse', 'Русе']
+        const addressLower = place.formatted_address.toLowerCase()
+        const containsExcludedCity = excludedCities.some(city => 
+          addressLower.includes(city.toLowerCase())
+        )
 
+        if (containsExcludedCity) {
+          alert('❌ Адресът е извън зоната за доставка. Моля, изберете адрес в Ловеч или в радиус от 30 км.')
+          setCustomerInfo(prev => ({
+            ...prev,
+            LocationText: '',
+            LocationCoordinates: ''
+          }))
+          return
+        }
+
+        // Validate that the selected place is within bounds
         if (place.geometry && place.geometry.location) {
           const coordinates = {
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng()
           };
+
+          // Check if coordinates are within the 30km radius from Lovech
+          const distance = calculateDistance(
+            lovechCenter.lat,
+            lovechCenter.lng,
+            coordinates.lat,
+            coordinates.lng
+          );
+
+          // Reject addresses outside 30km radius
+          if (distance > 30) {
+            alert('❌ Адресът е извън зоната за доставка. Моля, изберете адрес в Ловеч или в радиус от 30 км.')
+            setCustomerInfo(prev => ({
+              ...prev,
+              LocationText: '',
+              LocationCoordinates: ''
+            }))
+            return
+          }
+
+          // Update the address with the selected place
+          setCustomerInfo(prev => ({
+            ...prev,
+            LocationText: place.formatted_address || ''
+          }));
 
           // Update coordinates and validate address zone
           setCustomerInfo(prev => ({
