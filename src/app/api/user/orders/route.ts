@@ -135,6 +135,7 @@ export async function GET(request: NextRequest) {
         DeliveredDT: order.ReadyTime, // Using ReadyTime as DeliveredDT for now
         TotalAmount: totalAmount,
         Status: order.RfOrderStatus?.[0]?.OrderStatus || 'Unknown',
+        StatusID: order.OrderStatusID, // Add StatusID for progress bar
         PaymentMethod: paymentMethodMap.get(order.RfPaymentMethodID) || 'Unknown',
         IsPaid: order.IsPaid,
         DeliveryAddress: order.OrderLocation,

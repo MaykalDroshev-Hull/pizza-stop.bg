@@ -22,6 +22,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
   const [notification, setNotification] = useState<{
     type: 'error' | 'success' | 'info'
     message: string
+    isPermissionDenied?: boolean
   } | null>(null)
 
   useEffect(() => {
@@ -119,12 +120,14 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
     setNotification(null)
   }
 
-  const showNotification = (type: 'error' | 'success' | 'info', message: string) => {
-    setNotification({ type, message })
-    // Auto-hide notification after 5 seconds
-    setTimeout(() => {
-      setNotification(null)
-    }, 5000)
+  const showNotification = (type: 'error' | 'success' | 'info', message: string, isPermissionDenied?: boolean) => {
+    setNotification({ type, message, isPermissionDenied })
+    // Auto-hide notification after 5 seconds only if not permission denied (user might need time to click button)
+    if (!isPermissionDenied) {
+      setTimeout(() => {
+        setNotification(null)
+      }, 5000)
+    }
   }
 
   const detectDeviceLocation = () => {
@@ -173,10 +176,12 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
       (error) => {
         setIsDetectingLocation(false)
         let errorMessage = 'Грешка при определяне на локацията.'
+        let isPermissionDenied = false
         
         switch (error.code) {
           case error.PERMISSION_DENIED:
             errorMessage = 'Достъпът до геолокацията е отказан. Моля, разрешете достъпа в настройките на браузъра.'
+            isPermissionDenied = true
             break
           case error.POSITION_UNAVAILABLE:
             errorMessage = 'Информацията за локацията не е налична.'
@@ -186,7 +191,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
             break
         }
         
-        showNotification('error', errorMessage)
+        showNotification('error', errorMessage, isPermissionDenied)
       },
       {
         enableHighAccuracy: true,
@@ -504,6 +509,21 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
                             ×
                           </button>
                         </div>
+                        {notification.isPermissionDenied && (
+                          <div className={styles.notificationActions}>
+                            <button
+                              className={styles.requestPermissionButton}
+                              onClick={() => {
+                                setNotification(null)
+                                detectDeviceLocation()
+                              }}
+                              disabled={isDetectingLocation}
+                            >
+                              <Navigation size={16} />
+                              {isDetectingLocation ? 'Заявявам разрешение...' : 'Заяви разрешение за геолокация'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </>

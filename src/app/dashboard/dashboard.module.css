@@ -151,6 +151,44 @@
   justify-content: space-between;
 }
 
+.refreshButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.refreshButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--orange);
+  color: var(--orange);
+}
+
+.refreshButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .sectionIcon {
   color: var(--orange);
   flex-shrink: 0;
@@ -238,6 +276,114 @@
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--red);
+}
+
+/* Order Status Styles */
+.orderStatusText {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Progress Bar Styles */
+.progressBarContainer {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+.progressBarTrack {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.progressBarFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: all 0.5s ease;
+}
+
+.progressBarSteps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+.progressBarStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  z-index: 1;
+}
+
+.progressBarStepLine {
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 8px);
+  right: calc(-50% + 8px);
+  height: 2px;
+  z-index: 0;
+  transition: all 0.3s ease;
+}
+
+.progressBarStepDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: var(--card);
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+  margin-bottom: 0.5rem;
+}
+
+.progressBarStep.active .progressBarStepDot {
+  transform: scale(1.1);
+}
+
+.progressBarStep.current .progressBarStepDot {
+  transform: scale(1.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  50% {
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+.progressBarStepLabel {
+  font-size: 0.7rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.cancelledStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 0.5rem;
+  color: #fca5a5;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: 0.75rem;
 }
 
 .orderProducts {

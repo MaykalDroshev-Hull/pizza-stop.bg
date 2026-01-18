@@ -17,7 +17,8 @@ import {
   Navigation,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react'
 import { isRestaurantOpen } from '@/utils/openingHours'
 import styles from './dashboard.module.css'
@@ -37,6 +38,7 @@ interface Order {
   OrderDate: string
   TotalAmount: number
   Status: string
+  StatusID?: number // Order status ID for progress bar
   PaymentMethod: string
   IsPaid: boolean
   DeliveryAddress: string
@@ -66,6 +68,7 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
   const [orders, setOrders] = useState<Order[]>([])
   const [favouriteOrder, setFavouriteOrder] = useState<Order | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   
   // Form states
   const [passwordData, setPasswordData] = useState({
@@ -392,7 +395,101 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [])
 
+  // Ref to track if refresh is in progress to prevent multiple simultaneous calls
+  const isRefreshingStatusesRef = useRef(false)
+  
+  // Ref to store current orders without causing re-renders
+  const ordersRef = useRef<Order[]>([])
+  
+  // Update ref when orders change
+  useEffect(() => {
+    ordersRef.current = orders
+  }, [orders])
 
+  // Function to refresh statuses of active orders only
+  const refreshActiveOrderStatuses = useCallback(async () => {
+    if (!user || isRefreshingStatusesRef.current) return
+
+    const currentOrders = ordersRef.current
+    
+    if (currentOrders.length === 0) return
+
+    // Get active orders (not delivered and not cancelled)
+    const activeOrders = currentOrders.filter(order => {
+      const statusID = order.StatusID
+      return statusID && statusID !== 6 && statusID !== 7 // Not delivered and not cancelled
+    })
+
+    if (activeOrders.length === 0) return
+
+    try {
+      isRefreshingStatusesRef.current = true
+      const orderIds = activeOrders.map(order => order.OrderID)
+      
+      const response = await fetch('/api/user/orders/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderIds })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const statusMap = data.statuses || {}
+
+        // Update orders with new statuses using functional update to avoid dependency
+        setOrders(prevOrders => 
+          prevOrders.map(order => {
+            const newStatus = statusMap[order.OrderID]
+            if (newStatus) {
+              return {
+                ...order,
+                StatusID: newStatus.StatusID,
+                Status: newStatus.Status
+              }
+            }
+            return order
+          })
+        )
+      }
+    } catch (err) {
+      // Silently fail - don't show error for background refresh
+    } finally {
+      isRefreshingStatusesRef.current = false
+    }
+  }, [user]) // Removed 'orders' from dependencies to prevent infinite loop
+
+  // Auto-refresh active order statuses every 30 seconds
+  useEffect(() => {
+    if (activeTab !== 'orders' || !user) return
+
+    // Check if there are any active orders before setting up refresh
+    const hasActiveOrders = orders.some(order => {
+      const statusID = order.StatusID
+      return statusID && statusID !== 6 && statusID !== 7
+    })
+
+    if (!hasActiveOrders) return
+
+    // Refresh immediately when orders tab is active and has active orders
+    refreshActiveOrderStatuses()
+
+    // Set up interval to refresh every 30 seconds
+    const interval = setInterval(() => {
+      // Check again if there are still active orders before refreshing
+      const stillHasActiveOrders = ordersRef.current.some(order => {
+        const statusID = order.StatusID
+        return statusID && statusID !== 6 && statusID !== 7
+      })
+      
+      if (stillHasActiveOrders) {
+        refreshActiveOrderStatuses()
+      }
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [activeTab, user, refreshActiveOrderStatuses]) // Refresh when tab changes or refresh function changes
 
   const fetchUserData = async () => {
     if (!user) return
@@ -475,6 +572,18 @@ export default function DashboardPage() {
       setError('Грешка при зареждане на данните')
     } finally {
       stopLoading()
+    }
+  }
+
+  // Function to manually refresh all orders
+  const handleRefreshOrders = async () => {
+    if (!user) return
+    
+    try {
+      setIsRefreshing(true)
+      await fetchUserData()
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -1052,6 +1161,55 @@ export default function DashboardPage() {
     }
   }
 
+  // Order status definitions based on ID
+  const ORDER_STATUSES = [
+    { id: 1, text: 'Приета', progress: 0, color: '#3b82f6' }, // Blue
+    { id: 2, text: 'В процес на приготвяне', progress: 20, color: '#fbbf24' }, // Yellow
+    { id: 3, text: 'Приготвена', progress: 40, color: '#f59e0b' }, // Orange
+    { id: 4, text: 'При шофьора', progress: 60, color: '#8b5cf6' }, // Purple
+    { id: 5, text: 'В процес на доставка', progress: 80, color: '#10b981' }, // Green
+    { id: 6, text: 'Доставена', progress: 100, color: '#22c55e' }, // Bright Green
+    { id: 7, text: 'Отменена', progress: 0, color: '#ef4444' } // Red
+  ] as const
+
+  // Helper function to get status info by ID or text
+  const getStatusInfo = (statusID?: number, statusText?: string) => {
+    // First try to get by ID
+    if (statusID) {
+      const status = ORDER_STATUSES.find(s => s.id === statusID)
+      if (status) return status
+    }
+    
+    // Fallback to text matching
+    if (statusText) {
+      const statusLower = statusText.toLowerCase()
+      if (statusLower.includes('приета') || statusLower.includes('accepted')) {
+        return ORDER_STATUSES[0]
+      }
+      if (statusLower.includes('приготвяне') || statusLower.includes('preparation')) {
+        return ORDER_STATUSES[1]
+      }
+      if (statusLower.includes('приготвена') || statusLower.includes('ready') || statusLower.includes('prepared')) {
+        return ORDER_STATUSES[2]
+      }
+      if (statusLower.includes('шофьора') || statusLower.includes('driver')) {
+        return ORDER_STATUSES[3]
+      }
+      if (statusLower.includes('доставка') || statusLower.includes('delivery')) {
+        return ORDER_STATUSES[4]
+      }
+      if (statusLower.includes('доставена') || statusLower.includes('delivered')) {
+        return ORDER_STATUSES[5]
+      }
+      if (statusLower.includes('отменена') || statusLower.includes('cancelled') || statusLower.includes('canceled')) {
+        return ORDER_STATUSES[6]
+      }
+    }
+    
+    // Default to first status
+    return ORDER_STATUSES[0]
+  }
+
   const handleOrderAgain = async (order: Order) => {
     try {
       startLoading()
@@ -1337,15 +1495,96 @@ export default function DashboardPage() {
             <section className={styles.recentOrders}>
               <div className={styles.sectionHeader}>
                 <Clock className={styles.sectionIcon} size={24} />
-                                 <h2>Последни поръчки</h2>
+                <h2>Последни поръчки</h2>
+                <button
+                  onClick={handleRefreshOrders}
+                  disabled={isRefreshing}
+                  className={styles.refreshButton}
+                  title="Обнови поръчките"
+                >
+                  <RefreshCw size={18} className={isRefreshing ? styles.spinning : ''} />
+                </button>
               </div>
               {orders.length > 0 ? (
                 <div className={styles.ordersList}>
-                  {orders.slice(0, 5).map((order) => (
+                  {orders.slice(0, 5).map((order) => {
+                    const statusInfo = getStatusInfo(order.StatusID, order.Status)
+                    const isCancelled = statusInfo.id === 7
+                    
+                    return (
                     <div key={order.OrderID} className={styles.orderCard}>
                       <div className={styles.orderHeader}>
                         <div>
-                          <h3>Поръчка #{order.OrderID}</h3>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                            <h3 style={{ margin: 0 }}>Поръчка #{order.OrderID}</h3>
+                            <span className={styles.orderStatusText} style={{ color: statusInfo.color }}>
+                              {statusInfo.text}
+                            </span>
+                          </div>
+                          
+                          {/* Progress Bar */}
+                          {!isCancelled ? (
+                            <div className={styles.progressBarContainer}>
+                              <div className={styles.progressBarTrack}>
+                                <div 
+                                  className={styles.progressBarFill}
+                                  style={{
+                                    width: `${statusInfo.progress}%`,
+                                    backgroundColor: statusInfo.color,
+                                    boxShadow: `0 0 12px ${statusInfo.color}40`
+                                  }}
+                                />
+                              </div>
+                              <div className={styles.progressBarSteps}>
+                                {ORDER_STATUSES.filter(s => s.id !== 7).map((status, index, array) => {
+                                  const isActive = statusInfo.id >= status.id
+                                  const isCurrent = statusInfo.id === status.id
+                                  const nextStatus = array[index + 1]
+                                  const isNextActive = nextStatus && statusInfo.id >= nextStatus.id
+                                  
+                                  return (
+                                    <div
+                                      key={status.id}
+                                      className={`${styles.progressBarStep} ${isActive ? styles.active : ''} ${isCurrent ? styles.current : ''}`}
+                                      title={status.text}
+                                    >
+                                      <div
+                                        className={styles.progressBarStepDot}
+                                        style={{
+                                          backgroundColor: isActive ? statusInfo.color : 'rgba(255, 255, 255, 0.2)',
+                                          borderColor: isActive ? statusInfo.color : 'rgba(255, 255, 255, 0.3)',
+                                          boxShadow: isCurrent ? `0 0 8px ${statusInfo.color}` : 'none'
+                                        }}
+                                      />
+                                      {index < array.length - 1 && (
+                                        <div
+                                          className={styles.progressBarStepLine}
+                                          style={{
+                                            backgroundColor: isNextActive ? statusInfo.color : 'rgba(255, 255, 255, 0.1)',
+                                            opacity: isNextActive ? 0.6 : 1
+                                          }}
+                                        />
+                                      )}
+                                      <span
+                                        className={styles.progressBarStepLabel}
+                                        style={{
+                                          color: isActive ? statusInfo.color : 'var(--muted)',
+                                          fontWeight: isCurrent ? 600 : 400
+                                        }}
+                                      >
+                                        {status.text}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className={styles.cancelledStatus}>
+                              <XCircle size={16} />
+                              <span>Поръчката е отменена</span>
+                            </div>
+                          )}
                           <p className={styles.orderDate}>
                             <Clock size={16} />
                             Поръчана: {new Date(order.OrderDate).toLocaleDateString('bg-BG')} в {new Date(order.OrderDate).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' })}
@@ -1402,7 +1641,8 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <div className={styles.emptyState}>
