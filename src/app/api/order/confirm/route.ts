@@ -308,7 +308,8 @@ export async function POST(request: NextRequest) {
       ExpectedDT: expectedDT.toISOString(),
       OrderType: isCollection ? 1 : 2, // 1 = Restaurant collection, 2 = Delivery
       DeliveryPrice: validatedDeliveryCost, // Use server-validated delivery cost
-      TotalAmount: validatedTotalPrice // Use server-validated total (SECURITY: Never trust client)
+      TotalAmount: validatedTotalPrice, // Use server-validated total (SECURITY: Never trust client)
+      Comments: customerInfo.deliveryInstructions || null // Save delivery instructions/comments to Order.Comments
     }
 
     // Create the order
