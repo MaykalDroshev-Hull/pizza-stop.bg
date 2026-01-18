@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       PaymentMethodID: paymentMethodId,
       OrderStatusID: 1, // Pending payment for online orders
       OrderType: orderType === 'user' ? 1 : 0, // 1 = registered user, 0 = guest
-      Comments: null,
+      Comments: customerInfo.deliveryInstructions || null, // Save delivery instructions/comments
       addressInstructions: null
     }
 
@@ -154,14 +154,6 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Store ORDER number in Comments for lookup in callback
-    await supabase
-      .from('Orders')
-      .update({
-        Comments: `Pending payment. Will be updated after BORICA callback.`
-      })
-      .eq('OrderID', orderId)
-
     // Generate Datecs payment request
     const { createDatecsService } = await import('@/utils/datecsPayment')
     const datecsService = createDatecsService()
@@ -178,10 +170,17 @@ export async function POST(request: NextRequest) {
     )
 
     // Store ORDER number in database for callback lookup
+    // Combine delivery instructions with payment info
+    const deliveryInstructions = customerInfo.deliveryInstructions || ''
+    const paymentInfo = `ORDER:${paymentRequest.ORDER} | Pending payment confirmation from BORICA`
+    const combinedComments = deliveryInstructions 
+      ? `${deliveryInstructions}\n\n${paymentInfo}`
+      : paymentInfo
+
     await supabase
       .from('Orders')
       .update({
-        Comments: `ORDER:${paymentRequest.ORDER} | Pending payment confirmation from BORICA`
+        Comments: combinedComments
       })
       .eq('OrderID', orderId)
 
