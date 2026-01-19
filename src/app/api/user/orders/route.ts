@@ -152,6 +152,7 @@ export async function GET(request: NextRequest) {
           }
           
           return {
+            ProductID: item.ProductID,
             ProductName: item.ProductName,
             ProductSize: item.ProductSize,
             Quantity: item.Quantity,
