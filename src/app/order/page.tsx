@@ -1187,7 +1187,9 @@ export default function MenuPage() {
             }}
           >
             {filteredItems.map(item => (
-              <div key={item.id} className="bg-card border border-white/12 rounded-xl p-4 md:p-6 overflow-hidden flex flex-col h-full min-h-[400px]">                <div className="text-center py-3 md:py-4 bg-gradient-to-br from-red/10 to-orange/10 min-h-[120px] md:min-h-[160px] flex items-center justify-center relative overflow-hidden group">
+              <div key={item.id} className="bg-card border border-white/12 rounded-xl p-4 md:p-6 overflow-hidden flex flex-col h-full min-h-[400px]">                <div className={`text-center py-3 md:py-4 min-h-[120px] md:min-h-[160px] flex items-center justify-center relative overflow-hidden group rounded-xl ${
+                  item.category === 'drinks' ? 'bg-black' : 'bg-gradient-to-br from-red/10 to-orange/10'
+                }`}>
                   {(() => {
                     if (item.image.startsWith('http')) {
                       return (
@@ -1196,7 +1198,9 @@ export default function MenuPage() {
                           <img 
                             src={item.image} 
                             alt={item.name}
-                            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                            className={`absolute inset-0 w-full h-full ${
+                              item.category === 'drinks' ? 'object-contain' : 'object-cover'
+                            } transition-opacity duration-300 ${
                               item.secondImage ? 'group-hover:opacity-0' : ''
                             }`}
                             onError={(e) => {
@@ -1214,7 +1218,9 @@ export default function MenuPage() {
                             <img 
                               src={item.secondImage} 
                               alt={`${item.name} hover`}
-                              className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                              className={`absolute inset-0 w-full h-full ${
+                                item.category === 'drinks' ? 'object-contain' : 'object-cover'
+                              } opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
                               onError={(e) => {
                                 // Hide if second image fails to load
                                 const target = e.target as HTMLImageElement;
