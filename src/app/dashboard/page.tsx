@@ -46,6 +46,7 @@ interface Order {
   ExpectedDT?: string // Expected delivery/collection time
   DeliveredDT?: string // Actual delivery/collection time
   Products: Array<{
+    ProductID?: number | null
     ProductName: string
     ProductSize: string
     Quantity: number
@@ -1300,9 +1301,36 @@ export default function DashboardPage() {
           }
         } else {
           // Regular product - find matching product in current menu
-          const availableProduct = availableProducts.find((p: any) => 
-            p.name === orderProduct.ProductName
-          )
+          // First try to match by ProductID (most reliable)
+          let availableProduct: any = null
+          
+          if (orderProduct.ProductID) {
+            availableProduct = availableProducts.find((p: any) => 
+              p.id === orderProduct.ProductID
+            )
+          }
+          
+          // Fallback to name matching if ProductID is not available or not found
+          // (for backward compatibility with older orders or 50/50 pizzas)
+          if (!availableProduct) {
+            // Remove size information from order product name (e.g., "Акапулко (30)" -> "Акапулко")
+            const cleanOrderName = orderProduct.ProductName
+              .replace(/\s*\([0-9]+\)\s*$/, '') // Remove trailing "(30)" or "(60)"
+              .trim()
+            
+            // Try exact match first
+            availableProduct = availableProducts.find((p: any) => 
+              p.name === orderProduct.ProductName || p.name === cleanOrderName
+            )
+            
+            // If exact match fails, try normalized match (trim whitespace, case-insensitive)
+            if (!availableProduct) {
+              const normalizedOrderName = cleanOrderName.toLowerCase()
+              availableProduct = availableProducts.find((p: any) => 
+                p.name.trim().toLowerCase() === normalizedOrderName
+              )
+            }
+          }
           
           if (availableProduct) {
             const unitPrice = typeof orderProduct.UnitPrice === 'number'
@@ -1370,7 +1398,7 @@ export default function DashboardPage() {
       // Navigate to checkout
       router.push('/checkout')
       
-    } catch {
+    } catch (err: any) {
       setError('Грешка при зареждане на поръчката. Моля, опитайте отново.')
     } finally {
       stopLoading()
