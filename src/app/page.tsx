@@ -83,6 +83,9 @@ export default function HomePage() {
       <main id="home">
         {/* HERO */}
         <section className={styles.hero}>
+          <div className={styles.testPeriodBanner}>
+            <p>Сайта е в тестови период, моля обадете се за поръчки на телефона</p>
+          </div>
           <div className={styles.heroLayout}>
             {/* Left decorative image */}
             <div className={styles.heroLeftContainer}>
