@@ -935,6 +935,18 @@
     max-width: 300px;
     text-align: center;
   }
+}
+
+/* Tablet - hide images like mobile */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .heroLeftContainer,
+  .heroRightContainer {
+    display: none;
+  }
+  
+  .heroLayout {
+    justify-content: center;
+  }
   
   .galleryItem {
     width: 140px;
