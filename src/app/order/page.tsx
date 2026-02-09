@@ -6,6 +6,7 @@ import CartModal from '../../components/CartModal'
 import { fetchMenuData, MenuItem, fetchAddons } from '../../lib/menuData'
 import { useLoading } from '../../components/LoadingContext'
 import { useCart } from '../../components/CartContext'
+import { convertToBGN, formatBGNPrice } from '@/utils/currency'
 
 export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState('pizza')
@@ -585,7 +586,7 @@ export default function MenuPage() {
                         </div>
                         
                         <div className="text-orange font-bold text-lg">
-                          {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} €.
+                          {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(getPriceForSize(pizza, fiftyFiftySelection.size)))})</span>
                         </div>
                       </div>
                     ))}
@@ -632,7 +633,7 @@ export default function MenuPage() {
                       <h4 className="font-bold text-sm text-orange mb-2">Избери дясна половина</h4>
                       <p className="text-xs text-muted">Кликни на пица</p>
                       <div className="text-orange font-bold text-lg mt-2">
-                        {fiftyFiftySelection.leftHalf ? getPriceForSize(fiftyFiftySelection.leftHalf, fiftyFiftySelection.size).toFixed(2) : '0.00'} €.
+                        {fiftyFiftySelection.leftHalf ? getPriceForSize(fiftyFiftySelection.leftHalf, fiftyFiftySelection.size).toFixed(2) : '0.00'} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(fiftyFiftySelection.leftHalf ? getPriceForSize(fiftyFiftySelection.leftHalf, fiftyFiftySelection.size) : 0))})</span>
                       </div>
                       <div className="text-xs text-muted">минимум</div>
                     </div>
@@ -731,7 +732,7 @@ export default function MenuPage() {
                         </div>
                         
                         <div className="text-orange font-bold text-lg">
-                          {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} €.
+                          {getPriceForSize(pizza, fiftyFiftySelection.size).toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(getPriceForSize(pizza, fiftyFiftySelection.size)))})</span>
                         </div>
                         {pizza.id === fiftyFiftySelection.leftHalf?.id && (
                           <div className="text-xs text-green mt-1">Кликни за промяна</div>
@@ -784,7 +785,7 @@ export default function MenuPage() {
                         </div>
                         <h5 className="font-medium text-text mb-2">{fiftyFiftySelection.leftHalf?.name}</h5>
                         <div className="text-orange font-bold">
-                          {getPriceForSize(fiftyFiftySelection.leftHalf, fiftyFiftySelection.size).toFixed(2)} €.
+                          {getPriceForSize(fiftyFiftySelection.leftHalf, fiftyFiftySelection.size).toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(getPriceForSize(fiftyFiftySelection.leftHalf, fiftyFiftySelection.size)))})</span>
                         </div>
                       </div>
                       
@@ -820,7 +821,7 @@ export default function MenuPage() {
                         </div>
                         <h5 className="font-medium text-text mb-2">{fiftyFiftySelection.rightHalf?.name}</h5>
                         <div className="text-orange font-bold">
-                          {getPriceForSize(fiftyFiftySelection.rightHalf, fiftyFiftySelection.size).toFixed(2)} €.
+                          {getPriceForSize(fiftyFiftySelection.rightHalf, fiftyFiftySelection.size).toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(getPriceForSize(fiftyFiftySelection.rightHalf, fiftyFiftySelection.size)))})</span>
                         </div>
                       </div>
                     </div>
@@ -834,7 +835,7 @@ export default function MenuPage() {
                         Размер: {fiftyFiftySelection.size} (~2000г | 60см)
                       </div>
                       <div className="text-3xl font-bold text-orange">
-                        {fiftyFiftySelection.finalPrice.toFixed(2)} €.
+                        {fiftyFiftySelection.finalPrice.toFixed(2)} €. <span className="text-muted text-lg font-normal">({formatBGNPrice(convertToBGN(fiftyFiftySelection.finalPrice))})</span>
                       </div>
                     </div>
                     
@@ -934,7 +935,7 @@ export default function MenuPage() {
                                       whiteSpace: 'nowrap'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €.
+                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}
@@ -983,7 +984,7 @@ export default function MenuPage() {
                                       whiteSpace: 'nowrap'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €.
+                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}
@@ -1032,7 +1033,7 @@ export default function MenuPage() {
                                       whiteSpace: 'nowrap'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €.
+                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}
@@ -1081,7 +1082,7 @@ export default function MenuPage() {
                                       whiteSpace: 'nowrap'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €.
+                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}
@@ -1130,7 +1131,7 @@ export default function MenuPage() {
                                       whiteSpace: 'nowrap'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €.
+                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}
@@ -1292,7 +1293,25 @@ export default function MenuPage() {
                           
                           // Fallback to basePrice
                           return item.basePrice?.toFixed(2) || '0.00';
-                        })()} €.
+                        })()} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(parseFloat((() => {
+                          if (selectedSizes[item.id] && selectedSizes[item.id].price) {
+                            return (selectedSizes[item.id].price || 0).toFixed(2);
+                          }
+                          
+                          if (item.basePrice && item.basePrice > 0) {
+                            return item.basePrice.toFixed(2);
+                          }
+                          
+                          if (item.smallPrice && item.smallPrice > 0) {
+                            return item.smallPrice.toFixed(2);
+                          } else if (item.mediumPrice && item.mediumPrice > 0) {
+                            return item.mediumPrice.toFixed(2);
+                          } else if (item.largePrice && item.largePrice > 0) {
+                            return item.largePrice.toFixed(2);
+                          }
+                          
+                          return item.basePrice?.toFixed(2) || '0.00';
+                        })())))})</span>
                     </span>
                     <div className="flex items-center text-xs md:text-sm text-muted">
                       <Star className="w-3 h-3 md:w-4 md:h-4 text-yellow fill-current mr-1" />
@@ -1369,7 +1388,7 @@ export default function MenuPage() {
                                     <div className="font-medium">
                                         {selectedSizes[item.id].name} {selectedSizes[item.id].weight ? `(${selectedSizes[item.id].weight}г)` : ''}
                                     </div>
-                                    <div className="text-xs opacity-75">{selectedSizes[item.id].price?.toFixed(2)} €.</div>
+                                    <div className="text-xs opacity-75">{selectedSizes[item.id].price?.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(selectedSizes[item.id].price || 0))})</span></div>
                                   </div>
                                   <button
                                     type="button"
@@ -1410,7 +1429,7 @@ export default function MenuPage() {
                                         )}
                                       </div>
                                       <div className="text-xs md:text-sm font-bold text-orange">
-                                        {size.price?.toFixed(2)} €.
+                                        {size.price?.toFixed(2)} €. <span className="text-muted text-xs font-normal">({formatBGNPrice(convertToBGN(size.price || 0))})</span>
                                       </div>
                                     </button>
                                   ))}
@@ -1477,7 +1496,7 @@ export default function MenuPage() {
                                     <div className="font-medium">
                                         {selectedSizes[item.id].name} {selectedSizes[item.id].weight ? `(${selectedSizes[item.id].weight}г)` : ''}
                                     </div>
-                                    <div className="text-xs opacity-75">{selectedSizes[item.id].price?.toFixed(2)} €.</div>
+                                    <div className="text-xs opacity-75">{selectedSizes[item.id].price?.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(selectedSizes[item.id].price || 0))})</span></div>
                                   </div>
                                   <button
                                     type="button"
@@ -1518,7 +1537,7 @@ export default function MenuPage() {
                                         )}
                                       </div>
                                       <div className="text-xs md:text-sm font-bold text-orange">
-                                        {size.price?.toFixed(2)} €.
+                                        {size.price?.toFixed(2)} €. <span className="text-muted text-xs font-normal">({formatBGNPrice(convertToBGN(size.price || 0))})</span>
                                       </div>
                                     </button>
                                   ))}
@@ -1563,7 +1582,7 @@ export default function MenuPage() {
                                 <div className="font-medium">
                                     {selectedSizes[item.id].name} {selectedSizes[item.id].weight ? `(${selectedSizes[item.id].weight}г)` : ''}
                                 </div>
-                                <div className="text-xs opacity-75">{selectedSizes[item.id].price?.toFixed(2)} €.</div>
+                                <div className="text-xs opacity-75">{selectedSizes[item.id].price?.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(selectedSizes[item.id].price || 0))})</span></div>
                               </div>
                               <button
                                 type="button"
@@ -1604,7 +1623,7 @@ export default function MenuPage() {
                                     )}
                                   </div>
                                   <div className="text-xs md:text-sm font-bold text-orange">
-                                    {size.price?.toFixed(2)} €.
+                                    {size.price?.toFixed(2)} €. <span className="text-muted text-xs font-normal">({formatBGNPrice(convertToBGN(size.price || 0))})</span>
                                   </div>
                                 </button>
                               ))}

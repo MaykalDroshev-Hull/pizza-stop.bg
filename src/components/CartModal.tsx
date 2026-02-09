@@ -6,6 +6,7 @@ import { X, Plus, Minus } from 'lucide-react'
 import { useCart } from './CartContext'
 import { isRestaurantOpen } from '../utils/openingHours'
 import { fetchAddons } from '../lib/menuData'
+import { convertToBGN, formatBGNPrice } from '@/utils/currency'
 
 interface CartModalProps {
   isOpen: boolean
@@ -252,9 +253,14 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                       .reduce((sum, price) => sum + price, 0) * quantity;
                     
                     const totalPrice = basePrice + addonCost;
+                    const bgnPrice = convertToBGN(totalPrice);
                     
-                    return totalPrice.toFixed(2);
-                  })()} €.
+                    return (
+                      <>
+                        {totalPrice.toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(bgnPrice)})</span>
+                      </>
+                    );
+                  })()}
                 </span>
               </div>
             </div>
@@ -316,7 +322,9 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                     }
                     return selectedSize.name;
                   })()}</span>
-                  <span className="text-orange font-bold text-lg">{selectedSize.price?.toFixed(2)} €.</span>
+                  <span className="text-orange font-bold text-lg">
+                    {selectedSize.price?.toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(selectedSize.price || 0))})</span>
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -360,7 +368,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                           )}
                         </div>
                         <div className="text-sm font-bold text-orange">
-                          {(sizeOption.price || 0).toFixed(2)} €.
+                          {(sizeOption.price || 0).toFixed(2)} €. <span className="text-muted text-xs font-normal">({formatBGNPrice(convertToBGN(sizeOption.price || 0))})</span>
                         </div>
                       </button>
                     ))
@@ -415,7 +423,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                           )}
                         </div>
                         <div className="text-sm font-bold text-orange">
-                          {(sizeOption.price || 0).toFixed(2)} €.
+                          {(sizeOption.price || 0).toFixed(2)} €. <span className="text-muted text-xs font-normal">({formatBGNPrice(convertToBGN(sizeOption.price || 0))})</span>
                         </div>
                       </button>
                     );
@@ -514,14 +522,24 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                                     const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID)
                                     if (positionInType >= 3) {
                                       // 4th and beyond of this type are paid
-                                      return `${addon.Price.toFixed(2)} €.`
+                                      const bgnPrice = convertToBGN(addon.Price)
+                                      return (
+                                        <>
+                                          {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(bgnPrice)})</span>
+                                        </>
+                                      )
                                     } else {
                                       // First 3 of this type remain free
                                       return 'Безплатно'
                                     }
                                   } else {
                                     // Unselected ones show price after 3 of this type are selected
-                                    return `${addon.Price.toFixed(2)} €.`
+                                    const bgnPrice = convertToBGN(addon.Price)
+                                    return (
+                                      <>
+                                        {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(bgnPrice)})</span>
+                                      </>
+                                    )
                                   }
                                 }
                               })()}
@@ -599,14 +617,24 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                                     const positionInType = typeSelected.findIndex(a => a.AddonID === addon.AddonID)
                                     if (positionInType >= 3) {
                                       // 4th and beyond of this type are paid
-                                      return `${addon.Price.toFixed(2)} €.`
+                                      const bgnPrice = convertToBGN(addon.Price)
+                                      return (
+                                        <>
+                                          {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(bgnPrice)})</span>
+                                        </>
+                                      )
                                     } else {
                                       // First 3 of this type remain free
                                       return 'Безплатно'
                                     }
                                   } else {
                                     // Unselected ones show price after 3 of this type are selected
-                                    return `${addon.Price.toFixed(2)} €.`
+                                    const bgnPrice = convertToBGN(addon.Price)
+                                    return (
+                                      <>
+                                        {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(bgnPrice)})</span>
+                                      </>
+                                    )
                                   }
                                 }
                               })()}
@@ -650,7 +678,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                               whiteSpace: 'nowrap'
                             }}>{addon.Name}</div>
                             <div className="text-xs mt-1 text-red-400">
-                              {addon.Price.toFixed(2)} €.
+                              {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                             </div>
                           </button>
                         ))}
@@ -691,7 +719,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                               whiteSpace: 'nowrap'
                             }}>{addon.Name}</div>
                             <div className="text-xs mt-1 text-red-400">
-                              {addon.Price.toFixed(2)} €.
+                              {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                             </div>
                           </button>
                         ))}
@@ -732,7 +760,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                               whiteSpace: 'nowrap'
                             }}>{addon.Name}</div>
                             <div className="text-xs mt-1 text-red-400">
-                              {addon.Price.toFixed(2)} €.
+                              {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                             </div>
                           </button>
                         ))}
@@ -811,7 +839,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                       {item.name} {quantity > 1 && `× ${quantity}`}
                     </span>
                     <span className="text-sm font-medium text-text">
-                      {basePrice.toFixed(2)} €.
+                      {basePrice.toFixed(2)} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(basePrice))})</span>
                     </span>
                   </div>
                   
@@ -840,7 +868,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                               {isFree && <span className="text-green-400 ml-1">(безплатно)</span>}
                             </span>
                             <span className="text-xs font-medium text-text">
-                              {addonTotal.toFixed(2)} €.
+                              {addonTotal.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addonTotal))})</span>
                             </span>
                           </div>
                         )
@@ -853,7 +881,7 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-text">Общо:</span>
                       <span className="text-xl font-bold text-orange">
-                        {totalPrice.toFixed(2)} €.
+                        {totalPrice.toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(totalPrice))})</span>
                       </span>
                     </div>
                   </div>

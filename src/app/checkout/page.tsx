@@ -15,6 +15,7 @@ import DrinksSuggestionBox from '../../components/DrinksSuggestionBox'
 import { isRestaurantOpen } from '../../utils/openingHours'
 import { useLoginID } from '../../components/LoginIDContext'
 import { encryptOrderId } from '../../utils/orderEncryption'
+import { convertToBGN, formatBGNPrice } from '@/utils/currency'
 import styles from './checkout.module.css'
 
 interface CustomerInfo {
@@ -1035,7 +1036,6 @@ export default function CheckoutPage() {
         loginId: user?.id || null
       }
 
-
       // Call payment initiation API
       const response = await fetch('/api/payment/initiate', {
         method: 'POST',
@@ -1609,7 +1609,7 @@ export default function CheckoutPage() {
                             </p>
                           </div>
                         </div>
-                        <p className="font-bold text-orange">{getItemTotalPrice(item).toFixed(2)} €.</p>
+                        <p className="font-bold text-orange">{getItemTotalPrice(item).toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(getItemTotalPrice(item)))})</span></p>
                       </div>
                       
                       {/* Display addons if any */}
@@ -1629,7 +1629,13 @@ export default function CheckoutPage() {
                                         className="text-xs bg-green/20 text-green px-2 py-1 rounded-md"
                                       >
                                         {addon.Name}
-                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
+                                        {addon.Price > 0 && (
+                                          <>
+                                            {' (+'}
+                                            {addon.Price.toFixed(2)} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(addon.Price))})</span>
+                                            {')'}
+                                          </>
+                                        )}
                                       </span>
                                     ))}
                                 </div>
@@ -1649,7 +1655,13 @@ export default function CheckoutPage() {
                                         className="text-xs bg-emerald/20 text-emerald px-2 py-1 rounded-md"
                                       >
                                         {addon.Name}
-                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
+                                        {addon.Price > 0 && (
+                                          <>
+                                            {' (+'}
+                                            {addon.Price.toFixed(2)} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(addon.Price))})</span>
+                                            {')'}
+                                          </>
+                                        )}
                                       </span>
                                     ))}
                                 </div>
@@ -1669,7 +1681,13 @@ export default function CheckoutPage() {
                                         className="text-xs bg-orange/20 text-orange px-2 py-1 rounded-md"
                                       >
                                         {addon.Name}
-                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
+                                        {addon.Price > 0 && (
+                                          <>
+                                            {' (+'}
+                                            {addon.Price.toFixed(2)} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(addon.Price))})</span>
+                                            {')'}
+                                          </>
+                                        )}
                                       </span>
                                     ))}
                                 </div>
@@ -1689,7 +1707,13 @@ export default function CheckoutPage() {
                                         className="text-xs bg-orange/20 text-orange px-2 py-1 rounded-md"
                                       >
                                         {addon.Name}
-                                        {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
+                                        {addon.Price > 0 && (
+                                          <>
+                                            {' (+'}
+                                            {addon.Price.toFixed(2)} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(addon.Price))})</span>
+                                            {')'}
+                                          </>
+                                        )}
                                       </span>
                                     ))}
                                 </div>
@@ -2471,7 +2495,7 @@ export default function CheckoutPage() {
                     {deliveryCost === 0 ? (
                       <span className="text-white">Безплатна</span>
                     ) : (
-                      <span className="text-white">{deliveryCost.toFixed(2)} €.</span>
+                      <span className="text-white">{deliveryCost.toFixed(2)} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(deliveryCost))})</span></span>
                     )}
                   </span>
                 </div>
@@ -2482,7 +2506,7 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between text-lg font-bold">
                   <span>Обща сума:</span>
                   <span className="text-white">
-                    {(totalPrice + (selectedDeliveryType === 'pickup' ? 0 : (deliveryCost || 0))).toFixed(2)} €.
+                    {(totalPrice + (selectedDeliveryType === 'pickup' ? 0 : (deliveryCost || 0))).toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(totalPrice + (selectedDeliveryType === 'pickup' ? 0 : (deliveryCost || 0))))})</span>
                   </span>
                 </div>
               </div>
@@ -2532,14 +2556,14 @@ export default function CheckoutPage() {
                 {addressZone === 'yellow' && selectedDeliveryType !== 'pickup' && totalPrice < 15 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за жълта зона</div>
-                    <div>Минималната сума за доставка в жълта зона е 15 €. Текуща сума: {totalPrice.toFixed(2)} €.</div>
+                    <div>Минималната сума за доставка в жълта зона е 15 €. ({formatBGNPrice(convertToBGN(15))}) Текуща сума: {totalPrice.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(totalPrice))})</span></div>
                   </div>
                 )}
                 
                 {addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < 30 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за синя зона</div>
-                    <div>Минималната сума за доставка в синя зона е 30 €. Текуща сума: {totalPrice.toFixed(2)} €.</div>
+                    <div>Минималната сума за доставка в синя зона е 30 €. ({formatBGNPrice(convertToBGN(30))}) Текуща сума: {totalPrice.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(totalPrice))})</span></div>
                   </div>
                 )}
                 
@@ -2547,7 +2571,7 @@ export default function CheckoutPage() {
                 {selectedDeliveryType === 'pickup' && totalPrice < 15 && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за поръчка</div>
-                    <div>Минималната сума за поръчка е 15 €. Текуща сума: {totalPrice.toFixed(2)} €.</div>
+                    <div>Минималната сума за поръчка е 15 €. ({formatBGNPrice(convertToBGN(15))}) Текуща сума: {totalPrice.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(totalPrice))})</span></div>
                   </div>
                 )}
                 
@@ -2645,11 +2669,11 @@ export default function CheckoutPage() {
                 <div className={styles.zoneLegend}>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#fbbf24' }}></div>
-                    <span>Зона 1 (3 €.)</span>
+                    <span>Зона 1 (3 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(3))})</span>)</span>
                   </div>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#3b82f6' }}></div>
-                    <span>Зона 2 (7 €.)</span>
+                    <span>Зона 2 (7 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(7))})</span>)</span>
                   </div>
                 </div>
                 <div className={styles.mapModalActions}>

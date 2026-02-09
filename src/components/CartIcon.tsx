@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { ShoppingCart, X, Trash2 } from 'lucide-react'
 import { useCart } from './CartContext'
 import { isRestaurantOpen } from '../utils/openingHours'
+import { convertToBGN, formatBGNPrice } from '@/utils/currency'
 
 export default function CartIcon() {
   const { items, removeItem, totalItems, totalPrice, getItemTotalPrice } = useCart()
@@ -99,7 +100,9 @@ export default function CartIcon() {
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-orange">{(getItemTotalPrice(item) / item.quantity).toFixed(2)} €.</p>
+                        <p className="font-bold text-orange">
+                          {(getItemTotalPrice(item) / item.quantity).toFixed(2)} €. <span className="text-muted text-xs font-normal">({formatBGNPrice(convertToBGN(getItemTotalPrice(item) / item.quantity))})</span>
+                        </p>
                         <button
                           onClick={() => removeItem(item.id)}
                           className="text-muted hover:text-red transition-colors p-1 mt-1"
@@ -120,9 +123,12 @@ export default function CartIcon() {
                 <>
                   {/* Total */}
                   <div className="text-center p-4 bg-white/6 rounded-xl border border-white/12 mb-4">
-                    <div className="text-sm text-muted">Обща сума:</div>
+                    <div className="text-sm text-muted mb-1">Обща сума:</div>
                     <div className="text-2xl font-bold text-orange">
                       {totalPrice.toFixed(2)} €.
+                    </div>
+                    <div className="text-sm text-muted mt-1">
+                      {formatBGNPrice(convertToBGN(totalPrice))}
                     </div>
                   </div>
                   
