@@ -41,7 +41,7 @@ interface CustomerInfo {
   name: string;
   phone: string;
   address: string;
-  orderType: number; // 1 = Collection (3BGN), 2 = Delivery (7BGN)
+  orderType: number; // 1 = Collection, 2 = Delivery (1.5 EUR yellow / 3.5 EUR blue)
   deliveryPrice: number;
 }
 
@@ -1022,27 +1022,27 @@ export default function PrinterPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 3 }))}
+                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 1.5 }))}
                     className={`p-4 border transition-colors duration-200 ${
-                      customerInfo.orderType === 2 && customerInfo.deliveryPrice === 3
+                      customerInfo.orderType === 2 && customerInfo.deliveryPrice === 1.5
                         ? 'bg-yellow-600 border-yellow-600 text-white'
                         : 'bg-gray-900 border-gray-700 text-white hover:border-yellow-500'
                     }`}
                   >
                     <div className="font-bold text-xl">Доставка</div>
-                    <div className="text-sm mt-1">Жълта - 3 BGN</div>
+                    <div className="text-sm mt-1">Жълта - 1.5 €</div>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 7 }))}
+                    onClick={() => setCustomerInfo(prev => ({ ...prev, orderType: 2, deliveryPrice: 3.5 }))}
                     className={`p-4 border transition-colors duration-200 ${
-                      customerInfo.orderType === 2 && customerInfo.deliveryPrice === 7
+                      customerInfo.orderType === 2 && customerInfo.deliveryPrice === 3.5
                         ? 'bg-blue-600 border-blue-600 text-white'
                         : 'bg-gray-900 border-gray-700 text-white hover:border-blue-500'
                     }`}
                   >
                     <div className="font-bold text-xl">Доставка</div>
-                    <div className="text-sm mt-1">Синя - 7 BGN</div>
+                    <div className="text-sm mt-1">Синя - 3.5 €</div>
                   </button>
                   <button
                     type="button"

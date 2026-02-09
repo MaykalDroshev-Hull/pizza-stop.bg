@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MapPin, Clock, Phone, Truck, Pizza, CheckCircle, XCircle, Navigation } from 'lucide-react'
 import styles from '../styles/DeliveryArea.module.css'
 import { isRestaurantOpen } from '../utils/openingHours'
+import { convertToBGN, formatBGNPrice } from '../utils/currency'
 
 interface DeliveryAreaMapProps {
   apiKey: string
@@ -98,10 +99,10 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
     
     if (isInLovechCity || hasLovechPostalCode) {
       isInCoverage = true
-      deliveryZone = 'Ловеч град (3 €.)'
+      deliveryZone = `Ловеч град (1.5 €. / ${formatBGNPrice(convertToBGN(1.5))})`
     } else if (isInVillage) {
       isInCoverage = true
-      deliveryZone = 'Разширена зона (7 €.)'
+      deliveryZone = `Разширена зона (3.5 €. / ${formatBGNPrice(convertToBGN(3.5))})`
     }
     
     // Simulate API call delay
@@ -260,7 +261,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
     // Lovech, Bulgaria coordinates
     const lovechCenter = { lat: 43.142931, lng: 24.717857 }
     
-    // Define Lovech city area (3 BGN delivery) - Golden color
+    // Define Lovech city area (1.5 EUR delivery) - Golden color
     const lovechArea = [
       { lat: 43.12525, lng: 24.71518 },
       { lat: 43.12970, lng: 24.70579 },
@@ -284,7 +285,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
       { lat: 43.12939, lng: 24.72549 }
     ]
     
-    // Define extended area (7 BGN delivery) - Blue color
+    // Define extended area (3.5 EUR delivery) - Blue color
     // Updated polygon coordinates for blue zone
     const extendedArea = [
       { lat: 43.19740, lng: 24.67377 },
@@ -340,7 +341,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
       ]
     })
 
-    // Add extended area polygon (7 BGN delivery) - Blue color
+    // Add extended area polygon (3.5 EUR delivery) - Blue color
     new window.google.maps.Polygon({
       paths: extendedArea,
       fillColor: '#3b82f6', // Blue
@@ -351,7 +352,7 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
       map: map
     })
     
-    // Add Lovech city area polygon (3 BGN delivery) - Golden color
+    // Add Lovech city area polygon (1.5 EUR delivery) - Golden color
     new window.google.maps.Polygon({
       paths: lovechArea,
       fillColor: '#fbbf24', // Golden
@@ -383,13 +384,13 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
                  <div className={styles.deliveryInfo}>
            <div className={styles.infoCard}>
              <MapPin className={styles.infoIcon} />
-             <h3>Ловеч - 3 €.</h3>
+             <h3>Ловеч - 1.5 €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(1.5))})</span></h3>
              <p>Доставка в град Ловеч и близките райони - Гозница, Продимчец, Вилна зона - Бабаковец, Синантепе</p>
            </div>
            
                        <div className={styles.infoCard}>
               <MapPin className={styles.infoIcon} />
-              <h3>Разширена зона - 7 €.</h3>
+              <h3>Разширена зона - 3.5 €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(3.5))})</span></h3>
               <p>Лисец, Баховица, Сливек, Пресяка, Умаревци</p>
             </div>
            
@@ -408,11 +409,11 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
            <div className={styles.mapLegend}>
              <div className={styles.legendItem}>
                <div className={styles.legendColor} style={{ backgroundColor: '#fbbf24' }}></div>
-               <span>Ловеч - 3 €. доставка</span>
+               <span>Ловеч - 1.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(1.5))})</span> доставка</span>
              </div>
              <div className={styles.legendItem}>
                <div className={styles.legendColor} style={{ backgroundColor: '#3b82f6' }}></div>
-               <span>Разширена зона - 7 €. доставка</span>
+               <span>Разширена зона - 3.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(3.5))})</span> доставка</span>
              </div>
            </div>
          </div>
@@ -435,8 +436,8 @@ export default function DeliveryAreaMap({ apiKey }: DeliveryAreaMapProps) {
              <li><strong>Онлайн поръчки:</strong><br/> Понеделник – Петък: 09:00 - 22:30<br/>Събота и Неделя: 11:00 - 20:30</li>
              <li><strong>Телефон за поръчки:</strong> <br/> 068 670 070</li>
              <li><strong>Минимална сума за доставка:</strong> 15 €.</li>
-             <li><strong>Безплатна доставка в града при поръчка над 50 €.</strong></li>
-             <li><strong>Доставка извън града: 7 €.</strong></li>
+             <li><strong>Безплатна доставка в града при поръчка над 25 €.</strong></li>
+             <li><strong>Доставка извън града: 3.5 €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(3.5))})</span></strong></li>
              <li><strong>Поръчки с отложен час:</strong> <br/> приемат се до 5 дни предварително</li>
            </ul>
          </div>

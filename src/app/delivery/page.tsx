@@ -104,7 +104,7 @@ const convertToDeliveryOrder = (kitchenOrder: KitchenOrder): DeliveryOrder => {
       comment: product.Comment || undefined
     })),
     totalPrice: kitchenOrder.TotalOrderPrice - (kitchenOrder.DeliveryPrice || 0),
-    deliveryFee: kitchenOrder.DeliveryPrice || 3.00, // Use delivery price from order or default to 3.00
+    deliveryFee: kitchenOrder.DeliveryPrice || 1.5, // Use delivery price from order or default to 1.5
     totalAmount: kitchenOrder.TotalOrderPrice,
     status,
     orderTime,

@@ -24,6 +24,7 @@ import { isRestaurantOpen } from '@/utils/openingHours'
 import styles from './dashboard.module.css'
 import { useLoginID } from '@/components/LoginIDContext'
 import { useLoading } from '@/components/LoadingContext'
+import { convertToBGN, formatBGNPrice } from '@/utils/currency'
 
 interface User {
   id: string
@@ -1478,7 +1479,7 @@ export default function DashboardPage() {
                       <h3>Поръчка #{favouriteOrder.OrderID}</h3>
                     </div>
                     <div className={styles.orderTotal}>
-                      {favouriteOrder.TotalAmount.toFixed(2)} €.
+                      {favouriteOrder.TotalAmount.toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(favouriteOrder.TotalAmount))})</span>
                     </div>
                   </div>
                   <div className={styles.orderProducts}>
@@ -1488,14 +1489,16 @@ export default function DashboardPage() {
                           <span className={styles.productName}>{product.ProductName}</span>
                           <span className={styles.productSize}>{product.ProductSize}</span>
                           <span className={styles.productQuantity}>x{product.Quantity}</span>
-                          <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} €.</span>
+                          <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(product.TotalPrice))})</span></span>
                         </div>
                         {product.Addons && product.Addons.length > 0 && (
                           <div className={styles.productAddons}>
                             {product.Addons.map((addon, addonIndex) => (
                               <span key={addonIndex} className={styles.addonItem}>
                                 {addon.Name}
-                                {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
+                                {addon.Price > 0 && (
+                                  <> (+{addon.Price.toFixed(2)} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(addon.Price))})</span>)</>
+                                )}
                               </span>
                             ))}
                           </div>
@@ -1628,7 +1631,7 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <div className={styles.orderTotal}>
-                          {order.TotalAmount.toFixed(2)} €.
+                          {order.TotalAmount.toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(order.TotalAmount))})</span>
                         </div>
                       </div>
                       <div className={styles.orderProducts}>
@@ -1638,14 +1641,16 @@ export default function DashboardPage() {
                               <span className={styles.productName}>{product.ProductName}</span>
                               <span className={styles.productSize}>{product.ProductSize}</span>
                               <span className={styles.productQuantity}>x{product.Quantity}</span>
-                              <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} €.</span>
+                              <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(product.TotalPrice))})</span></span>
                             </div>
                             {product.Addons && product.Addons.length > 0 && (
                               <div className={styles.productAddons}>
                                 {product.Addons.slice(0, 2).map((addon, addonIndex) => (
                                   <span key={addonIndex} className={styles.addonItem}>
                                     {addon.Name}
-                                    {addon.Price > 0 && ` (+${addon.Price.toFixed(2)} €.)`}
+                                    {addon.Price > 0 && (
+                                      <> (+{addon.Price.toFixed(2)} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(addon.Price))})</span>)</>
+                                    )}
                                   </span>
                                 ))}
                                 {product.Addons.length > 2 && (
@@ -1904,13 +1909,13 @@ export default function DashboardPage() {
                          {addressZone === 'yellow' && (
                            <div className={styles.zoneYellow}>
                              <CheckCircle size={16} />
-                             <span>Зона 1 (3 €.)</span>
+                             <span>Зона 1 (1.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(1.5))})</span>)</span>
                            </div>
                          )}
                          {addressZone === 'blue' && (
                            <div className={styles.zoneBlue}>
                              <CheckCircle size={16} />
-                             <span>Зона 2 (7 €.)</span>
+                             <span>Зона 2 (3.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(3.5))})</span>)</span>
                            </div>
                          )}
                          {addressZone === 'outside' && (
@@ -1992,11 +1997,11 @@ export default function DashboardPage() {
                 <div className={styles.zoneLegend}>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#fbbf24' }}></div>
-                    <span>Зона 1 (3 €.)</span>
+                    <span>Зона 1 (1.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(1.5))})</span>)</span>
                   </div>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#3b82f6' }}></div>
-                    <span>Зона 2 (7 €.)</span>
+                    <span>Зона 2 (3.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(3.5))})</span>)</span>
                   </div>
                 </div>
                 <div className={styles.mapModalActions}>
