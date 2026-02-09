@@ -136,32 +136,45 @@ function getDeliveryZone(coordinates: { lat: number; lng: number }): 'yellow' | 
 }
 
 /**
- * Calculate delivery cost based on zone
+ * Calculate delivery cost based on zone and order total
  */
 function calculateDeliveryCost(
   isCollection: boolean,
-  coordinates?: { lat: number; lng: number }
+  coordinates?: { lat: number; lng: number },
+  itemsTotal?: number
 ): number {
   if (isCollection) {
     return 0
   }
   
   if (!coordinates) {
-    console.warn('No coordinates provided for delivery cost calculation, using default 3 €')
-    return 3.00 // Default to yellow zone price
+    console.warn('No coordinates provided for delivery cost calculation, using default 1.5 €')
+    // If no coordinates but we have itemsTotal, check for free delivery threshold
+    if (itemsTotal !== undefined && itemsTotal >= 25) {
+      return 0 // Free delivery for orders above 25 euros (assuming yellow zone)
+    }
+    return 1.5 // Default to yellow zone price
   }
   
   const zone = getDeliveryZone(coordinates)
   
   switch (zone) {
     case 'yellow':
-      return 3.00 // Lovech city area
+      // Free delivery in yellow zone for orders above 25 euros
+      if (itemsTotal !== undefined && itemsTotal >= 25) {
+        return 0
+      }
+      return 1.5 // Lovech city area
     case 'blue':
-      return 7.00 // Extended area
+      return 3.5 // Extended area
     case 'outside':
       return 0 // No delivery available (should be handled by frontend)
     default:
-      return 3.00 // Default fallback
+      // If we have itemsTotal, check for free delivery threshold
+      if (itemsTotal !== undefined && itemsTotal >= 25) {
+        return 0 // Free delivery for orders above 25 euros (assuming yellow zone)
+      }
+      return 1.5 // Default fallback
   }
 }
 
@@ -383,8 +396,8 @@ export async function calculateServerSidePrice(
     }
   }
  
-  // 6. Calculate delivery cost
-  const deliveryCost = calculateDeliveryCost(isCollection, coordinates)
+  // 6. Calculate delivery cost (pass itemsTotal for free delivery logic)
+  const deliveryCost = calculateDeliveryCost(isCollection, coordinates, totalItemsPrice)
 
   // 7. Calculate total
   const totalPrice = totalItemsPrice + deliveryCost

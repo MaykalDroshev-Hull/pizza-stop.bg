@@ -760,11 +760,13 @@ export default function CheckoutPage() {
     if (deliveryType === 'pickup') return 0
     if (zone === 'yellow') {
       if (orderTotal < 15) return null
-      return 3
+      // Free delivery in yellow zone for orders above 25 euros
+      if (orderTotal >= 25) return 0
+      return 1.5
     }
     if (zone === 'blue') {
       if (orderTotal < 30) return null
-      return 7
+      return 3.5
     }
     return null
   }
