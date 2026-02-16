@@ -891,9 +891,6 @@ export default function MenuPage() {
                     ) : fiftyFiftyAddons && fiftyFiftyAddons.length > 0 ? (
                       <div>
                         <h4 className="font-medium text-text mb-4">Добавки:</h4>
-                        <p className="text-sm text-muted mb-4">
-                          💡 Добавките за пица са платени според цената в менюто.
-                        </p>
                         {/* Sauces */}
                         {fiftyFiftyAddons.filter((addon: any) => addon.AddonType === 'sauce').length > 0 && (
                           <div>

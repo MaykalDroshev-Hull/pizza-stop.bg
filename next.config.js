@@ -3,6 +3,11 @@ const nextConfig = {
   // Fix workspace root detection
   outputFileTracingRoot: __dirname,
   
+  // Fix Turbopack root directory detection
+  turbopack: {
+    root: __dirname,
+  },
+  
   // Remove X-Powered-By header to prevent information disclosure
   poweredByHeader: false,
   

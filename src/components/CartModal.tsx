@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { X, Plus, Minus } from 'lucide-react'
 import { useCart } from './CartContext'
 import { isRestaurantOpen } from '../utils/openingHours'
-import { fetchAddons } from '../lib/menuData'
+import { fetchAddons, fetchAddonsForProduct } from '../lib/menuData'
 import { convertToBGN, formatBGNPrice } from '@/utils/currency'
 
 interface CartModalProps {
@@ -57,12 +57,12 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
         return
       }
 
-      // For pizzas, fetch addons based on selected size
+      // For pizzas, fetch addons based on selected size (per-product if assigned)
       if (item.category === 'pizza' && (size || selectedSize?.name)) {
         const currentSize = selectedSize?.name || size
         setIsLoadingAddons(true)
         try {
-          const addons = await fetchAddons(1, currentSize) // ProductTypeID = 1 for pizza
+          const addons = await fetchAddonsForProduct(item.id, 1, currentSize) // ProductID + ProductTypeID = 1 for pizza
           setCurrentAddons(addons)
           // Clear selected addons when size changes to avoid confusion
           setSelectedAddons([])
@@ -74,14 +74,27 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
       } else if (item.category === 'pizza' && !size && !selectedSize?.name) {
         // Pizza but no size selected yet - clear addons
         setCurrentAddons([])
+      } else if (item.category === 'burgers' || item.category === 'doners') {
+        // For burgers and doners, fetch addons dynamically from DB (per-product if assigned)
+        setIsLoadingAddons(true)
+        try {
+          const productTypeMap: { [key: string]: number } = { burgers: 2, doners: 3 }
+          const addons = await fetchAddonsForProduct(item.id, productTypeMap[item.category])
+          setCurrentAddons(addons)
+          setSelectedAddons([])
+        } catch {
+          setCurrentAddons([])
+        } finally {
+          setIsLoadingAddons(false)
+        }
       } else {
-        // For non-pizza items, use the static addons from item
+        // For other items, use the static addons from item
         setCurrentAddons(item.addons || [])
       }
     }
 
     fetchAddonsForCurrentState()
-  }, [isOpen, item.category, size, selectedSize?.name, item.addons, item.isNoAddOns])
+  }, [isOpen, item.category, size, selectedSize?.name, item.isNoAddOns])
 
   if (!isOpen) return null
 
@@ -443,12 +456,6 @@ export default function CartModal({ isOpen, onClose, item, selectedSize, onSizeC
           {!isDrink && !item.isNoAddOns && currentAddons && currentAddons.length > 0 && (
             <div>
               <h4 className="font-medium text-text mb-4">Добавки:</h4>
-              <p className="text-sm text-muted mb-4">
-                {(item.category === 'pizza' || item.category === 'pizza-5050')
-                  ? '💡 Добавките за пица са платени според цената в менюто.'
-                  : '💡 Първите 3 добавки от всеки тип са безплатни. След избора на 3-та добавка от даден тип ще се покажат цените за останалите от същия тип.'
-                }
-              </p>
               {isLoadingAddons && (
                 <div className="text-center text-sm text-muted py-2">
                   Зареждане на добавки...
