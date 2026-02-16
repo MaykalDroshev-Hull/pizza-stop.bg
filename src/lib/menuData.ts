@@ -7,6 +7,8 @@ export interface ProductAddon {
   Price: number
   AddonType: string
   ProductTypeID: number
+  SizeCategory?: string | null
+  AddonTypeBG?: string
 }
 
 export interface MenuItem {
@@ -81,37 +83,39 @@ const ratingMap: { [key: number]: number } = {
   9: 4.8
 }
 
-// Function to fetch addons for a specific product type and size
+// AddonType to Bulgarian label mapping
+const addonTypeBGMap: { [key: string]: string } = {
+  'sauce': 'сосове',
+  'vegetable': 'салати',
+  'meat': 'колбаси',
+  'cheese': 'сирена',
+  'pizza-addon': 'добавки'
+}
+
+/**
+ * Fetch addons for a specific product type and size.
+ * Uses AddonType and SizeCategory columns from the database — NO hardcoded ID ranges.
+ * Also supports per-product addon assignment via LkProductAddon table.
+ */
 export async function fetchAddons(productTypeID: number, size?: string) {
   try {
-    
     // Special handling for pizza size-based addons
     if (productTypeID === 1 && size) {
-      let meatRange: { min: number; max: number }
-      let cheeseRange: { min: number; max: number }
-      let addonRange: { min: number; max: number }
-      
-      if (size.toLowerCase().includes('малка') || size.toLowerCase().includes('small')) {
-        meatRange = { min: 800, max: 899 }
-        cheeseRange = { min: 700, max: 799 }
-        addonRange = { min: 600, max: 699 }
-      } else if (size.toLowerCase().includes('голяма') || size.toLowerCase().includes('large')) {
-        meatRange = { min: 8000, max: 8999 }
-        cheeseRange = { min: 7000, max: 7999 }
-        addonRange = { min: 6000, max: 6999 }
-      } else {
-        // Default to small pizza addons if size is not recognized
-        meatRange = { min: 800, max: 899 }
-        cheeseRange = { min: 700, max: 799 }
-        addonRange = { min: 600, max: 699 }
+      // Determine SizeCategory from size name
+      let sizeCategory = 'small'
+      if (size.toLowerCase().includes('голяма') || size.toLowerCase().includes('large')) {
+        sizeCategory = 'large'
       }
       
-      
-      // Fetch meat, cheese, and addon addons
+      // Fetch pizza addons by AddonType + SizeCategory, excluding disabled ones
       const { data: pizzaAddons, error: pizzaError } = await supabase
         .from('Addon')
         .select('*')
-        .or(`and(AddonID.gte.${meatRange.min},AddonID.lte.${meatRange.max}),and(AddonID.gte.${cheeseRange.min},AddonID.lte.${cheeseRange.max}),and(AddonID.gte.${addonRange.min},AddonID.lte.${addonRange.max})`)
+        .in('AddonType', ['meat', 'cheese', 'pizza-addon'])
+        .eq('SizeCategory', sizeCategory)
+        .eq('IsDisabled', 0)
+        .order('SortOrder', { ascending: true })
+        .order('Name', { ascending: true })
       
       if (pizzaError) {
         console.error('Error fetching pizza addons:', pizzaError)
@@ -120,46 +124,18 @@ export async function fetchAddons(productTypeID: number, size?: string) {
       
       if (!pizzaAddons) return []
       
-      
-      // Transform to our interface format
-      const transformedPizzaAddons: any[] = pizzaAddons.map(addon => {
-        let addonType = 'meat'
-        let addonTypeBG = 'колбаси'
-        
-        // Determine addon type based on ID range
-        if (size.toLowerCase().includes('малка') || size.toLowerCase().includes('small')) {
-          if (addon.AddonID >= 700 && addon.AddonID <= 799) {
-            addonType = 'cheese'
-            addonTypeBG = 'сирена'
-          } else if (addon.AddonID >= 600 && addon.AddonID <= 699) {
-            addonType = 'pizza-addon'
-            addonTypeBG = 'добавки'
-          }
-        } else if (size.toLowerCase().includes('голяма') || size.toLowerCase().includes('large')) {
-          if (addon.AddonID >= 7000 && addon.AddonID <= 7999) {
-            addonType = 'cheese'
-            addonTypeBG = 'сирена'
-          } else if (addon.AddonID >= 6000 && addon.AddonID <= 6999) {
-            addonType = 'pizza-addon'
-            addonTypeBG = 'добавки'
-          }
-        }
-        
-        return {
-          AddonID: addon.AddonID,
-          Name: addon.Name,
-          Price: addon.Price || 0,
-          ProductTypeID: addon.ProductTypeID,
-          AddonType: addonType,
-          AddonTypeBG: addonTypeBG
-        }
-      })
-      
-      return transformedPizzaAddons
+      return pizzaAddons.map(addon => ({
+        AddonID: addon.AddonID,
+        Name: addon.Name,
+        Price: addon.Price || 0,
+        ProductTypeID: addon.ProductTypeID,
+        AddonType: addon.AddonType || 'meat',
+        AddonTypeBG: addonTypeBGMap[addon.AddonType] || 'колбаси'
+      }))
     }
     
-    // Original logic for non-pizza products (burgers, doners)
-    // First, get the AddonIDs that are linked to this specific product type
+    // For non-pizza products (burgers, doners):
+    // Use LkProductTypeAddons (existing link table) to find assigned addons
     const { data: linkedAddons, error: linkError } = await supabase
       .from('LkProductTypeAddons')
       .select('AddonID')
@@ -171,11 +147,16 @@ export async function fetchAddons(productTypeID: number, size?: string) {
     }
     
     if (!linkedAddons || linkedAddons.length === 0) {
-      // Fallback: get all available addons (sauces and vegetables) for all product types
+      // No addons linked to this product type — fetch all enabled sauces and vegetables
+      // using AddonType instead of hardcoded ProductTypeID
       const { data: fallbackAddons, error: fallbackError } = await supabase
         .from('Addon')
         .select('*')
-        .in('ProductTypeID', [5, 6]) // Only sauces (5) and vegetables (6)
+        .in('AddonType', ['sauce', 'vegetable'])
+        .is('SizeCategory', null)
+        .eq('IsDisabled', 0)
+        .order('SortOrder', { ascending: true })
+        .order('Name', { ascending: true })
       
       if (fallbackError) {
         console.error('Error fetching fallback addons:', fallbackError)
@@ -184,27 +165,26 @@ export async function fetchAddons(productTypeID: number, size?: string) {
       
       if (!fallbackAddons) return []
       
-      // Transform to our interface format
-      const transformedFallbackAddons: any[] = fallbackAddons.map(addon => ({
+      return fallbackAddons.map(addon => ({
         AddonID: addon.AddonID,
         Name: addon.Name,
         Price: addon.Price || 0,
         ProductTypeID: addon.ProductTypeID,
-        AddonType: addon.ProductTypeID === 5 ? 'sauce' : 'vegetable',
-        AddonTypeBG: addon.ProductTypeID === 5 ? 'сосове' : 'салати'
+        AddonType: addon.AddonType || 'sauce',
+        AddonTypeBG: addonTypeBGMap[addon.AddonType] || 'сосове'
       }))
-      
-      return transformedFallbackAddons
     }
     
     const addonIDs = linkedAddons.map(item => item.AddonID)
     
-    // Now fetch the actual addon details from Addons
+    // Fetch addon details, excluding disabled ones
     const { data: addons, error: addonError } = await supabase
       .from('Addon')
       .select('*')
       .in('AddonID', addonIDs)
-      .in('ProductTypeID', [5, 6]) // Only sauces (5) and vegetables (6)
+      .eq('IsDisabled', 0)
+      .order('SortOrder', { ascending: true })
+      .order('Name', { ascending: true })
     
     if (addonError) {
       console.error('Error fetching addon details:', addonError)
@@ -213,21 +193,77 @@ export async function fetchAddons(productTypeID: number, size?: string) {
     
     if (!addons) return []
     
-    // Transform to our interface format
-    const transformedAddons: any[] = addons.map(addon => ({
+    return addons.map(addon => ({
       AddonID: addon.AddonID,
       Name: addon.Name,
       Price: addon.Price || 0,
       ProductTypeID: addon.ProductTypeID,
-      AddonType: addon.ProductTypeID === 5 ? 'sauce' : 'vegetable',
-      AddonTypeBG: addon.ProductTypeID === 5 ? 'сосове' : 'салати'
+      AddonType: addon.AddonType || 'sauce',
+      AddonTypeBG: addonTypeBGMap[addon.AddonType] || 'сосове'
     }))
-    
-    return transformedAddons
     
   } catch (error) {
     console.error('Error in fetchAddons:', error)
     return []
+  }
+}
+
+/**
+ * Fetch addons assigned to a specific product via LkProductAddon.
+ * Falls back to fetchAddons(productTypeID, size) if no per-product assignments exist.
+ */
+export async function fetchAddonsForProduct(productId: number, productTypeID: number, size?: string) {
+  try {
+    // First check if there are per-product addon assignments
+    const { data: productLinks, error: linkError } = await supabase
+      .from('LkProductAddon')
+      .select('AddonID')
+      .eq('ProductID', productId)
+    
+    if (linkError) {
+      console.error('Error fetching product addon links:', linkError)
+      // Fallback to type-based fetching
+      return fetchAddons(productTypeID, size)
+    }
+    
+    if (!productLinks || productLinks.length === 0) {
+      // No per-product assignments, fallback to type-based
+      return fetchAddons(productTypeID, size)
+    }
+    
+    const addonIDs = productLinks.map(link => link.AddonID)
+    
+    // Fetch the actual addon details, excluding disabled ones
+    const { data: addons, error: addonError } = await supabase
+      .from('Addon')
+      .select('*')
+      .in('AddonID', addonIDs)
+      .eq('IsDisabled', 0)
+      .order('SortOrder', { ascending: true })
+      .order('Name', { ascending: true })
+    
+    if (addonError) {
+      console.error('Error fetching addon details for product:', addonError)
+      return fetchAddons(productTypeID, size)
+    }
+    
+    if (!addons || addons.length === 0) {
+      // Per-product links exist but all addons are disabled, fallback
+      return fetchAddons(productTypeID, size)
+    }
+    
+    return addons.map(addon => ({
+      AddonID: addon.AddonID,
+      Name: addon.Name,
+      Price: addon.Price || 0,
+      ProductTypeID: addon.ProductTypeID,
+      AddonType: addon.AddonType || 'sauce',
+      AddonTypeBG: addonTypeBGMap[addon.AddonType] || 'сосове'
+    }))
+    
+  } catch (error) {
+    console.error('Error in fetchAddonsForProduct:', error)
+    return fetchAddons(productTypeID, size)
   }
 }
 
