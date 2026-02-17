@@ -10,6 +10,8 @@ import { NextRequest } from 'next/server'
 // Initialize Redis client (only if env vars are set)
 let redis: Redis | null = null
 let rateLimiters: Record<string, Ratelimit> | null = null
+let redisAvailable = false
+let redisErrorLogged = false
 
 // Fallback in-memory rate limiting (if Redis is not available)
 interface MemoryRateLimit {
@@ -40,8 +42,9 @@ function checkMemoryRateLimit(identifier: string, limit: number, windowMs: numbe
   return true
 }
 
-try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+// Initialize Redis only if env vars are set
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  try {
     redis = new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -105,9 +108,21 @@ try {
         prefix: 'ratelimit:api',
       }),
     }
+    
+    // Mark Redis as available (will be verified on first use)
+    redisAvailable = true
+  } catch (error) {
+    // Only log initialization errors once
+    if (!redisErrorLogged) {
+      console.warn('⚠️ Redis rate limiting not available, using in-memory fallback:', error instanceof Error ? error.message : 'Unknown error')
+      redisErrorLogged = true
+    }
+    redisAvailable = false
+    rateLimiters = null
   }
-} catch (error) {
-  console.error('❌ Failed to initialize rate limiting:', error)
+} else {
+  // No Redis credentials - use in-memory only
+  redisAvailable = false
 }
 
 /**
@@ -154,8 +169,8 @@ export async function checkRateLimit(
     api: { limit: 60, windowMs: 60 * 1000 }, // 60 per minute
   }
 
-  // If Redis rate limiters are configured, use them
-  if (rateLimiters && rateLimiters[limiterType]) {
+  // If Redis rate limiters are configured and available, use them
+  if (redisAvailable && rateLimiters && rateLimiters[limiterType]) {
     try {
       const result = await rateLimiters[limiterType].limit(identifier)
       
@@ -184,7 +199,15 @@ export async function checkRateLimit(
         reset: result.reset
       }
     } catch (error) {
-      console.error(`❌ Redis rate limit check failed for ${limiterType}:${identifier}:`, error)
+      // If Redis fails, disable it and fall back to memory
+      if (redisAvailable) {
+        redisAvailable = false
+        if (!redisErrorLogged) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          console.warn(`⚠️ Redis connection failed, switching to in-memory rate limiting: ${errorMessage}`)
+          redisErrorLogged = true
+        }
+      }
       // Fall through to memory-based rate limiting
     }
   }
