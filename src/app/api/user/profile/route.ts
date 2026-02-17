@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthenticatedUser, sanitizeInput } from '@/utils/auth'
 
 // Create Supabase client with service role key for admin operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -12,8 +13,20 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   }
 })
 
+// ✅ SECURE GET METHOD - requires authentication
 export async function GET(request: NextRequest) {
   try {
+    // 1. AUTHENTICATE USER
+    const { error: authError, status: authStatus, user: authUser } = await getAuthenticatedUser(request)
+
+    if (authError || !authUser) {
+      return NextResponse.json(
+        { error: authError },
+        { status: authStatus }
+      )
+    }
+
+    // 2. GET REQUESTED USER ID
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 
@@ -32,8 +45,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch user profile information
-    const { data: user, error: userError} = await supabase
+    // 3. VERIFY USER CAN ONLY ACCESS THEIR OWN DATA
+    if (authUser.LoginID !== userIdNum) {
+      return NextResponse.json(
+        { error: 'Забранен достъп - можете да достъпвате само собствения си профил' },
+        { status: 403 }
+      )
+    }
+
+    // 4. FETCH USER PROFILE
+    const { data: user, error: userError } = await supabase
       .from('Login')
       .select(`
         LoginID,
@@ -49,7 +70,6 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (userError || !user) {
-      console.error('Error fetching user profile:', userError)
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
@@ -61,8 +81,8 @@ export async function GET(request: NextRequest) {
     if (user.LocationCoordinates) {
       try {
         coordinates = JSON.parse(user.LocationCoordinates)
-      } catch (error) {
-        console.warn('Failed to parse coordinates:', user.LocationCoordinates)
+      } catch {
+        // Failed to parse coordinates
       }
     }
 
@@ -81,7 +101,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Profile API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -89,10 +108,22 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// ✅ SECURE PUT METHOD - requires authentication + input sanitization
 export async function PUT(request: NextRequest) {
   try {
+    // 1. AUTHENTICATE USER
+    const { error: authError, status: authStatus, user: authUser } = await getAuthenticatedUser(request)
+
+    if (authError || !authUser) {
+      return NextResponse.json(
+        { error: authError },
+        { status: authStatus }
+      )
+    }
+
+    // 2. GET REQUEST BODY
     const body = await request.json()
-    const { userId, name, email, phone } = body
+    let { userId, name, email, phone } = body
 
     if (!userId) {
       return NextResponse.json(
@@ -109,6 +140,15 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // 3. VERIFY USER CAN ONLY UPDATE THEIR OWN DATA
+    if (authUser.LoginID !== userIdNum) {
+      return NextResponse.json(
+        { error: 'Забранен достъп - можете да обновявате само собствения си профил' },
+        { status: 403 }
+      )
+    }
+
+    // 4. VALIDATE REQUIRED FIELDS
     if (!name || !email || !phone) {
       return NextResponse.json(
         { error: 'Name, email, and phone are required' },
@@ -116,7 +156,26 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Validate email format
+    // ✅ 5. INPUT SANITIZATION - REJECT MALICIOUS CONTENT
+    name = name.trim()
+
+    const nameSanitization = sanitizeInput(name, 'Името')
+    if (!nameSanitization.safe) {
+      return NextResponse.json(
+        { error: nameSanitization.reason },
+        { status: 400 }
+      )
+    }
+
+    // Limit name length
+    if (name.length > 100) {
+      return NextResponse.json(
+        { error: 'Името е твърде дълго (максимум 100 символа)' },
+        { status: 400 }
+      )
+    }
+
+    // 6. VALIDATE EMAIL FORMAT
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -125,7 +184,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Validate phone format (Bulgarian phone numbers)
+    // 7. VALIDATE PHONE FORMAT (Bulgarian phone numbers)
     const phoneRegex = /^(\+359|0)[0-9]{9}$/
     if (!phoneRegex.test(phone)) {
       return NextResponse.json(
@@ -134,7 +193,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Check if email is already taken by another user
+    // 8. CHECK IF EMAIL IS TAKEN BY ANOTHER USER
     const { data: existingUser, error: checkError } = await supabase
       .from('Login')
       .select('LoginID, email')
@@ -142,8 +201,7 @@ export async function PUT(request: NextRequest) {
       .neq('LoginID', userId)
       .single()
 
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found" error
-      console.error('Error checking existing email:', checkError)
+    if (checkError && checkError.code !== 'PGRST116') {
       return NextResponse.json(
         { error: 'Error checking email availability' },
         { status: 500 }
@@ -157,7 +215,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Update user profile
+    // 9. UPDATE USER PROFILE
     const { data: updatedUser, error: updateError } = await supabase
       .from('Login')
       .update({
@@ -180,7 +238,6 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('Error updating user profile:', updateError)
       return NextResponse.json(
         { error: 'Failed to update profile' },
         { status: 500 }
@@ -210,7 +267,6 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Profile update API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

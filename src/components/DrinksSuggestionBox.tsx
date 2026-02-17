@@ -5,6 +5,7 @@ import { Plus, Minus } from 'lucide-react'
 import { useCart } from './CartContext'
 import { fetchMenuData } from '../lib/menuData'
 import { MenuItem } from '../lib/menuData'
+import { convertToBGN, formatBGNPrice } from '@/utils/currency'
 
 interface DrinksSuggestionBoxProps {
   onClose: () => void
@@ -124,7 +125,9 @@ export default function DrinksSuggestionBox({ onClose }: DrinksSuggestionBoxProp
               <div className="flex items-center justify-between mb-3">
                 <div className="flex-1">
                   <h4 className="font-medium text-text text-sm">{drink.name}</h4>
-                  <p className="text-muted text-xs">{drink.smallPrice?.toFixed(2)} €.</p>
+                  <p className="text-muted text-xs">
+                    {drink.smallPrice?.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(drink.smallPrice || 0))})</span>
+                  </p>
                 </div>
                 {drink.image && (
                   <img 
@@ -163,7 +166,9 @@ export default function DrinksSuggestionBox({ onClose }: DrinksSuggestionBoxProp
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted">
           {hasSelectedItems && (
-            <span>Общо: {getTotalPrice().toFixed(2)} €. ({getTotalSelectedItems()} напитки)</span>
+            <span>
+              Общо: {getTotalPrice().toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(getTotalPrice()))})</span> ({getTotalSelectedItems()} напитки)
+            </span>
           )}
         </div>
         

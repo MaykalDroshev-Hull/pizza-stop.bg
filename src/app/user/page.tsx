@@ -245,26 +245,30 @@ export default function UserPage() {
         throw new Error(data.error || 'Login failed')
       }
 
+      // Store JWT token from login response
+      const authToken = data.token
       
       // Fetch complete profile data including coordinates
       try {
-        const profileResponse = await fetch(`/api/user/profile?userId=${data.user.id}`)
+        const profileResponse = await fetch(`/api/user/profile?userId=${data.user.id}`, {
+          headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+        })
         if (profileResponse.ok) {
           const profileData = await profileResponse.json()
           if (profileData.user) {
             // Use the complete profile data for login
-            login(profileData.user)
+            login(profileData.user, authToken)
           } else {
             // Fallback to basic login data
-            login(data.user)
+            login(data.user, authToken)
           }
         } else {
           // Fallback to basic login data
-          login(data.user)
+          login(data.user, authToken)
         }
       } catch {
         // Fallback to basic login data
-        login(data.user)
+        login(data.user, authToken)
       }
       
       // Redirect as soon as profile data is ready

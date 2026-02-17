@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import bcrypt from 'bcryptjs'
 import { loginSchema } from '@/utils/zodSchemas'
 import { withRateLimit, createRateLimitResponse } from '@/utils/rateLimit'
+import { generateToken } from '@/utils/auth'
 
 // Helper function to create Supabase client
 function createSupabaseClient() {
@@ -22,11 +23,19 @@ function createSupabaseClient() {
 }
 
 export async function POST(request: NextRequest) {
+  let rateLimitHeaders: Record<string, string> = {}
+
   try {
-    // Rate limiting - prevent brute force attacks
-    const rateLimit = await withRateLimit(request, 'login')
-    if (!rateLimit.allowed) {
-      return createRateLimitResponse(rateLimit.headers)
+    // ✅ IMPROVED RATE LIMITING WITH ERROR HANDLING
+    try {
+      const rateLimit = await withRateLimit(request, 'login')
+      rateLimitHeaders = rateLimit.headers
+      if (!rateLimit.allowed) {
+        return createRateLimitResponse(rateLimit.headers)
+      }
+    } catch (rateLimitError) {
+      // Rate limit check failed - continue processing (fail open)
+      // In production, consider failing closed (return 503)
     }
 
     const supabase = createSupabaseClient()
@@ -35,7 +44,6 @@ export async function POST(request: NextRequest) {
     // Validate input with Zod
     const validationResult = loginSchema.safeParse(body)
     if (!validationResult.success) {
-      console.error('❌ Login validation failed:', validationResult.error.flatten())
       return NextResponse.json(
         { 
           error: 'Invalid email or password format',
@@ -43,7 +51,7 @@ export async function POST(request: NextRequest) {
         },
         { 
           status: 400,
-          headers: rateLimit.headers
+          headers: rateLimitHeaders
         }
       )
     }
@@ -95,6 +103,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ✅ GENERATE JWT TOKEN
+    const token = await generateToken(user.LoginID, user.email)
+
     // Parse coordinates if available
     let coordinates = null
     if (user.LocationCoordinates) {
@@ -108,14 +119,15 @@ export async function POST(request: NextRequest) {
         }
         
         coordinates = parsedCoords
-      } catch (error) {
-        console.warn('Failed to parse coordinates:', user.LocationCoordinates)
+      } catch {
+        // Failed to parse coordinates
       }
     }
 
-    // Return user data (without password)
+    // Return user data (without password) + JWT token
     return NextResponse.json({
       message: 'Login successful',
+      token, // ✅ JWT token for subsequent API calls
       user: {
         id: user.LoginID,
         name: user.Name,
@@ -129,7 +141,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Login error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

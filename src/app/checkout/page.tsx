@@ -1160,7 +1160,10 @@ export default function CheckoutPage() {
     }
 
     try {
-      const response = await fetch(`/api/user/profile?userId=${user.id}`)
+      const checkoutToken = localStorage.getItem('auth_token')
+      const response = await fetch(`/api/user/profile?userId=${user.id}`, {
+        headers: checkoutToken ? { 'Authorization': `Bearer ${checkoutToken}` } : {}
+      })
       
       if (response.ok) {
         const profileData = await response.json()

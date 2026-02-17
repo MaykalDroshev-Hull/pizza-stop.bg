@@ -17,10 +17,12 @@ interface LoginIDContextType {
   user: User | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (userData: User) => void
+  login: (userData: User, token?: string) => void
   logout: () => void
   updateUser: (updates: Partial<User>) => void
   refreshUser: () => void
+  getToken: () => string | null
+  authHeaders: () => Record<string, string>
 }
 
 const LoginIDContext = createContext<LoginIDContextType | undefined>(undefined)
@@ -42,6 +44,7 @@ export function LoginIDProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         localStorage.removeItem('user')
+        localStorage.removeItem('auth_token')
       } finally {
         setIsLoading(false)
       }
@@ -70,12 +73,16 @@ export function LoginIDProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
-  const login = (userData: User) => {
+  const login = (userData: User, token?: string) => {
     setUser(userData)
     setIsAuthenticated(true)
     localStorage.setItem('user', JSON.stringify(userData))
     // Store user ID for authorization headers (temporary solution)
     localStorage.setItem('user_id', userData.id.toString())
+    // ✅ Store JWT token for authenticated API requests
+    if (token) {
+      localStorage.setItem('auth_token', token)
+    }
   }
 
   const logout = () => {
@@ -83,6 +90,7 @@ export function LoginIDProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false)
     localStorage.removeItem('user')
     localStorage.removeItem('user_id')
+    localStorage.removeItem('auth_token')
   }
 
   const updateUser = (updates: Partial<User>) => {
@@ -108,6 +116,19 @@ export function LoginIDProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // ✅ Get the JWT token from localStorage
+  const getToken = (): string | null => {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem('auth_token')
+  }
+
+  // ✅ Get authorization headers for API requests
+  const authHeaders = (): Record<string, string> => {
+    const token = getToken()
+    if (!token) return {}
+    return { 'Authorization': `Bearer ${token}` }
+  }
+
   return (
     <LoginIDContext.Provider value={{
       user,
@@ -116,7 +137,9 @@ export function LoginIDProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       updateUser,
-      refreshUser
+      refreshUser,
+      getToken,
+      authHeaders
     }}>
       {children}
     </LoginIDContext.Provider>
@@ -130,4 +153,3 @@ export function useLoginID() {
   }
   return context
 }
-

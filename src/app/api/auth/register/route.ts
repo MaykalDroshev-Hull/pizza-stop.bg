@@ -7,6 +7,7 @@ import { ErrorResponseBuilder } from '@/utils/errorResponses'
 import { Logger } from '@/utils/logger'
 import { ResourceValidator } from '@/utils/resourceValidator'
 import { handleValidationError, handleEmailError, handleDatabaseError } from '@/utils/globalErrorHandler'
+import { withRateLimit, createRateLimitResponse } from '@/utils/rateLimit'
 
 // Create Supabase client with service role key for admin operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -23,6 +24,30 @@ export async function POST(request: NextRequest) {
   const endpoint = '/api/auth/register';
   
   try {
+    // ✅ RATE LIMITING - prevent spam registrations
+    // Fail closed: if rate limiting fails, block the request for security
+    try {
+      const rateLimit = await withRateLimit(request, 'register')
+      if (!rateLimit.allowed) {
+        Logger.warn('Registration rate limit exceeded', { 
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown' 
+        }, endpoint)
+        return createRateLimitResponse(rateLimit.headers)
+      }
+    } catch (rateLimitError) {
+      // Rate limit check failed - block registration for security (fail closed)
+      Logger.error('Rate limit check failed - blocking registration', { 
+        error: rateLimitError instanceof Error ? rateLimitError.message : rateLimitError 
+      }, endpoint)
+      return NextResponse.json(
+        { 
+          error: 'Системата за защита е временно недостъпна. Моля, опитайте отново след няколко минути.',
+          code: 'RATE_LIMIT_ERROR'
+        },
+        { status: 503 }
+      )
+    }
+
     Logger.logRequest('POST', endpoint);
     
     const { name, email, phone, password } = await request.json()

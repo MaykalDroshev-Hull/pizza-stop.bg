@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getAuthenticatedUser } from '@/utils/auth'
 
 // Type definitions for the database response
 interface LkOrderProductData {
@@ -35,6 +36,17 @@ interface OrderData {
 
 export async function GET(request: NextRequest) {
   try {
+    // ✅ 1. AUTHENTICATE USER
+    const { error: authError, status: authStatus, user: authUser } = await getAuthenticatedUser(request)
+
+    if (authError || !authUser) {
+      return NextResponse.json(
+        { error: authError },
+        { status: authStatus }
+      )
+    }
+
+    // 2. GET REQUESTED USER ID
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 
@@ -54,10 +66,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Create server-side Supabase client
+    // ✅ 3. VERIFY USER CAN ONLY ACCESS THEIR OWN ORDERS
+    if (authUser.LoginID !== userIdNum) {
+      return NextResponse.json(
+        { error: 'Забранен достъп - можете да достъпвате само собствените си поръчки' },
+        { status: 403 }
+      )
+    }
+
+    // 4. Create server-side Supabase client
     const supabase = createServerClient()
 
-    // Fetch user's orders with complete details
+    // 5. Fetch user's orders with complete details
     const { data: orders, error: ordersError } = await supabase
       .from('Order')
       .select(`
@@ -92,13 +112,6 @@ export async function GET(request: NextRequest) {
       .order('OrderDT', { ascending: false })
 
     if (ordersError) {
-      console.error('Error fetching orders:', ordersError)
-      console.error('Error details:', {
-        code: ordersError.code,
-        message: ordersError.message,
-        details: ordersError.details,
-        hint: ordersError.hint
-      })
       return NextResponse.json(
         { error: 'Failed to fetch orders', details: ordersError.message },
         { status: 500 }
@@ -110,7 +123,7 @@ export async function GET(request: NextRequest) {
     const paymentMethodIds = [...new Set(orders?.map(order => order.RfPaymentMethodID) || [])]
     
     // Fetch payment method names
-    const { data: paymentMethods, error: paymentMethodsError } = await supabase
+    const { data: paymentMethods } = await supabase
       .from('RfPaymentMethod')
       .select('PaymentMethodID, PaymentMethod')
       .in('PaymentMethodID', paymentMethodIds)
@@ -146,8 +159,8 @@ export async function GET(request: NextRequest) {
           if (item.Addons) {
             try {
               addons = JSON.parse(item.Addons)
-            } catch (e) {
-              console.warn('Failed to parse addons:', item.Addons)
+            } catch {
+              // Failed to parse addons
             }
           }
           
@@ -172,7 +185,6 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Orders API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
