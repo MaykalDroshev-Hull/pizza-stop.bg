@@ -5,6 +5,7 @@ import { ErrorResponseBuilder } from '@/utils/errorResponses'
 import { Logger } from '@/utils/logger'
 import { ResourceValidator } from '@/utils/resourceValidator'
 import { handleValidationError, handleResourceNotFoundError, handleDatabaseError } from '@/utils/globalErrorHandler'
+import { getAuthenticatedUser } from '@/utils/auth'
 
 export async function GET(request: NextRequest) {
   const endpoint = '/api/order/details';
@@ -24,6 +25,95 @@ export async function GET(request: NextRequest) {
 
     const numericOrderId = parseInt(orderId!, 10);
     const supabase = createServerClient()
+
+    // ✅ AUTHENTICATION CHECK (before resource validation to prevent enumeration)
+    const authHeader = request.headers.get('authorization')
+    
+    if (authHeader) {
+      // User is sending auth token - verify they own this order
+      const { error: authError, status: authStatus, user: authUser } = await getAuthenticatedUser(request)
+      
+      if (authError || !authUser) {
+        return NextResponse.json(
+          { error: authError },
+          { status: authStatus }
+        )
+      }
+
+      // Fetch the order to check ownership
+      const { data: orderOwnerCheck } = await supabase
+        .from('Order')
+        .select('LoginID')
+        .eq('OrderID', numericOrderId)
+        .single()
+
+      if (orderOwnerCheck && orderOwnerCheck.LoginID !== authUser.LoginID) {
+        return NextResponse.json(
+          { error: 'Забранен достъп - това не е вашата поръчка' },
+          { status: 403 }
+        )
+      }
+    } else {
+      // No auth header - require orderToken for unauthenticated access (order-success page)
+      const orderToken = searchParams.get('orderToken')
+      
+      if (!orderToken) {
+        return NextResponse.json(
+          { error: 'Неоторизиран достъп - моля, влезте в акаунта си' },
+          { status: 401 }
+        )
+      }
+
+      // Verify the order token (base64 encoded orderId:timestamp:salt)
+      try {
+        const SALT = 'pizza-stop-2024'
+        let base64 = orderToken.replace(/-/g, '+').replace(/_/g, '/')
+        while (base64.length % 4) {
+          base64 += '='
+        }
+        const decoded = atob(base64)
+        const parts = decoded.split(':')
+        
+        if (parts.length !== 3) {
+          return NextResponse.json(
+            { error: 'Невалиден токен за поръчка' },
+            { status: 401 }
+          )
+        }
+
+        const [tokenOrderId, timestamp, salt] = parts
+
+        if (salt !== SALT) {
+          return NextResponse.json(
+            { error: 'Невалиден токен за поръчка' },
+            { status: 401 }
+          )
+        }
+
+        // Check timestamp (24 hours validity)
+        const orderTime = parseInt(timestamp)
+        const maxAge = 24 * 60 * 60 * 1000
+        if (Date.now() - orderTime > maxAge) {
+          return NextResponse.json(
+            { error: 'Токенът за поръчка е изтекъл' },
+            { status: 401 }
+          )
+        }
+
+        // Verify the token matches the requested orderId
+        if (tokenOrderId !== orderId) {
+          return NextResponse.json(
+            { error: 'Невалиден токен за поръчка' },
+            { status: 403 }
+          )
+        }
+      } catch {
+        return NextResponse.json(
+          { error: 'Невалиден токен за поръчка' },
+          { status: 401 }
+        )
+      }
+    }
 
     // Pre-validate that order exists
     const validator = new ResourceValidator();
@@ -106,8 +196,8 @@ export async function GET(request: NextRequest) {
     if (order.OrderLocationCoordinates) {
       try {
         coordinates = JSON.parse(order.OrderLocationCoordinates)
-      } catch (e) {
-        console.warn('Failed to parse order coordinates:', order.OrderLocationCoordinates)
+      } catch {
+        // Failed to parse coordinates
       }
     }
 
@@ -115,8 +205,8 @@ export async function GET(request: NextRequest) {
     if (login?.LocationCoordinates) {
       try {
         userCoordinates = JSON.parse(login.LocationCoordinates)
-      } catch (e) {
-        console.warn('Failed to parse user coordinates:', login.LocationCoordinates)
+      } catch {
+        // Failed to parse coordinates
       }
     }
 
@@ -127,8 +217,7 @@ export async function GET(request: NextRequest) {
         if (typeof data === 'string') {
           try {
             return JSON.parse(data)
-          } catch (e) {
-            console.warn('Failed to parse JSON string:', data)
+          } catch {
             return null
           }
         }
@@ -153,20 +242,6 @@ export async function GET(request: NextRequest) {
       return parsedItem
     }) || []
 
-    return NextResponse.json({
-      success: true,
-      order: {
-        ...order,
-        OrderLocationCoordinates: coordinates,
-        Login: login ? { ...login, LocationCoordinates: userCoordinates } : null,
-        OrderStatus: orderStatus ? { StatusName: orderStatus.OrderStatus } : null,
-        PaymentMethod: paymentMethod ? { PaymentMethodName: paymentMethod.PaymentMethod } : null,
-        items: itemsWithParsedAddons,
-        ExpectedDT: order.ExpectedDT, // Include the expected delivery time
-        OrderType: order.OrderType // Include order type (1=restaurant, 2=delivery)
-      }
-    })
-
     Logger.info('Order details retrieved successfully', { 
       orderId: numericOrderId, 
       itemsCount: orderItems?.length || 0 
@@ -181,8 +256,8 @@ export async function GET(request: NextRequest) {
         OrderStatus: orderStatus ? { StatusName: orderStatus.OrderStatus } : null,
         PaymentMethod: paymentMethod ? { PaymentMethodName: paymentMethod.PaymentMethod } : null,
         items: itemsWithParsedAddons,
-        ExpectedDT: order.ExpectedDT, // Include the expected delivery time
-        OrderType: order.OrderType // Include order type (1=restaurant, 2=delivery)
+        ExpectedDT: order.ExpectedDT,
+        OrderType: order.OrderType
       }
     })
 

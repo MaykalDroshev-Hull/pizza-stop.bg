@@ -233,6 +233,17 @@ export async function fetchAddonsForProduct(productId: number, productTypeID: nu
     
     const addonIDs = productLinks.map(link => link.AddonID)
     
+    // For pizzas with size, determine SizeCategory to filter by
+    let sizeCategory: string | null = null
+    if (productTypeID === 1 && size) {
+      // Determine SizeCategory from size name (same logic as fetchAddons)
+      if (size.toLowerCase().includes('голяма') || size.toLowerCase().includes('large')) {
+        sizeCategory = 'large'
+      } else {
+        sizeCategory = 'small'
+      }
+    }
+    
     // Fetch the actual addon details, excluding disabled ones
     const { data: addons, error: addonError } = await supabase
       .from('Addon')
@@ -252,7 +263,19 @@ export async function fetchAddonsForProduct(productId: number, productTypeID: nu
       return fetchAddons(productTypeID, size)
     }
     
-    return addons.map(addon => ({
+    // Filter by SizeCategory for pizza addons
+    // Addons with SizeCategory must match the selected size
+    // Addons without SizeCategory (sauces, vegetables) are shown for all sizes
+    const filteredAddons = productTypeID === 1 && sizeCategory
+      ? addons.filter(addon => {
+          // Include addons with no SizeCategory (sauces, vegetables work for all sizes)
+          if (!addon.SizeCategory) return true
+          // Include addons that match the selected size
+          return addon.SizeCategory === sizeCategory
+        })
+      : addons
+    
+    return filteredAddons.map((addon: any) => ({
       AddonID: addon.AddonID,
       Name: addon.Name,
       Price: addon.Price || 0,

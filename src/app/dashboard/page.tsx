@@ -500,7 +500,9 @@ export default function DashboardPage() {
       startLoading()
       
       // Fetch user's orders
-      const ordersResponse = await fetch(`/api/user/orders?userId=${user.id}`)
+      const token = localStorage.getItem('auth_token')
+      const authHdrs: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {}
+      const ordersResponse = await fetch(`/api/user/orders?userId=${user.id}`, { headers: authHdrs })
       if (ordersResponse.ok) {
         const ordersData = await ordersResponse.json()
         const sortedOrders = (ordersData.orders || []).sort((a: Order, b: Order) => 
@@ -533,7 +535,7 @@ export default function DashboardPage() {
       }
       
       // Fetch user profile data
-      const profileResponse = await fetch(`/api/user/profile?userId=${user.id}`)
+      const profileResponse = await fetch(`/api/user/profile?userId=${user.id}`, { headers: authHdrs })
       if (profileResponse.ok) {
         const profileData = await profileResponse.json()
         if (profileData.user) {
@@ -760,9 +762,13 @@ export default function DashboardPage() {
     setUpdateSuccess('')
     
     try {
+      const putToken = localStorage.getItem('auth_token')
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(putToken ? { 'Authorization': `Bearer ${putToken}` } : {})
+        },
         body: JSON.stringify({
           userId: user?.id,
           name: profileData.name,

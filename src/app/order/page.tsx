@@ -916,23 +916,26 @@ export default function MenuPage() {
                                         : 'border-white/12 text-muted hover:border-white/20'
                                     }`}
                                     style={{
-                                      height: '60px',
+                                      minHeight: '60px',
                                       padding: '8px 12px',
                                       display: 'flex',
                                       flexDirection: 'column',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      lineHeight: '1.2'
+                                      lineHeight: '1.3'
                                     }}
                                     title={addon.Name}
                                   >
-                                    <div className="font-medium truncate w-full text-center text-sm" style={{
+                                    <div className="font-medium w-full text-center text-sm" style={{
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
                                       overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap'
+                                      wordBreak: 'break-word'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
+                                      {addon.Price.toFixed(2)} €.<br />
+                                      <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}
@@ -965,23 +968,26 @@ export default function MenuPage() {
                                         : 'border-white/12 text-muted hover:border-white/20'
                                     }`}
                                     style={{
-                                      height: '60px',
+                                      minHeight: '60px',
                                       padding: '8px 12px',
                                       display: 'flex',
                                       flexDirection: 'column',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      lineHeight: '1.2'
+                                      lineHeight: '1.3'
                                     }}
                                     title={addon.Name}
                                   >
-                                    <div className="font-medium truncate w-full text-center text-sm" style={{
+                                    <div className="font-medium w-full text-center text-sm" style={{
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
                                       overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap'
+                                      wordBreak: 'break-word'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
+                                      {addon.Price.toFixed(2)} €.<br />
+                                      <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}
@@ -1014,23 +1020,26 @@ export default function MenuPage() {
                                         : 'border-white/12 text-muted hover:border-white/20'
                                     }`}
                                     style={{
-                                      height: '60px',
+                                      minHeight: '60px',
                                       padding: '8px 12px',
                                       display: 'flex',
                                       flexDirection: 'column',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      lineHeight: '1.2'
+                                      lineHeight: '1.3'
                                     }}
                                     title={addon.Name}
                                   >
-                                    <div className="font-medium truncate w-full text-center text-sm" style={{
+                                    <div className="font-medium w-full text-center text-sm" style={{
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
                                       overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap'
+                                      wordBreak: 'break-word'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
+                                      {addon.Price.toFixed(2)} €.<br />
+                                      <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}
@@ -1063,23 +1072,26 @@ export default function MenuPage() {
                                         : 'border-white/12 text-muted hover:border-white/20'
                                     }`}
                                     style={{
-                                      height: '60px',
+                                      minHeight: '60px',
                                       padding: '8px 12px',
                                       display: 'flex',
                                       flexDirection: 'column',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      lineHeight: '1.2'
+                                      lineHeight: '1.3'
                                     }}
                                     title={addon.Name}
                                   >
-                                    <div className="font-medium truncate w-full text-center text-sm" style={{
+                                    <div className="font-medium w-full text-center text-sm" style={{
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
                                       overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap'
+                                      wordBreak: 'break-word'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
+                                      {addon.Price.toFixed(2)} €.<br />
+                                      <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}
@@ -1112,23 +1124,26 @@ export default function MenuPage() {
                                         : 'border-white/12 text-muted hover:border-white/20'
                                     }`}
                                     style={{
-                                      height: '60px',
+                                      minHeight: '60px',
                                       padding: '8px 12px',
                                       display: 'flex',
                                       flexDirection: 'column',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      lineHeight: '1.2'
+                                      lineHeight: '1.3'
                                     }}
                                     title={addon.Name}
                                   >
-                                    <div className="font-medium truncate w-full text-center text-sm" style={{
+                                    <div className="font-medium w-full text-center text-sm" style={{
+                                      display: '-webkit-box',
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: 'vertical',
                                       overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap'
+                                      wordBreak: 'break-word'
                                     }}>{addon.Name}</div>
                                     <div className="text-xs mt-1 text-red-400">
-                                      {addon.Price.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
+                                      {addon.Price.toFixed(2)} €.<br />
+                                      <span className="text-muted">({formatBGNPrice(convertToBGN(addon.Price))})</span>
                                     </div>
                                   </button>
                                 ))}

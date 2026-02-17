@@ -15,7 +15,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }): React.JSX.
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       if (typeof window === 'undefined') return;
       
       const authenticated = isAuthenticated();
@@ -32,6 +32,38 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }): React.JSX.
       if (!authenticated) {
         router.push('/login-admin');
         return;
+      }
+
+      // Verify token with backend
+      if (hasToken) {
+        try {
+          const token = getAccessToken();
+          const response = await fetch('/api/administraciq/products', {
+            method: 'GET',
+            headers: {
+              'x-admin-auth': token!
+            }
+          });
+
+          // If unauthorized, clear auth and redirect
+          if (response.status === 401 || response.status === 403) {
+            clearAuth();
+            router.push('/login-admin');
+            return;
+          }
+
+          // If request succeeds, user is authorized
+          if (response.ok) {
+            setIsAuthorized(true);
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          // On error, clear auth and redirect
+          clearAuth();
+          router.push('/login-admin');
+          return;
+        }
       }
       
       setIsAuthorized(true);

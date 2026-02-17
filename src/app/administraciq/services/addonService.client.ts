@@ -24,6 +24,22 @@ function getAuthToken(): string | null {
   return localStorage.getItem('admin_access_token');
 }
 
+/**
+ * Handle unauthorized responses by clearing auth and redirecting to login
+ */
+function handleUnauthorized(response: Response): void {
+  if (response.status === 401 || response.status === 403) {
+    // Clear authentication
+    localStorage.removeItem('admin_authenticated');
+    localStorage.removeItem('admin_access_token');
+    localStorage.removeItem('admin_refresh_token');
+    localStorage.removeItem('admin_login_time');
+    
+    // Redirect to login
+    window.location.href = '/login-admin';
+  }
+}
+
 // ─── Addon CRUD ───
 
 export async function getAddonsClient(): Promise<DatabaseAddon[]> {
@@ -34,6 +50,13 @@ export async function getAddonsClient(): Promise<DatabaseAddon[]> {
     cache: 'no-store',
     headers: { 'x-admin-auth': token }
   });
+  
+  // Handle unauthorized responses
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized - redirecting to login');
+  }
+  
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json as DatabaseAddon[];
@@ -48,6 +71,13 @@ export async function upsertAddonClient(addon: Partial<DatabaseAddon>): Promise<
     headers: { 'Content-Type': 'application/json', 'x-admin-auth': token },
     body: JSON.stringify(addon)
   });
+  
+  // Handle unauthorized responses
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized - redirecting to login');
+  }
+  
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json as DatabaseAddon;
@@ -62,6 +92,13 @@ export async function setAddonDisabledClient(id: number, isDisabled: boolean) {
     headers: { 'Content-Type': 'application/json', 'x-admin-auth': token },
     body: JSON.stringify({ id, isDisabled })
   });
+  
+  // Handle unauthorized responses
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized - redirecting to login');
+  }
+  
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json;
@@ -76,6 +113,13 @@ export async function deleteAddonsClient(ids: number[]) {
     headers: { 'Content-Type': 'application/json', 'x-admin-auth': token },
     body: JSON.stringify({ ids })
   });
+  
+  // Handle unauthorized responses
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized - redirecting to login');
+  }
+  
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json;
@@ -91,6 +135,13 @@ export async function getProductsForAssignment(): Promise<AssignableProduct[]> {
     cache: 'no-store',
     headers: { 'x-admin-auth': token }
   });
+  
+  // Handle unauthorized responses
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized - redirecting to login');
+  }
+  
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json as AssignableProduct[];
@@ -104,6 +155,13 @@ export async function getAllAddonAssignmentsClient(): Promise<{ [addonId: number
     cache: 'no-store',
     headers: { 'x-admin-auth': token }
   });
+  
+  // Handle unauthorized responses
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized - redirecting to login');
+  }
+  
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json;
@@ -117,6 +175,13 @@ export async function getProductsForAddonClient(addonId: number): Promise<number
     cache: 'no-store',
     headers: { 'x-admin-auth': token }
   });
+  
+  // Handle unauthorized responses
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized - redirecting to login');
+  }
+  
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json.productIds;
@@ -131,6 +196,13 @@ export async function setProductsForAddonClient(addonId: number, productIds: num
     headers: { 'Content-Type': 'application/json', 'x-admin-auth': token },
     body: JSON.stringify({ addonId, productIds })
   });
+  
+  // Handle unauthorized responses
+  if (res.status === 401 || res.status === 403) {
+    handleUnauthorized(res);
+    throw new Error('Unauthorized - redirecting to login');
+  }
+  
   const json = await res.json();
   if (!res.ok) throw new Error(json.error ?? 'Request failed');
   return json;
