@@ -1201,7 +1201,7 @@ export default function MenuPage() {
           >
             {filteredItems.map(item => (
               <div key={item.id} className="bg-card border border-white/12 rounded-xl p-4 md:p-6 overflow-hidden flex flex-col h-full min-h-[400px]">                <div className={`text-center py-3 md:py-4 min-h-[120px] md:min-h-[160px] flex items-center justify-center relative overflow-hidden group rounded-xl ${
-                  item.category === 'drinks' ? 'bg-black' : 'bg-gradient-to-br from-red/10 to-orange/10'
+                  item.category === 'drinks' ? 'bg-white' : 'bg-gradient-to-br from-red/10 to-orange/10'
                 }`}>
                   {(() => {
                     if (item.image.startsWith('http')) {

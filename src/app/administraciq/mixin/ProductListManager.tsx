@@ -12,6 +12,7 @@ import {
 } from "../services/productService.client";
 import EditProductModal from "./EditProductModal";
 import ImageUpload from "@/components/ImageUpload";
+import { getImageSizeFromUrl, formatFileSize } from "@/utils/imageUpload";
 
 // Product interface for UI
 interface Product {
@@ -152,6 +153,9 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   
+  // Image sizes state - maps product ID to total image size in bytes
+  const [imageSizes, setImageSizes] = useState<Map<number, number>>(new Map());
+  
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: '',
@@ -207,6 +211,33 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
     return (): void => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
+  // Fetch image sizes for products
+  const fetchImageSizes = async (productsList: Product[]): Promise<void> => {
+    const sizeMap = new Map<number, number>();
+    
+    // Fetch sizes for all products in parallel
+    const sizePromises = productsList.map(async (product: Product) => {
+      let totalSize = 0;
+      
+      if (product.imageUrl) {
+        const size1 = await getImageSizeFromUrl(product.imageUrl);
+        if (size1 !== null) totalSize += size1;
+      }
+      
+      if (product.secondImageUrl) {
+        const size2 = await getImageSizeFromUrl(product.secondImageUrl);
+        if (size2 !== null) totalSize += size2;
+      }
+      
+      if (totalSize > 0) {
+        sizeMap.set(product.id, totalSize);
+      }
+    });
+    
+    await Promise.all(sizePromises);
+    setImageSizes(sizeMap);
+  };
+
   // Fetch products on mount
   useEffect((): void => {
     const loadProducts = async (): Promise<void> => {
@@ -235,6 +266,9 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         const deletedProductsCount = productsWithType.filter(p => p.isDeleted).length;
         
         setProducts(productsWithType);
+        
+        // Fetch image sizes after products are loaded
+        fetchImageSizes(productsWithType);
       } catch {
         addFlashMessage('error', `Грешка при зареждане на ${tabName}.`);
       }
@@ -461,11 +495,37 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
         isDeleted: savedProduct.isDeleted === 1 || savedProduct.isDeleted === true
       };
       
+      // Update products list
       setProducts((prevProducts: Product[]) => 
         prevProducts.map((product: Product) => 
           product.id === productId ? productWithType : product
         )
       );
+      
+      // Update image sizes for the updated product
+      let totalSize = 0;
+      
+      if (productWithType.imageUrl) {
+        const size1 = await getImageSizeFromUrl(productWithType.imageUrl);
+        if (size1 !== null) totalSize += size1;
+      }
+      
+      if (productWithType.secondImageUrl) {
+        const size2 = await getImageSizeFromUrl(productWithType.secondImageUrl);
+        if (size2 !== null) totalSize += size2;
+      }
+      
+      // Update image sizes map
+      setImageSizes((prevSizes: Map<number, number>) => {
+        const updatedSizeMap = new Map(prevSizes);
+        if (totalSize > 0) {
+          updatedSizeMap.set(productId, totalSize);
+        } else {
+          updatedSizeMap.delete(productId);
+        }
+        return updatedSizeMap;
+      });
+      
       setIsEditModalOpen(false);
       setEditingProduct(null);
       addFlashMessage('success', 'Продуктът беше обновен успешно!');
@@ -629,6 +689,30 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
       };
       
       setProducts([...products, productWithType]);
+      
+      // Update image sizes for the new product
+      if (productWithType.imageUrl || productWithType.secondImageUrl) {
+        let totalSize = 0;
+        
+        if (productWithType.imageUrl) {
+          const size1 = await getImageSizeFromUrl(productWithType.imageUrl);
+          if (size1 !== null) totalSize += size1;
+        }
+        
+        if (productWithType.secondImageUrl) {
+          const size2 = await getImageSizeFromUrl(productWithType.secondImageUrl);
+          if (size2 !== null) totalSize += size2;
+        }
+        
+        if (totalSize > 0) {
+          setImageSizes((prevSizes: Map<number, number>) => {
+            const updatedSizeMap = new Map(prevSizes);
+            updatedSizeMap.set(productWithType.id, totalSize);
+            return updatedSizeMap;
+          });
+        }
+      }
+      
       setNewProduct({ 
         name: "", 
         description: "", 
@@ -1200,6 +1284,15 @@ const ProductListManager: React.FC<ProductListManagerProps> = ({
                       </p>
                     )}
                   </div>
+                  {/* Image Size Display */}
+                  {(product.imageUrl || product.secondImageUrl) && imageSizes.has(product.id) && (
+                    <div className="mt-1 px-2 py-1 bg-gray-800/50 rounded-md border border-gray-700/50">
+                      <p className="text-xs text-gray-400">
+                        <span className="font-medium">Размер на изображенията: </span>
+                        <span className="text-gray-300">{formatFileSize(imageSizes.get(product.id) || 0)}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Price Fields - Individual Row Layout */}
