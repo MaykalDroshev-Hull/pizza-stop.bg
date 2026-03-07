@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Upload, X, Image as ImageIcon, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Upload, X, Image as ImageIcon, AlertCircle, CheckCircle, Loader2, Zap } from "lucide-react";
 import { 
   uploadImageToSupabase, 
   validateImageFile, 
   createImagePreview, 
   revokeImagePreview,
   ImageUploadProgress,
-  ImageUploadResult
+  ImageUploadResult,
+  formatFileSize,
+  optimizeImageToAVIF
 } from "@/utils/imageUpload";
 
 interface ImageUploadProps {
@@ -29,6 +31,9 @@ interface UploadState {
   message?: string;
   previewUrl?: string;
   error?: string;
+  selectedFile?: File;
+  fileSize?: number;
+  isOptimizing?: boolean;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -48,34 +53,40 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     status: 'idle'
   });
 
-  const handleFileSelect = useCallback(async (file: File): Promise<void> => {
+  const handleFileSelect = useCallback(async (file: File, optimizedFile?: File): Promise<void> => {
+    const fileToUpload = optimizedFile || file;
+    
     // Validate file
-    const validation = validateImageFile(file);
+    const validation = validateImageFile(fileToUpload);
     if (!validation.isValid) {
       setUploadState(prev => ({
         ...prev,
         status: 'error',
         error: validation.error,
-        isUploading: false
+        isUploading: false,
+        selectedFile: undefined,
+        fileSize: undefined
       }));
       onError?.(validation.error || 'Невалиден файл');
       return;
     }
 
     // Create preview
-    const previewUrl = createImagePreview(file);
+    const previewUrl = createImagePreview(fileToUpload);
     setUploadState(prev => ({
       ...prev,
       previewUrl,
       isUploading: true,
       status: 'uploading',
       progress: 0,
-      error: undefined
+      error: undefined,
+      selectedFile: file,
+      fileSize: fileToUpload.size
     }));
 
     // Upload to Supabase
     const result = await uploadImageToSupabase(
-      file,
+      fileToUpload,
       'pizza-stop',
       'public',
       (progress: ImageUploadProgress) => {
@@ -98,7 +109,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         isUploading: false,
         status: 'complete',
         progress: 100,
-        message: isSameImage ? 'Същото изображение е вече качено!' : 'Изображението е качено успешно!'
+        message: isSameImage ? 'Същото изображение е вече качено!' : 'Изображението е качено успешно!',
+        selectedFile: undefined,
+        fileSize: undefined
       }));
       onChange(result.url);
     } else {
@@ -107,7 +120,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         isUploading: false,
         status: 'error',
         error: result.error || 'Грешка при качване',
-        previewUrl: undefined
+        previewUrl: undefined,
+        selectedFile: undefined,
+        fileSize: undefined
       }));
       onError?.(result.error || 'Грешка при качване');
     }
@@ -121,14 +136,61 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         message: undefined
       }));
     }, 3000);
-  }, [onChange, onError]);
+  }, [onChange, onError, value]);
+
+  const handleOptimize = useCallback(async (): Promise<void> => {
+    if (!uploadState.selectedFile) return;
+
+    setUploadState(prev => ({ ...prev, isOptimizing: true }));
+
+    try {
+      const optimizedFile = await optimizeImageToAVIF(uploadState.selectedFile, 100);
+      
+      if (optimizedFile) {
+        // Update preview with optimized file
+        revokeImagePreview(uploadState.previewUrl || '');
+        const newPreviewUrl = createImagePreview(optimizedFile);
+        
+        setUploadState(prev => ({
+          ...prev,
+          previewUrl: newPreviewUrl,
+          fileSize: optimizedFile.size,
+          isOptimizing: false
+        }));
+
+        // Automatically upload the optimized file
+        await handleFileSelect(uploadState.selectedFile!, optimizedFile);
+      } else {
+        setUploadState(prev => ({
+          ...prev,
+          isOptimizing: false,
+          error: 'Грешка при оптимизация на изображението'
+        }));
+      }
+    } catch (error) {
+      setUploadState(prev => ({
+        ...prev,
+        isOptimizing: false,
+        error: 'Грешка при оптимизация на изображението'
+      }));
+    }
+  }, [uploadState.selectedFile, uploadState.previewUrl, handleFileSelect]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     if (file) {
-      handleFileSelect(file);
+      // Store file info but don't upload yet - let user see size and optimize option
+      const previewUrl = createImagePreview(file);
+      setUploadState(prev => ({
+        ...prev,
+        previewUrl,
+        selectedFile: file,
+        fileSize: file.size,
+        status: 'idle',
+        isUploading: false
+      }));
     }
-  }, [handleFileSelect]);
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
@@ -136,9 +198,18 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
     const file = e.dataTransfer.files[0];
     if (file) {
-      handleFileSelect(file);
+      // Store file info but don't upload yet - let user see size and optimize option
+      const previewUrl = createImagePreview(file);
+      setUploadState(prev => ({
+        ...prev,
+        previewUrl,
+        selectedFile: file,
+        fileSize: file.size,
+        status: 'idle',
+        isUploading: false
+      }));
     }
-  }, [disabled, uploadState.isUploading, handleFileSelect]);
+  }, [disabled, uploadState.isUploading]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
@@ -146,15 +217,20 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   const handleRemoveImage = useCallback((): void => {
     onChange(null);
+    if (uploadState.previewUrl) {
+      revokeImagePreview(uploadState.previewUrl);
+    }
     setUploadState({
       isUploading: false,
       progress: 0,
-      status: 'idle'
+      status: 'idle',
+      selectedFile: undefined,
+      fileSize: undefined
     });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [onChange]);
+  }, [onChange, uploadState.previewUrl]);
 
   const handleClick = useCallback((): void => {
     if (!disabled && !uploadState.isUploading) {
@@ -165,6 +241,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const hasImage = value || uploadState.previewUrl;
   const isUploading = uploadState.isUploading;
   const hasError = uploadState.status === 'error';
+  const hasSelectedFile = uploadState.selectedFile && !isUploading && uploadState.status !== 'complete';
+  const fileSize = uploadState.fileSize;
+  const isFileTooLarge = fileSize ? fileSize > 100 * 1024 : false; // 100KB
+  const canOptimize = hasSelectedFile && !uploadState.isOptimizing;
 
   return (
     <div className={`space-y-2 sm:space-y-3 ${className}`}>
@@ -271,8 +351,56 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               <span className="text-center">{uploadState.error}</span>
             </div>
           )}
+
+          {/* File Size Info */}
+          {hasSelectedFile && fileSize !== undefined && (
+            <div className={`flex items-center gap-2 text-xs sm:text-sm ${
+              isFileTooLarge ? 'text-orange-400' : 'text-gray-400'
+            }`}>
+              <span>Размер: {formatFileSize(fileSize)}</span>
+              {isFileTooLarge && (
+                <span className="flex items-center gap-1 text-orange-400">
+                  <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span>Над 100 KB</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Optimize Button */}
+      {canOptimize && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={handleOptimize}
+            disabled={uploadState.isOptimizing}
+            className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {uploadState.isOptimizing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Оптимизиране...</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-4 h-4" />
+                <span>Оптимизирай (&lt;100KB, AVIF)</span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => uploadState.selectedFile && handleFileSelect(uploadState.selectedFile)}
+            disabled={uploadState.isUploading}
+            className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Качи без оптимизация</span>
+          </button>
+        </div>
+      )}
 
       {/* Image Preview */}
       {hasImage && (
