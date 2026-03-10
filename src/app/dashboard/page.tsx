@@ -119,6 +119,23 @@ export default function DashboardPage() {
   const markerRef = useRef<google.maps.Marker | null>(null)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
+  
+  // Products modal state
+  const [isProductsModalOpen, setIsProductsModalOpen] = useState(false)
+  const [selectedOrderProducts, setSelectedOrderProducts] = useState<Order['Products']>([])
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  
+  // Check if mobile device
+  const [isMobile, setIsMobile] = useState(false)
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Load Google Maps script
   useEffect(() => {
@@ -1170,15 +1187,21 @@ export default function DashboardPage() {
   }
 
   // Order status definitions based on ID
-  const ORDER_STATUSES = [
-    { id: 1, text: 'Приета', progress: 0, color: '#3b82f6' }, // Blue
-    { id: 2, text: 'В процес на приготвяне', progress: 20, color: '#fbbf24' }, // Yellow
-    { id: 3, text: 'Приготвена', progress: 40, color: '#f59e0b' }, // Orange
-    { id: 4, text: 'При шофьора', progress: 60, color: '#8b5cf6' }, // Purple
-    { id: 5, text: 'В процес на доставка', progress: 80, color: '#10b981' }, // Green
-    { id: 6, text: 'Доставена', progress: 100, color: '#22c55e' }, // Bright Green
-    { id: 7, text: 'Отменена', progress: 0, color: '#ef4444' } // Red
-  ] as const
+  const ORDER_STATUSES: Array<{
+    id: number
+    text: string
+    shortText: string
+    progress: number
+    color: string
+  }> = [
+    { id: 1, text: 'Приета', shortText: 'Приета', progress: 0, color: '#3b82f6' }, // Blue
+    { id: 2, text: 'В процес на приготвяне', shortText: 'Приготвяне', progress: 20, color: '#fbbf24' }, // Yellow
+    { id: 3, text: 'Приготвена', shortText: 'Приготвена', progress: 40, color: '#f59e0b' }, // Orange
+    { id: 4, text: 'При шофьора', shortText: 'Шофьор', progress: 60, color: '#8b5cf6' }, // Purple
+    { id: 5, text: 'В процес на доставка', shortText: 'Доставка', progress: 80, color: '#10b981' }, // Green
+    { id: 6, text: 'Доставена', shortText: 'Доставена', progress: 100, color: '#22c55e' }, // Bright Green
+    { id: 7, text: 'Отменена', shortText: 'Отменена', progress: 0, color: '#ef4444' } // Red
+  ]
 
   // Helper function to get status info by ID or text
   const getStatusInfo = (statusID?: number, statusText?: string) => {
@@ -1552,8 +1575,8 @@ export default function DashboardPage() {
                     <div key={order.OrderID} className={styles.orderCard}>
                       <div className={styles.orderHeader}>
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                            <h3 style={{ margin: 0 }}>Поръчка #{order.OrderID}</h3>
+                          <div className={styles.orderTitleRow}>
+                            <h3>Поръчка #{order.OrderID}</h3>
                             <span className={styles.orderStatusText} style={{ color: statusInfo.color }}>
                               {statusInfo.text}
                             </span>
@@ -1608,8 +1631,9 @@ export default function DashboardPage() {
                                           color: isActive ? statusInfo.color : 'var(--muted)',
                                           fontWeight: isCurrent ? 600 : 400
                                         }}
+                                        title={status.text}
                                       >
-                                        {status.text}
+                                        {isMobile ? status.shortText : status.text}
                                       </span>
                                     </div>
                                   )
@@ -1667,7 +1691,16 @@ export default function DashboardPage() {
                           </div>
                         ))}
                         {order.Products.length > 2 && (
-                          <p className={styles.moreItems}>+{order.Products.length - 2} още продукти</p>
+                          <button 
+                            className={styles.moreItems}
+                            onClick={() => {
+                              setSelectedOrderProducts(order.Products)
+                              setSelectedOrderId(order.OrderID)
+                              setIsProductsModalOpen(true)
+                            }}
+                          >
+                            +{order.Products.length - 2} още продукти
+                          </button>
                         )}
                       </div>
                       <div className={styles.orderActions}>
@@ -2026,6 +2059,67 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Products Modal */}
+      {isProductsModalOpen && (
+        <div 
+          className={styles.productsModalOverlay}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsProductsModalOpen(false)
+            }
+          }}
+        >
+          <div className={styles.productsModal}>
+            <div className={styles.productsModalHeader}>
+              <h3>Всички продукти{selectedOrderId && ` - Поръчка #${selectedOrderId}`}</h3>
+              <button 
+                onClick={() => setIsProductsModalOpen(false)}
+                className={styles.closeButton}
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.productsModalContent}>
+              {selectedOrderProducts.map((product, index) => (
+                <div key={index} className={styles.productItem}>
+                  <div className={styles.productMain}>
+                    <span className={styles.productName}>{product.ProductName}</span>
+                    <span className={styles.productSize}>{product.ProductSize}</span>
+                    <span className={styles.productQuantity}>x{product.Quantity}</span>
+                    <span className={styles.productPrice}>{product.TotalPrice.toFixed(2)} €. <span className="text-muted text-sm font-normal">({formatBGNPrice(convertToBGN(product.TotalPrice))})</span></span>
+                  </div>
+                  {product.Addons && product.Addons.length > 0 && (
+                    <div className={styles.productAddons}>
+                      {product.Addons.map((addon, addonIndex) => (
+                        <span key={addonIndex} className={styles.addonItem}>
+                          {addon.Name}
+                          {addon.Price > 0 && (
+                            <> (+{addon.Price.toFixed(2)} €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(addon.Price))})</span>)</>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {product.Comment && (
+                    <div className={styles.productComment}>
+                      <em>"{product.Comment}"</em>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className={styles.productsModalFooter}>
+              <button 
+                onClick={() => setIsProductsModalOpen(false)}
+                className={styles.primaryBtn}
+              >
+                Затвори
+              </button>
             </div>
           </div>
         </div>
