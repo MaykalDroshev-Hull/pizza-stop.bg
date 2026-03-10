@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import CartIcon from './CartIcon'
-import { User, Phone, Clock, MapPin, LogOut } from 'lucide-react'
+import { User, Phone, Clock, MapPin, LogOut, ChevronDown } from 'lucide-react'
 import { isRestaurantOpen, getCurrentDayWorkingHours } from '../utils/openingHours'
 
 // Door Sign Component
@@ -38,6 +38,10 @@ export default function NavBar() {
   const [isOpen, setIsOpen] = useState(isRestaurantOpen())
   const [workingHours, setWorkingHours] = useState(getCurrentDayWorkingHours())
   const [user, setUser] = useState(null)
+  const [isHoursOpen, setIsHoursOpen] = useState(false)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const hoursDropdownRef = useRef<HTMLDivElement>(null)
+  const hoursButtonRef = useRef<HTMLButtonElement>(null)
   
   // Update open/closed status and working hours every minute
   useEffect(() => {
@@ -54,6 +58,47 @@ export default function NavBar() {
     
     return () => clearInterval(interval)
   }, [])
+  
+  // Position dropdown just below header
+  useEffect(() => {
+    if (isHoursOpen && hoursButtonRef.current) {
+      const header = document.querySelector('header')
+      const buttonRect = hoursButtonRef.current.getBoundingClientRect()
+      const headerRect = header?.getBoundingClientRect()
+      
+      if (headerRect) {
+        setDropdownStyle({
+          position: 'fixed',
+          top: `${headerRect.bottom + 1}px`,
+          left: `${buttonRect.left}px`,
+          transform: 'none'
+        })
+      }
+    }
+  }, [isHoursOpen])
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isHoursOpen &&
+        hoursDropdownRef.current &&
+        hoursButtonRef.current &&
+        !hoursDropdownRef.current.contains(event.target as Node) &&
+        !hoursButtonRef.current.contains(event.target as Node)
+      ) {
+        setIsHoursOpen(false)
+      }
+    }
+    
+    if (isHoursOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isHoursOpen])
   
   // Check if user is logged in
   useEffect(() => {
@@ -89,9 +134,55 @@ export default function NavBar() {
               <Phone size={16} className="contact-icon" />
               <a href="tel:+35968670070">068 670 070</a>
             </div>
-            <div className="contact-item">
-              <Clock size={16} className="contact-icon" />
-              <span>{workingHours}</span>
+            <div className="contact-item relative">
+              <button
+                ref={hoursButtonRef}
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/15 bg-black/40 hover:bg-black/70 hover:border-orange text-xs sm:text-sm text-white transition-colors cursor-pointer"
+                onClick={() => setIsHoursOpen(prev => !prev)}
+                aria-expanded={isHoursOpen}
+                aria-controls="working-hours-dropdown"
+              >
+                <Clock size={14} className="contact-icon" />
+                <span className="hidden sm:inline">
+                  {workingHours.startsWith('Днес') ? workingHours : `Днес: ${workingHours}`}
+                </span>
+                <span className="sm:hidden">
+                  {isOpen ? 'Отворено' : 'Затворено'}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform duration-200 ${isHoursOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {isHoursOpen && (
+                <div
+                  ref={hoursDropdownRef}
+                  id="working-hours-dropdown"
+                  className="fixed w-72 rounded-2xl bg-black/95 backdrop-blur-sm border border-white/20 shadow-2xl p-4 z-50"
+                  style={dropdownStyle}
+                >
+                  <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                    <Clock size={16} className="text-orange" />
+                    Работно време
+                  </h3>
+                  <ul className="space-y-2 text-xs sm:text-sm text-gray-200">
+                    <li>
+                      <span className="font-medium text-white">Понеделник – Събота:</span>{' '}
+                      <span>11:00 – 21:00</span>
+                    </li>
+                    <li>
+                      <span className="font-medium text-white">Неделя:</span>{' '}
+                      <span>почивен ден</span>
+                    </li>
+                    <li className="pt-2 border-t border-white/10 mt-2">
+                      <span className="font-medium text-white">Прием на поръчки:</span>{' '}
+                      <span>11:30 – 20:30</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
             <div className="contact-item">
               <MapPin size={16} className="contact-icon" />

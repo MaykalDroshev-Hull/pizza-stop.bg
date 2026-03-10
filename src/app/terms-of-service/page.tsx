@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function TermsOfService() {
   return (
-    <div className="min-h-screen bg-bg py-12 px-4">
+    <div className="min-h-screen bg-bg pt-28 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold text-primary mb-8">
           Общи условия
@@ -112,7 +112,8 @@ export default function TermsOfService() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-white mb-4">11. Работно време</h2>
             <div className="bg-bg-secondary p-4 rounded-lg">
-              <p><strong>Понеделник - Неделя:</strong> 10:00 - 23:00</p>
+              <p><strong>Понеделник – Събота:</strong> 11:00 - 21:00</p>
+              <p><strong>Неделя:</strong> почивен ден</p>
               <p className="text-sm text-text-muted mt-2">
                 * Работното време може да варира по време на празници
               </p>

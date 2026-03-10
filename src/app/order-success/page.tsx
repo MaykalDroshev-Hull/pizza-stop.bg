@@ -74,18 +74,16 @@ function OrderSuccessContent() {
       }
 
       try {
-        // Build request with auth token or orderToken for unauthenticated access
-        const orderToken = localStorage.getItem('auth_token')
+        // Build request WITHOUT auth header – always use orderToken for this page
+        // This avoids invalid-session errors when auth token exists but is expired
         const fetchHeaders: Record<string, string> = {}
-        if (orderToken) {
-          fetchHeaders['Authorization'] = `Bearer ${orderToken}`
-        }
-        // Pass encrypted orderId as orderToken for guests who don't have an auth token
-        const orderTokenParam = !orderToken ? `&orderToken=${encryptedOrderId}` : ''
+        const orderTokenParam = `&orderToken=${encryptedOrderId}`
+        
         const res = await fetch(`/api/order/details?orderId=${decryptedOrderId}${orderTokenParam}`, { 
           cache: 'no-store',
           headers: fetchHeaders
         })
+        
         if (!res.ok) {
           const err = await res.json().catch(() => ({}))
           throw new Error(err?.error || 'Грешка при зареждане на поръчката')

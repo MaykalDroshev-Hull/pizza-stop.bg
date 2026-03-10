@@ -94,9 +94,9 @@ function getDeliveryZone(coordinates: { lat: number; lng: number }): 'yellow' | 
   const isInExtendedArea = isPointInPolygon(coordinates, extendedArea)
   
   if (isInLovechArea) {
-    return 'yellow' // 1.5 EUR delivery
+    return 'yellow' // 2 EUR delivery
   } else if (isInExtendedArea) {
-    return 'blue' // 3.5 EUR delivery
+    return 'blue' // 5 EUR delivery
   } else {
     return 'outside' // No delivery
   }
@@ -124,12 +124,12 @@ export async function POST(request: NextRequest) {
     const response = {
       valid: zone !== 'outside',
       zone,
-      deliveryCost: zone === 'yellow' ? 1.5 : zone === 'blue' ? 3.5 : 0,
+      deliveryCost: zone === 'yellow' ? 2 : zone === 'blue' ? 5 : 0,
       message: zone === 'outside' 
         ? 'Адресът е извън зоната за доставка'
         : zone === 'yellow'
-        ? 'Адресът е в централната зона (1.5 € доставка)'
-        : 'Адресът е в разширената зона (3.5 € доставка)'
+        ? 'Адресът е в централната зона (2 € доставка)'
+        : 'Адресът е в разширената зона (5 € доставка)'
     }
 
     return NextResponse.json(response)
