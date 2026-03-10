@@ -83,20 +83,21 @@ export default function CheckoutPage() {
   const getWorkingHoursForDay = (date: Date) => {
     const dayOfWeek = date.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      // Monday to Friday: 09:00 - 22:30
+    // Monday to Saturday: 11:30 - 20:30 (acceptance window)
+    // Sunday: closed
+    if (dayOfWeek >= 1 && dayOfWeek <= 6) {
       return {
-        start: '09:00',
-        end: '22:30',
-        message: 'Понеделник – Петък: 09:00 - 22:30'
-      }
-    } else {
-      // Saturday and Sunday: 11:00 - 20:30
-      return {
-        start: '11:00',
+        start: '11:30',
         end: '20:30',
-        message: 'Събота и Неделя: 11:00 - 20:30'
+        message: 'Понеделник – Събота: 11:30 - 20:30'
       }
+    }
+
+    // Sunday - closed
+    return {
+      start: null,
+      end: null,
+      message: 'Неделя: почивен ден'
     }
   }
 
@@ -762,11 +763,11 @@ export default function CheckoutPage() {
       if (orderTotal < 15) return null
       // Free delivery in yellow zone for orders above 25 euros
       if (orderTotal >= 25) return 0
-      return 1.5
+      return 2
     }
     if (zone === 'blue') {
       if (orderTotal < 30) return null
-      return 3.5
+      return 5
     }
     return null
   }
@@ -1886,6 +1887,13 @@ export default function CheckoutPage() {
                           
                           // Get working hours for the selected date
                           const workingHours = getWorkingHoursForDay(selectedDate)
+                          
+                          // If Sunday (closed), prevent scheduling
+                          if (workingHours.start === null || workingHours.end === null) {
+                            setDateTimeError('В неделя не работим. Моля, изберете друг ден.')
+                            return
+                          }
+                          
                           const [startHour] = workingHours.start.split(':').map(Number)
                           
                           // If current time is outside working hours for the new day, reset to start of working hours
@@ -1943,8 +1951,8 @@ export default function CheckoutPage() {
                       >
                       <input
                         type="time"
-                        min={orderTime.scheduledTime ? getWorkingHoursForDay(orderTime.scheduledTime).start : '09:00'}
-                        max={orderTime.scheduledTime ? getWorkingHoursForDay(orderTime.scheduledTime).end : '22:30'}
+                        min={orderTime.scheduledTime ? (getWorkingHoursForDay(orderTime.scheduledTime).start || '') : '11:30'}
+                        max={orderTime.scheduledTime ? (getWorkingHoursForDay(orderTime.scheduledTime).end || '') : '20:30'}
                         step="300"
                           value={orderTime.scheduledTime && orderTime.scheduledTime instanceof Date && !isNaN(orderTime.scheduledTime.getTime()) ? orderTime.scheduledTime.toTimeString().slice(0, 5) : ''}
                         onChange={(e) => {
@@ -1953,9 +1961,16 @@ export default function CheckoutPage() {
                           // Get working hours for the selected date
                           const selectedDate = orderTime.scheduledTime || new Date()
                           const workingHours = getWorkingHoursForDay(selectedDate)
+                          
+                          // If Sunday (closed), prevent scheduling
+                          if (workingHours.start === null || workingHours.end === null) {
+                            setDateTimeError('В неделя не работим. Моля, изберете друг ден.')
+                            return
+                          }
+                          
                           const [startHour] = workingHours.start.split(':').map(Number)
                           const [endHour, endMinute] = workingHours.end.split(':').map(Number)
-                          
+
                           // Validate hours are within business hours for the selected day
                           if (hours < startHour || (hours > endHour || (hours === endHour && minutes > endMinute))) {
                             const dayName = getDayNameInBulgarian(selectedDate)
@@ -2004,6 +2019,9 @@ export default function CheckoutPage() {
                             
                             const selectedDate = orderTime.scheduledTime || new Date()
                             const workingHours = getWorkingHoursForDay(selectedDate)
+                            if (workingHours.start === null || workingHours.end === null) {
+                              return
+                            }
                             const [startHour] = workingHours.start.split(':').map(Number)
                             const [endHour, endMinute] = workingHours.end.split(':').map(Number)
                             
@@ -2038,11 +2056,18 @@ export default function CheckoutPage() {
                     <span>
                       {orderTime.scheduledTime ? (
                         <>
-                          <strong>{getDayNameInBulgarian(orderTime.scheduledTime)}:</strong> Поръчки се приемат между {getWorkingHoursForDay(orderTime.scheduledTime).start} - {getWorkingHoursForDay(orderTime.scheduledTime).end}
+                          <strong>{getDayNameInBulgarian(orderTime.scheduledTime)}:</strong>{' '}
+                          {(() => {
+                            const hours = getWorkingHoursForDay(orderTime.scheduledTime as Date)
+                            if (hours.start === null || hours.end === null) {
+                              return 'В неделя не работим. Моля, изберете друг ден.'
+                            }
+                            return `Поръчки се приемат между ${hours.start} - ${hours.end}`
+                          })()}
                         </>
                       ) : (
                         <>
-                          <strong>Работно време:</strong> Понеделник – Петък: 09:00 - 22:30, Събота и Неделя: 11:00 - 20:30. Поръчките могат да се правят до 5 дни напред.
+                          <strong>Прием на поръчки:</strong> Понеделник – Събота: 11:30 - 20:30. Неделя: почивен ден. Поръчките могат да се правят до 5 дни напред.
                         </>
                       )}
                     </span>

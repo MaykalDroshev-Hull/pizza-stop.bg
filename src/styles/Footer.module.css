@@ -418,10 +418,16 @@
 
 .bottomContent {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
+}
+
+.bottomLinks {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.9rem;
 }
 
 .copyright {
@@ -459,6 +465,12 @@
     flex-direction: column;
     text-align: center;
     gap: 0.5rem;
+  }
+
+  .bottomLinks {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
   }
   
   .footerContent {

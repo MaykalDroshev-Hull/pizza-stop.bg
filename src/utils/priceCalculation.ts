@@ -127,9 +127,9 @@ function getDeliveryZone(coordinates: { lat: number; lng: number }): 'yellow' | 
   const isInExtendedArea = isPointInPolygon(coordinates, extendedArea)
   
   if (isInLovechArea) {
-    return 'yellow' // Lovech city area - 3 € delivery
+    return 'yellow' // Lovech city area - 2 € delivery
   } else if (isInExtendedArea) {
-    return 'blue' // Extended area - 7 € delivery
+    return 'blue' // Extended area - 5 € delivery
   } else {
     return 'outside' // Outside delivery area - no delivery
   }
@@ -148,12 +148,12 @@ function calculateDeliveryCost(
   }
   
   if (!coordinates) {
-    console.warn('No coordinates provided for delivery cost calculation, using default 1.5 €')
+    console.warn('No coordinates provided for delivery cost calculation, using default 2 €')
     // If no coordinates but we have itemsTotal, check for free delivery threshold
     if (itemsTotal !== undefined && itemsTotal >= 25) {
       return 0 // Free delivery for orders above 25 euros (assuming yellow zone)
     }
-    return 1.5 // Default to yellow zone price
+    return 2 // Default to yellow zone price
   }
   
   const zone = getDeliveryZone(coordinates)
@@ -164,9 +164,9 @@ function calculateDeliveryCost(
       if (itemsTotal !== undefined && itemsTotal >= 25) {
         return 0
       }
-      return 1.5 // Lovech city area
+      return 2 // Lovech city area
     case 'blue':
-      return 3.5 // Extended area
+      return 5 // Extended area
     case 'outside':
       return 0 // No delivery available (should be handled by frontend)
     default:
@@ -174,7 +174,7 @@ function calculateDeliveryCost(
       if (itemsTotal !== undefined && itemsTotal >= 25) {
         return 0 // Free delivery for orders above 25 euros (assuming yellow zone)
       }
-      return 1.5 // Default fallback
+      return 2 // Default fallback
   }
 }
 

@@ -1915,13 +1915,13 @@ export default function DashboardPage() {
                          {addressZone === 'yellow' && (
                            <div className={styles.zoneYellow}>
                              <CheckCircle size={16} />
-                             <span>Зона 1 (1.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(1.5))})</span>)</span>
+                             <span>Зона 1 (2 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(2))})</span>)</span>
                            </div>
                          )}
                          {addressZone === 'blue' && (
                            <div className={styles.zoneBlue}>
                              <CheckCircle size={16} />
-                             <span>Зона 2 (3.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(3.5))})</span>)</span>
+                             <span>Зона 2 (5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(5))})</span>)</span>
                            </div>
                          )}
                          {addressZone === 'outside' && (
@@ -2003,11 +2003,11 @@ export default function DashboardPage() {
                 <div className={styles.zoneLegend}>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#fbbf24' }}></div>
-                    <span>Зона 1 (1.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(1.5))})</span>)</span>
+                    <span>Зона 1 (2 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(2))})</span>)</span>
                   </div>
                   <div className={styles.legendItem}>
                     <div className={styles.legendColor} style={{ backgroundColor: '#3b82f6' }}></div>
-                    <span>Зона 2 (3.5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(3.5))})</span>)</span>
+                    <span>Зона 2 (5 €. <span className="text-muted text-xs">({formatBGNPrice(convertToBGN(5))})</span>)</span>
                   </div>
                 </div>
                 <div className={styles.mapModalActions}>
