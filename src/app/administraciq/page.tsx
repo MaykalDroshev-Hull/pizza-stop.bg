@@ -8,6 +8,7 @@ import {
   BarChart3,
   LogOut,
   Settings,
+  Trash2,
   LucideIcon
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,6 +19,7 @@ import AddonsTab from "./components/AddonsTab";
 import BeverageTab from "./components/BeverageTab";
 import AnalysisTab from "./components/AnalysisTab";
 import AddonConfigTab from "./components/AddonConfigTab";
+import DeleteOrdersTab from "./components/DeleteOrdersTab";
 
 interface Tab {
   id: string;
@@ -58,6 +60,7 @@ const AdminPage = (): React.JSX.Element => {
     { id: "addon-config", label: "Конфиг. добавки", icon: Settings },
     { id: "beverage", label: "Напитки", icon: Coffee },
     { id: "analysis", label: "Анализи", icon: BarChart3 },
+    { id: "delete-orders", label: "Изтриване на поръчки", icon: Trash2 },
   ];
 
   const renderTabContent = (): React.JSX.Element => {
@@ -72,6 +75,8 @@ const AdminPage = (): React.JSX.Element => {
         return <BeverageTab />;
       case "analysis":
         return <AnalysisTab />;
+      case "delete-orders":
+        return <DeleteOrdersTab />;
       default:
         return <ProductsTab />;
     }
