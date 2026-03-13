@@ -21,7 +21,9 @@ export async function GET() {
         return NextResponse.json({
           WorkingHours: null,
           IsClosed: 0,
-          NewOrderSoundDuration: 2
+          NewOrderSoundDuration: 2,
+          MinimumOrderAmount: 15,
+          ExtendedMinimumOrderAmount: 30
         });
       }
       
@@ -32,10 +34,14 @@ export async function GET() {
       );
     }
 
-    // Ensure NewOrderSoundDuration has a default value if null
+    // Ensure settings have default values if null and map DB columns to API shape
     const settings = {
       ...data,
-      NewOrderSoundDuration: data.NewOrderSoundDuration ?? 2
+      NewOrderSoundDuration: (data as any).NewOrderSoundDuration ?? 2,
+      MinimumOrderAmount:
+        (data as any).MinimumOrderAmount ?? (data as any).minimumorderamount ?? 15,
+      ExtendedMinimumOrderAmount:
+        (data as any).ExtendedMinimumOrderAmount ?? (data as any).extendedminimumorderamount ?? 30
     };
 
     return NextResponse.json(settings);
@@ -52,7 +58,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { NewOrderSoundDuration } = body;
+    const { NewOrderSoundDuration, MinimumOrderAmount, ExtendedMinimumOrderAmount } = body;
 
     // Validate duration (1-30 seconds)
     if (NewOrderSoundDuration !== undefined) {
@@ -61,6 +67,41 @@ export async function POST(request: NextRequest) {
           NewOrderSoundDuration > 30) {
         return NextResponse.json(
           { error: 'NewOrderSoundDuration must be between 1 and 30 seconds' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate minimum order amounts (0.01 - 500 EUR)
+    if (MinimumOrderAmount !== undefined) {
+      if (typeof MinimumOrderAmount !== 'number' ||
+          !Number.isFinite(MinimumOrderAmount) ||
+          MinimumOrderAmount < 0.01 ||
+          MinimumOrderAmount > 500) {
+        return NextResponse.json(
+          { error: 'MinimumOrderAmount must be a number between 0.01 and 500 EUR' },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (ExtendedMinimumOrderAmount !== undefined) {
+      if (typeof ExtendedMinimumOrderAmount !== 'number' ||
+          !Number.isFinite(ExtendedMinimumOrderAmount) ||
+          ExtendedMinimumOrderAmount < 0.01 ||
+          ExtendedMinimumOrderAmount > 500) {
+        return NextResponse.json(
+          { error: 'ExtendedMinimumOrderAmount must be a number between 0.01 and 500 EUR' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Ensure extended minimum is not lower than main minimum if both are provided
+    if (MinimumOrderAmount !== undefined && ExtendedMinimumOrderAmount !== undefined) {
+      if (ExtendedMinimumOrderAmount < MinimumOrderAmount) {
+        return NextResponse.json(
+          { error: 'ExtendedMinimumOrderAmount cannot be lower than MinimumOrderAmount' },
           { status: 400 }
         );
       }
@@ -76,18 +117,29 @@ export async function POST(request: NextRequest) {
     let result;
     if (existing && !fetchError) {
       // Update existing row - use WHERE clause that matches any row
-      // Since NewOrderSoundDuration should always have a value, we can match on it
       const updateData: any = {};
       if (NewOrderSoundDuration !== undefined) {
         updateData.NewOrderSoundDuration = NewOrderSoundDuration;
       }
+      if (MinimumOrderAmount !== undefined) {
+        // DB column is lowercase minimumorderamount
+        updateData.minimumorderamount = MinimumOrderAmount;
+      }
+      if (ExtendedMinimumOrderAmount !== undefined) {
+        // DB column is lowercase extendedminimumorderamount
+        updateData.extendedminimumorderamount = ExtendedMinimumOrderAmount;
+      }
+
+      // Only attempt update if there is something to change
+      if (Object.keys(updateData).length === 0) {
+        return NextResponse.json({ success: true, settings: existing });
+      }
 
       // Use a WHERE clause that matches any row (since there should only be one)
-      // Match on NewOrderSoundDuration being greater than or equal to 0 (always true)
       const { data, error } = await supabaseAdmin
         .from('RestaurantSettings')
         .update(updateData)
-        .gte('NewOrderSoundDuration', 0) // This will match any row where NewOrderSoundDuration >= 0
+        .gte('NewOrderSoundDuration', 0)
         .select()
         .limit(1)
         .single();
@@ -101,11 +153,12 @@ export async function POST(request: NextRequest) {
       }
 
       result = data;
-      console.log('Updated restaurant settings:', result);
     } else {
-      // Insert new row
+      // Insert new row with defaults (map to DB column names)
       const insertData: any = {
-        NewOrderSoundDuration: NewOrderSoundDuration ?? 2
+        NewOrderSoundDuration: NewOrderSoundDuration ?? 2,
+        minimumorderamount: MinimumOrderAmount ?? 15,
+        extendedminimumorderamount: ExtendedMinimumOrderAmount ?? 30
       };
 
       const { data, error } = await supabaseAdmin

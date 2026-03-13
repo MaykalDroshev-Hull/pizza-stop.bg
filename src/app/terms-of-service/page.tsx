@@ -1,11 +1,45 @@
 import type { Metadata } from 'next'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const metadata: Metadata = {
   title: 'Общи условия - Pizza Stop',
   description: 'Общи условия за ползване на услугите на Pizza Stop',
 }
 
-export default function TermsOfService() {
+async function getRestaurantSettings() {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('RestaurantSettings')
+      .select('*')
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      return {
+        MinimumOrderAmount: 15,
+        ExtendedMinimumOrderAmount: 30,
+      }
+    }
+
+    return {
+      MinimumOrderAmount:
+        (data as any)?.MinimumOrderAmount ?? (data as any)?.minimumorderamount ?? 15,
+      ExtendedMinimumOrderAmount:
+        (data as any)?.ExtendedMinimumOrderAmount ?? (data as any)?.extendedminimumorderamount ?? 30,
+    }
+  } catch {
+    return {
+      MinimumOrderAmount: 15,
+      ExtendedMinimumOrderAmount: 30,
+    }
+  }
+}
+
+export default async function TermsOfService() {
+  const { MinimumOrderAmount, ExtendedMinimumOrderAmount } = await getRestaurantSettings()
+
+  const updatedAt = new Date().toLocaleDateString('bg-BG')
+
   return (
     <div className="min-h-screen bg-bg pt-28 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -15,7 +49,7 @@ export default function TermsOfService() {
         
         <div className="prose prose-invert max-w-none space-y-6 text-text-secondary">
           <p className="text-sm text-text-muted mb-8">
-            Последна актуализация: {new Date().toLocaleDateString('bg-BG')}
+            Последна актуализация: {updatedAt}
           </p>
 
           <section className="mb-8">
@@ -32,8 +66,8 @@ export default function TermsOfService() {
               <li>Всички поръчки подлежат на потвърждение от наша страна</li>
               <li>Ние си запазваме правото да откажем поръчка при необичайни обстоятелства</li>
               <li>Цените са в евро (EUR) и включват ДДС</li>
-              <li>Минималната стойност за поръчка за доставка е 15 € за централната зона и 30 € за разширената зона</li>
-              <li>Минималната стойност за поръчка при вземане от ресторант е 15 €</li>
+              <li>Минималната стойност за поръчка за доставка е {MinimumOrderAmount.toFixed(2)} € за централната зона и {ExtendedMinimumOrderAmount.toFixed(2)} € за разширената зона</li>
+              <li>Минималната стойност за поръчка при вземане от ресторант следва условията, показани по време на процеса на поръчка</li>
               <li>Всички продукти са съобразени с актуалното меню и наличност</li>
             </ul>
           </section>

@@ -20,6 +20,7 @@ import BeverageTab from "./components/BeverageTab";
 import AnalysisTab from "./components/AnalysisTab";
 import AddonConfigTab from "./components/AddonConfigTab";
 import DeleteOrdersTab from "./components/DeleteOrdersTab";
+import RestaurantSettingsTab from "./components/RestaurantSettingsTab";
 
 interface Tab {
   id: string;
@@ -60,6 +61,7 @@ const AdminPage = (): React.JSX.Element => {
     { id: "addon-config", label: "Конфиг. добавки", icon: Settings },
     { id: "beverage", label: "Напитки", icon: Coffee },
     { id: "analysis", label: "Анализи", icon: BarChart3 },
+    { id: "restaurant-settings", label: "Настройки поръчки", icon: Settings },
     { id: "delete-orders", label: "Изтриване на поръчки", icon: Trash2 },
   ];
 
@@ -75,6 +77,8 @@ const AdminPage = (): React.JSX.Element => {
         return <BeverageTab />;
       case "analysis":
         return <AnalysisTab />;
+      case "restaurant-settings":
+        return <RestaurantSettingsTab />;
       case "delete-orders":
         return <DeleteOrdersTab />;
       default:
