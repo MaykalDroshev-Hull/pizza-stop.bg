@@ -78,6 +78,8 @@ export default function CheckoutPage() {
   const mapInstanceRef = useRef<google.maps.Map | null>(null)
   const markerRef = useRef<google.maps.Marker | null>(null)
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+  const [minimumOrderAmount, setMinimumOrderAmount] = useState<number>(15)
+  const [extendedMinimumOrderAmount, setExtendedMinimumOrderAmount] = useState<number>(30)
 
   // Function to get working hours for a specific day
   const getWorkingHoursForDay = (date: Date) => {
@@ -106,6 +108,29 @@ export default function CheckoutPage() {
     const dayNames = ['Неделя', 'Понеделник', 'Вторник', 'Сряда', 'Четвъртък', 'Петък', 'Събота']
     return dayNames[date.getDay()]
   }
+
+  // Load restaurant settings (minimum order amounts)
+  useEffect(() => {
+    const loadRestaurantSettings = async () => {
+      try {
+        const response = await fetch('/api/restaurant-settings')
+        if (!response.ok) {
+          return
+        }
+        const data = await response.json()
+
+        if (typeof data.MinimumOrderAmount === 'number') {
+          setMinimumOrderAmount(data.MinimumOrderAmount)
+        }
+        if (typeof data.ExtendedMinimumOrderAmount === 'number') {
+          setExtendedMinimumOrderAmount(data.ExtendedMinimumOrderAmount)
+        }
+      } catch {
+      }
+    }
+
+    loadRestaurantSettings()
+  }, [])
 
   // Load Google Maps script and initialize autocomplete when delivery is selected
   useEffect(() => {
@@ -760,13 +785,13 @@ export default function CheckoutPage() {
   ) => {
     if (deliveryType === 'pickup') return 0
     if (zone === 'yellow') {
-      if (orderTotal < 15) return null
+      if (orderTotal < minimumOrderAmount) return null
       // Free delivery in yellow zone for orders above 25 euros
       if (orderTotal >= 25) return 0
       return 2
     }
     if (zone === 'blue') {
-      if (orderTotal < 30) return null
+      if (orderTotal < extendedMinimumOrderAmount) return null
       return 5
     }
     return null
@@ -934,10 +959,16 @@ export default function CheckoutPage() {
         return
       }
 
-      if (totalPrice < 15) {
-        alert('❌ Минималната сума за поръчка е 15 €.')
-        setIsLoading(false)
-        return
+      // Validate minimum order amount for delivery only
+      if (selectedDeliveryType !== 'pickup') {
+        const requiredMinimum =
+          addressZone === 'blue' ? extendedMinimumOrderAmount : minimumOrderAmount
+
+        if (totalPrice < requiredMinimum) {
+          alert(`❌ Минималната сума за поръчка за доставка е ${requiredMinimum.toFixed(2)} €.`)
+          setIsLoading(false)
+          return
+        }
       }
 
       if (selectedDeliveryType !== 'pickup') {
@@ -1310,12 +1341,12 @@ export default function CheckoutPage() {
     (orderTime.type === 'immediate' || (orderTime.type === 'scheduled' && orderTime.scheduledTime)) &&
     orderType &&
     paymentMethodId !== null && // Payment method must be selected
-    totalPrice >= 15 && // Minimum order amount
+    totalPrice >= minimumOrderAmount && // Minimum order amount
     (
       selectedDeliveryType === 'pickup' || // Pickup orders don't need address validation
       ((selectedDeliveryType === 'delivery' || selectedDeliveryType === 'delivery-yellow' || selectedDeliveryType === 'delivery-blue') && (
-        (addressZone === 'yellow' && totalPrice >= 15) ||
-        (addressZone === 'blue' && totalPrice >= 30)
+        (addressZone === 'yellow' && totalPrice >= minimumOrderAmount) ||
+        (addressZone === 'blue' && totalPrice >= extendedMinimumOrderAmount)
       ))
     ) && // Delivery orders need address validation
     (selectedDeliveryType === 'pickup' || (customerInfo.LocationText && customerInfo.LocationCoordinates && addressConfirmed && addressZone !== 'outside')) &&
@@ -1351,11 +1382,16 @@ export default function CheckoutPage() {
       return
     }
     
-    // Validate minimum order amount
-    if (totalPrice < 15) {
-      alert('❌ Минималната сума за поръчка е 15 €.')
-      setIsLoading(false)
-      return
+    // Validate minimum order amount (delivery only, by zone)
+    if (selectedDeliveryType !== 'pickup') {
+      const requiredMinimum =
+        addressZone === 'blue' ? extendedMinimumOrderAmount : minimumOrderAmount
+
+      if (totalPrice < requiredMinimum) {
+        alert(`❌ Минималната сума за поръчка за доставка е ${requiredMinimum.toFixed(2)} €.`)
+        setIsLoading(false)
+        return
+      }
     }
      
      // Validate delivery requirements (only for delivery orders)
@@ -2583,25 +2619,17 @@ export default function CheckoutPage() {
               {/* Validation Messages */}
               <div className="space-y-2">
                 {/* Minimum order amount errors by delivery zone */}
-                {addressZone === 'yellow' && selectedDeliveryType !== 'pickup' && totalPrice < 15 && (
+                {addressZone === 'yellow' && selectedDeliveryType !== 'pickup' && totalPrice < minimumOrderAmount && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за жълта зона</div>
-                    <div>Минималната сума за доставка в жълта зона е 15 €. ({formatBGNPrice(convertToBGN(15))}) Текуща сума: {totalPrice.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(totalPrice))})</span></div>
+                    <div>Минималната сума за доставка в жълта зона е {minimumOrderAmount.toFixed(2)} €. ({formatBGNPrice(convertToBGN(minimumOrderAmount))}) Текуща сума: {totalPrice.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(totalPrice))})</span></div>
                   </div>
                 )}
                 
-                {addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < 30 && (
+                {addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < extendedMinimumOrderAmount && (
                   <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
                     <div className="font-medium mb-1">Минимална сума за синя зона</div>
-                    <div>Минималната сума за доставка в синя зона е 30 €. ({formatBGNPrice(convertToBGN(30))}) Текуща сума: {totalPrice.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(totalPrice))})</span></div>
-                  </div>
-                )}
-                
-                {/* General minimum order for pickup */}
-                {selectedDeliveryType === 'pickup' && totalPrice < 15 && (
-                  <div className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg p-3">
-                    <div className="font-medium mb-1">Минимална сума за поръчка</div>
-                    <div>Минималната сума за поръчка е 15 €. ({formatBGNPrice(convertToBGN(15))}) Текуща сума: {totalPrice.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(totalPrice))})</span></div>
+                    <div>Минималната сума за доставка в синя зона е {extendedMinimumOrderAmount.toFixed(2)} €. ({formatBGNPrice(convertToBGN(extendedMinimumOrderAmount))}) Текуща сума: {totalPrice.toFixed(2)} €. <span className="text-muted">({formatBGNPrice(convertToBGN(totalPrice))})</span></div>
                   </div>
                 )}
                 
@@ -2637,7 +2665,7 @@ export default function CheckoutPage() {
 
                 
                 {/* Action Buttons for Low Order */}
-                {(totalPrice < 15 || (addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < 30)) && (
+                {(totalPrice < minimumOrderAmount || (addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < extendedMinimumOrderAmount)) && (
                   <div className="flex space-x-3">
                     <a
                       href="/order"
