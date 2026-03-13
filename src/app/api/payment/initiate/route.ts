@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { emailService } from '@/utils/emailService'
-import { calculateServerSidePrice, validatePriceMatch } from '@/utils/priceCalculation'
+import { calculateServerSidePrice, validatePriceMatch, getDeliveryZone } from '@/utils/priceCalculation'
 import { orderConfirmationSchema } from '@/utils/zodSchemas'
 import { withRateLimit, createRateLimitResponse } from '@/utils/rateLimit'
 import { encryptOrderId } from '@/utils/orderEncryption'
@@ -63,7 +63,11 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
 
     // Calculate server-side prices
-    const serverSideCalculation = await calculateServerSidePrice(orderItems, isCollection)
+    const coordinates = customerInfo.LocationCoordinates ? 
+      (typeof customerInfo.LocationCoordinates === 'string' ? 
+        JSON.parse(customerInfo.LocationCoordinates) : customerInfo.LocationCoordinates) 
+      : undefined
+    const serverSideCalculation = await calculateServerSidePrice(orderItems, isCollection, coordinates)
 
     // Validate price match
     const priceValidation = validatePriceMatch(serverSideCalculation.totalPrice, totalPrice)
@@ -79,6 +83,49 @@ export async function POST(request: NextRequest) {
           headers: rateLimit.headers
         }
       )
+    }
+
+    // ===== CRITICAL SECURITY: Server-Side Minimum Order Amount Validation =====
+    // Validate minimum order amount based on delivery zone (only for delivery orders)
+    if (!isCollection) {
+      // Get minimum order amounts from database
+      const { data: restaurantSettings, error: settingsError } = await supabase
+        .from('RestaurantSettings')
+        .select('minimumorderamount, extendedminimumorderamount')
+        .limit(1)
+        .single()
+
+      if (!settingsError && restaurantSettings) {
+        const minimumOrderAmount = Number(restaurantSettings.minimumorderamount) || 15
+        const extendedMinimumOrderAmount = Number(restaurantSettings.extendedminimumorderamount) || 30
+
+        // Determine delivery zone from coordinates
+        let deliveryZone: 'yellow' | 'blue' | 'outside' = 'yellow' // Default to yellow
+        if (coordinates && typeof coordinates.lat === 'number' && typeof coordinates.lng === 'number') {
+          deliveryZone = getDeliveryZone(coordinates)
+        }
+
+        // Validate minimum order amount based on zone
+        const requiredMinimum = deliveryZone === 'blue' ? extendedMinimumOrderAmount : minimumOrderAmount
+
+        if (serverSideCalculation.itemsTotal < requiredMinimum) {
+          console.error('🚨 SECURITY ALERT: MINIMUM ORDER AMOUNT VIOLATION!')
+          console.error(`   Order total: ${serverSideCalculation.itemsTotal} €`)
+          console.error(`   Required minimum (${deliveryZone} zone): ${requiredMinimum} €`)
+          console.error(`   Customer: ${customerInfo.name} (${customerInfo.email})`)
+
+          return NextResponse.json({
+            error: 'Order rejected: Minimum order amount not met',
+            message: `Минималната сума за поръчка за доставка в ${deliveryZone === 'blue' ? 'синя' : 'жълта'} зона е ${requiredMinimum.toFixed(2)} €. Текуща сума: ${serverSideCalculation.itemsTotal.toFixed(2)} €.`
+          }, { 
+            status: 400,
+            headers: rateLimit.headers
+          })
+        }
+      } else {
+        console.warn('⚠️ Could not fetch restaurant settings for minimum order validation')
+        // Continue without validation if settings can't be fetched (fail open for availability)
+      }
     }
 
     // 1. Create order record

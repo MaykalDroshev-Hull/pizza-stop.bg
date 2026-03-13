@@ -53,7 +53,7 @@ function isPointInPolygon(point: { lat: number; lng: number }, polygon: Array<{ 
 /**
  * Get delivery zone based on coordinates
  */
-function getDeliveryZone(coordinates: { lat: number; lng: number }): 'yellow' | 'blue' | 'outside' {
+export function getDeliveryZone(coordinates: { lat: number; lng: number }): 'yellow' | 'blue' | 'outside' {
   // Define Lovech city area (3 BGN delivery) - Yellow zone
   const lovechArea = [
     { lat: 43.12525, lng: 24.71518 },

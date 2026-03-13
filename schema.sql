@@ -6,6 +6,10 @@ CREATE TABLE public.Addon (
   Name character varying NOT NULL,
   Price numeric NOT NULL DEFAULT 0,
   ProductTypeID integer NOT NULL,
+  AddonType text NOT NULL DEFAULT 'sauce'::text,
+  IsDisabled smallint NOT NULL DEFAULT 0,
+  SortOrder integer NOT NULL DEFAULT 0,
+  SizeCategory text,
   CONSTRAINT Addon_pkey PRIMARY KEY (AddonID),
   CONSTRAINT ProductAddons_ProductTypeID_fkey FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID)
 );
@@ -36,6 +40,13 @@ CREATE TABLE public.LkOrderProduct (
   CONSTRAINT fk_lkorderproduct_order FOREIGN KEY (OrderID) REFERENCES public.Order(OrderID),
   CONSTRAINT fk_lkorderproduct_product FOREIGN KEY (ProductID) REFERENCES public.Product(ProductID),
   CONSTRAINT fk_lkorderproduct_composite FOREIGN KEY (CompositeProductID) REFERENCES public.CompositeProduct(CompositeProductID)
+);
+CREATE TABLE public.LkProductAddon (
+  ProductID bigint NOT NULL,
+  AddonID integer NOT NULL,
+  CONSTRAINT LkProductAddon_pkey PRIMARY KEY (ProductID, AddonID),
+  CONSTRAINT fk_lkproductaddon_product FOREIGN KEY (ProductID) REFERENCES public.Product(ProductID),
+  CONSTRAINT fk_lkproductaddon_addon FOREIGN KEY (AddonID) REFERENCES public.Addon(AddonID)
 );
 CREATE TABLE public.LkProductTypeAddons (
   ProductTypeID integer NOT NULL,
@@ -99,6 +110,8 @@ CREATE TABLE public.Product (
   IsNoAddOns boolean DEFAULT false,
   SecondImageURL text,
   SortOrder integer DEFAULT 0,
+  cooling_power_kw character varying,
+  heating_power_kw character varying,
   CONSTRAINT Product_pkey PRIMARY KEY (ProductID),
   CONSTRAINT Product_ProductTypeID_fkey FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID),
   CONSTRAINT fk_product_producttype FOREIGN KEY (ProductTypeID) REFERENCES public.ProductType(ProductTypeID)
@@ -111,7 +124,9 @@ CREATE TABLE public.ProductType (
 CREATE TABLE public.RestaurantSettings (
   WorkingHours text,
   IsClosed smallint,
-  NewOrderSoundDuration integer DEFAULT 2
+  NewOrderSoundDuration integer DEFAULT 2,
+  minimumorderamount numeric DEFAULT 15,
+  extendedminimumorderamount numeric DEFAULT 30
 );
 CREATE TABLE public.RfOrderStatus (
   OrderStatusID smallint GENERATED ALWAYS AS IDENTITY NOT NULL,

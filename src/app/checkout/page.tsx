@@ -785,13 +785,13 @@ export default function CheckoutPage() {
   ) => {
     if (deliveryType === 'pickup') return 0
     if (zone === 'yellow') {
-      if (orderTotal < 15) return null
+      if (orderTotal < minimumOrderAmount) return null
       // Free delivery in yellow zone for orders above 25 euros
       if (orderTotal >= 25) return 0
       return 2
     }
     if (zone === 'blue') {
-      if (orderTotal < 30) return null
+      if (orderTotal < extendedMinimumOrderAmount) return null
       return 5
     }
     return null
@@ -1341,12 +1341,12 @@ export default function CheckoutPage() {
     (orderTime.type === 'immediate' || (orderTime.type === 'scheduled' && orderTime.scheduledTime)) &&
     orderType &&
     paymentMethodId !== null && // Payment method must be selected
-    totalPrice >= 15 && // Minimum order amount
+    totalPrice >= minimumOrderAmount && // Minimum order amount
     (
       selectedDeliveryType === 'pickup' || // Pickup orders don't need address validation
       ((selectedDeliveryType === 'delivery' || selectedDeliveryType === 'delivery-yellow' || selectedDeliveryType === 'delivery-blue') && (
-        (addressZone === 'yellow' && totalPrice >= 15) ||
-        (addressZone === 'blue' && totalPrice >= 30)
+        (addressZone === 'yellow' && totalPrice >= minimumOrderAmount) ||
+        (addressZone === 'blue' && totalPrice >= extendedMinimumOrderAmount)
       ))
     ) && // Delivery orders need address validation
     (selectedDeliveryType === 'pickup' || (customerInfo.LocationText && customerInfo.LocationCoordinates && addressConfirmed && addressZone !== 'outside')) &&
@@ -2665,7 +2665,7 @@ export default function CheckoutPage() {
 
                 
                 {/* Action Buttons for Low Order */}
-                {(totalPrice < 15 || (addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < 30)) && (
+                {(totalPrice < minimumOrderAmount || (addressZone === 'blue' && selectedDeliveryType !== 'pickup' && totalPrice < extendedMinimumOrderAmount)) && (
                   <div className="flex space-x-3">
                     <a
                       href="/order"
